@@ -1,0 +1,13 @@
+
+/* ============================================================
+ app/app.css
+============================================================ */
+
+@import "tailwindcss";
+@theme {
+   --font-sora: 'Sora', sans-serif;
+   --font-mono: 'JetBrains Mono', monospace;
+ }
+ * { scrollbar-width: thin; scrollbar-color: #2a3350 transparent; }
+ ::-webkit-scrollbar { width: 4px; }
+ ::-webkit-scrollbar-thumb { background: #2a3350; border-radius: 4px; }

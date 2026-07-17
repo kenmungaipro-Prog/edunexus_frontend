@@ -1,0 +1,251 @@
+// ============================================================
+// app/pages/transport/live-map.tsx
+// ============================================================
+import React, { useEffect, useState } from "react";
+import { useLoaderData, Link } from "react-router";
+import { api, type ApiResponse } from "~/lib/api";
+import Echo from "laravel-echo";
+import Pusher from "pusher-js";
+
+interface LiveVehicle {
+  vehicle_id: number;
+  number: string;
+  route: string | null;
+  driver: string | null;
+  lat: number | null;
+  lng: number | null;
+  speed: number | null;
+  updated_at: string;
+}
+
+export async function clientLoader() {
+  try {
+    const res = await api.get<ApiResponse<LiveVehicle[]>>("/transport/live");
+    return { initialVehicles: res.data.data };
+  } catch (error) {
+    console.error("Failed fetching dynamic vehicle feeds:", error);
+    return { initialVehicles: [] };
+  }
+}
+
+export default function FleetLiveMapPage() {
+  const { initialVehicles } = useLoaderData<typeof clientLoader>();
+  
+  // Maintain local state for vehicles to update them via WebSockets
+  const [vehicles, setVehicles] = useState<LiveVehicle[]>(initialVehicles);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
+
+  useEffect(() => {
+    const reverbAppKey = import.meta.env.VITE_REVERB_APP_KEY;
+    const reverbHost = import.meta.env.VITE_REVERB_HOST;
+    const reverbPort = import.meta.env.VITE_REVERB_PORT ?? "8080";
+    const reverbScheme = import.meta.env.VITE_REVERB_SCHEME ?? "https";
+
+    if (!reverbAppKey || reverbAppKey === "your-app-key-here") {
+      console.warn(
+        "Realtime fleet telemetry disabled: missing VITE_REVERB_APP_KEY in frontend/.env."
+      );
+      return;
+    }
+
+    if (!reverbHost) {
+      console.warn(
+        "Realtime fleet telemetry disabled: missing VITE_REVERB_HOST in frontend/.env."
+      );
+      return;
+    }
+
+    window.Pusher = Pusher;
+
+    const echo = new Echo({
+      broadcaster: 'reverb',
+      key: reverbAppKey,
+      wsHost: reverbHost,
+      wsPort: Number(reverbPort),
+      wssPort: Number(reverbPort),
+      forceTLS: reverbScheme === 'https',
+      enabledTransports: ['ws', 'wss'],
+    });
+
+    echo.channel("fleet-delivery")
+      .listen(".vehicle.location.updated", (event: { vehicle: LiveVehicle }) => {
+        setVehicles((prevVehicles) => {
+          const exists = prevVehicles.find(
+            (v) => v.vehicle_id === event.vehicle.vehicle_id
+          );
+
+          if (exists) {
+            return prevVehicles.map((v) =>
+              v.vehicle_id === event.vehicle.vehicle_id ? { ...v, ...event.vehicle } : v
+            );
+          }
+
+          return [...prevVehicles, event.vehicle];
+        });
+      });
+
+    return () => {
+      echo.leaveChannel("fleet-delivery");
+    };
+  }, []);
+
+  // Derived state for the active vehicle dashboard
+  const activeFocusVehicle = vehicles.find(v => v.vehicle_id === selectedVehicleId);
+
+  return (
+    <div className="p-6 space-y-6 flex flex-col h-[calc(100vh-110px)]">
+      {/* Header section layout elements */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 flex-shrink-0 text-left">
+        <div>
+          <div className="flex items-center gap-3">
+            <Link to="/transport" className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-lg transition border border-slate-700">
+              ⬅️
+            </Link>
+            <h1 className="text-2xl font-bold text-white tracking-tight">📡 Real-Time Fleet Telemetry</h1>
+          </div>
+          <p className="text-slate-400 text-sm mt-1 ml-11">
+            Monitoring active school transit vehicles and transit pilot telemetry tracks.
+          </p>
+        </div>
+        <div className="bg-slate-800 px-4 py-2 rounded-xl border border-slate-700 flex items-center gap-3 font-medium text-xs text-slate-300">
+          <span className="flex h-2 w-2 relative">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          Live Stream Polling Active (10s)
+        </div>
+      </div>
+
+      {/* Main Grid Interactive Module Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0">
+        {/* Left Side Roster Selection Deck */}
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col min-h-0 overflow-hidden text-left">
+          <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3 flex-shrink-0">
+            Active Vehicles ({vehicles.length})
+          </h2>
+          <div className="space-y-2 overflow-y-auto flex-1 pr-1 custom-scrollbar">
+            {vehicles.length > 0 ? (
+              vehicles.map((vehicle) => {
+                const isSelected = vehicle.vehicle_id === selectedVehicleId;
+                const hasSignal = vehicle.lat !== null && vehicle.lng !== null;
+                const isMoving = (vehicle.speed ?? 0) > 0;
+
+                return (
+                  <button
+                    key={vehicle.vehicle_id}
+                    onClick={() => setSelectedVehicleId(vehicle.vehicle_id)}
+                    className={`w-full p-3.5 rounded-xl border text-left transition ${
+                      isSelected
+                        ? "bg-blue-600/10 border-blue-500 text-white shadow-md"
+                        : "bg-slate-800/40 border-slate-800 text-slate-300 hover:bg-slate-800 hover:border-slate-700"
+                    }`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="font-mono font-bold text-white text-sm">{vehicle.number}</div>
+                        <div className="text-xs text-slate-400 mt-0.5 truncate max-w-[180px]">
+                          Route: <span className="text-slate-300 font-medium">{vehicle.route || "Idle/Unassigned"}</span>
+                        </div>
+                        <div className="text-xs text-slate-500 mt-1 truncate max-w-[180px]">
+                          Driver: {vehicle.driver || "Unallocated"}
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1.5">
+                        {hasSignal ? (
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                            isMoving ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                          }`}>
+                            {isMoving ? `🚚 ${vehicle.speed} km/h` : "🛑 Idle"}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-slate-500 border border-slate-700">
+                            Offline
+                          </span>
+                        )}
+                        <span className="text-[10px] text-slate-500 font-mono">
+                          {new Date(vehicle.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })
+            ) : (
+              <div className="py-8 text-center text-slate-500 italic text-sm">
+                No telemetry targets streaming updates.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Center/Right Map Simulation Projection Frame */}
+        <div className="lg:col-span-2 bg-slate-950 border border-slate-800 rounded-xl relative overflow-hidden flex flex-col justify-between p-6">
+          <div className="absolute inset-0 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px] opacity-40"></div>
+          
+          <div className="relative z-10 flex justify-between items-start pointer-events-none text-left">
+            <div className="bg-slate-900/90 border border-slate-800 p-3 rounded-lg backdrop-blur-sm max-w-sm">
+              <span className="text-xs font-semibold text-slate-400 block uppercase tracking-wider">Canvas Status</span>
+              <p className="text-xs text-slate-300 mt-1">
+                {selectedVehicleId 
+                  ? `Simulating dynamic trace projection matrices tracking device ID: ${selectedVehicleId}`
+                  : "Select an active fleet vessel node from the registry deck to lock coordinate arrays."}
+              </p>
+            </div>
+          </div>
+
+          {/* Coordinate Anchor Pinpoint Viewpoint Frame */}
+          <div className="my-auto py-12 flex flex-col items-center justify-center relative z-10">
+            {activeFocusVehicle ? (
+              <div className="bg-slate-900/90 border border-slate-700/60 p-6 rounded-2xl shadow-2xl text-center space-y-3 border-t-2 border-t-blue-500 max-w-xs animate-fadeIn">
+                <div className="h-12 w-12 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-xl mx-auto animate-bounce">
+                  🚌
+                </div>
+                <div>
+                  <h3 className="font-mono text-lg font-bold text-white">{activeFocusVehicle.number}</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">{activeFocusVehicle.route || "No Route Context Assigned"}</p>
+                </div>
+                <div className="bg-slate-950 px-3 py-2 rounded-xl border border-slate-800 text-left space-y-1">
+                  <div className="text-[11px] text-slate-500 flex justify-between">
+                    <span>Latitude:</span>
+                    <span className="font-mono text-slate-300 font-medium">{activeFocusVehicle.lat?.toFixed(5) ?? "N/A"}</span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 flex justify-between">
+                    <span>Longitude:</span>
+                    <span className="font-mono text-slate-300 font-medium">{activeFocusVehicle.lng?.toFixed(5) ?? "N/A"}</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center space-y-2">
+                <div className="text-4xl opacity-30">🗺️</div>
+                <p className="text-sm text-slate-500 font-medium">Select a transit device node to isolate vector coordinates</p>
+              </div>
+            )}
+          </div>
+
+          {/* Expanded Telemetry Stat Dashboard Banner */}
+          {activeFocusVehicle && (
+            <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 grid grid-cols-2 md:grid-cols-4 gap-4 flex-shrink-0 text-left relative z-10 animate-slideUp">
+              <div>
+                <div className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Active Tracker Node</div>
+                <div className="text-base font-mono font-bold text-blue-400 mt-0.5">{activeFocusVehicle.number}</div>
+              </div>
+              <div>
+                <div className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Dispatched Pathway Route</div>
+                <div className="text-base font-bold text-slate-200 mt-0.5 truncate">{activeFocusVehicle.route || "Idle Status"}</div>
+              </div>
+              <div>
+                <div className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Speed Metrics Log</div>
+                <div className="text-base font-bold text-emerald-400 mt-0.5 font-mono">{(activeFocusVehicle.speed ?? 0) > 0 ? `${activeFocusVehicle.speed} KM/H` : "Stationary"}</div>
+              </div>
+              <div>
+                <div className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Roster Driver Assigned</div>
+                <div className="text-base font-bold text-slate-200 mt-0.5 truncate">{activeFocusVehicle.driver || "Unallocated"}</div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

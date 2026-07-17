@@ -1,0 +1,232 @@
+// ============================================================
+// app/pages/fees/collect.tsx
+// EduNexus — Enterprise Payment Collection & Auto-Allocation
+// ============================================================
+import { Form, Link, useActionData, useNavigation, useSubmit } from "react-router";
+import { useState, useEffect } from "react";
+import api from "~/lib/api";
+import type { PaymentMethod } from "~/lib/api";
+
+export async function clientLoader() {
+  // Fetch active students to populate the dropdown
+  const studentsRes = await api.students.list({ per_page: 500, status: 'active' });
+  return {
+    students: studentsRes.data?.data ?? studentsRes.data ?? [],
+  };
+}
+
+export async function clientAction({ request }: { request: Request }) {
+  const form = await request.formData();
+  try {
+    const res = await api.finance.collectPayment({
+      student_id: Number(form.get("student_id")),
+      amount: Number(form.get("amount")),
+      payment_method: form.get("payment_method") as PaymentMethod,
+      reference_number: form.get("reference_number") as string,
+      payer_name: form.get("payer_name") as string,
+      auto_allocate: true, // Triggers our new PaymentAllocationService
+    });
+    
+    // Fetch the receipt URL from the new receipt service
+    const receiptRes = await api.finance.paymentReceipt(res.data.id);
+    
+    return { 
+      success: true, 
+      payment: res.data, 
+      receiptId: receiptRes.data.id 
+    };
+  } catch (e: any) {
+    return { success: false, error: e.message || "Failed to process payment." };
+  }
+}
+
+export default function CollectPaymentPage({ loaderData, actionData }: any) {
+  const { students } = loaderData;
+  const navigation = useNavigation();
+  const isSubmitting = navigation.state === "submitting";
+  
+  // Local state to dynamically show the student's actual outstanding balance
+  const [selectedStudent, setSelectedStudent] = useState<string>("");
+  const [balanceData, setBalanceData] = useState<{ balance: number; overdue: number } | null>(null);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
+
+  // Fetch student balance dynamically when selected
+  useEffect(() => {
+    if (!selectedStudent) {
+      setBalanceData(null);
+      return;
+    }
+    
+    setIsLoadingBalance(true);
+    api.finance.studentSummary(Number(selectedStudent))
+      .then(res => setBalanceData({
+        balance: res.data.balance,
+        overdue: res.data.overdue_balance
+      }))
+      .catch(console.error)
+      .finally(() => setIsLoadingBalance(false));
+  }, [selectedStudent]);
+
+  if (actionData?.success) {
+    return (
+      <div className="max-w-md mx-auto text-center py-12">
+        <div className="text-5xl mb-4">✅</div>
+        <h2 className="text-xl font-bold text-white mb-2">Payment Successfully Allocated</h2>
+        <p className="text-slate-400 mb-6">
+          Transaction <span className="font-mono text-blue-400">{actionData.payment.payment_number}</span> has been processed and allocated to open invoices.
+        </p>
+        <div className="flex gap-3 justify-center">
+          <Link to="/fees" className="px-4 py-2 rounded-lg text-sm bg-slate-700 text-slate-300 hover:bg-slate-600 transition">
+            ← Back to Dashboard
+          </Link>
+          <a 
+            href={`${import.meta.env.VITE_API_URL}/api/v1/finance/receipts/${actionData.receiptId}/pdf`} 
+            target="_blank" 
+            rel="noreferrer" 
+            className="px-4 py-2 rounded-lg text-sm bg-blue-500 text-white hover:bg-blue-600 transition"
+          >
+            🖨 Print Official Receipt
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto">
+      <div className="mb-6">
+        <h1 className="text-xl md:text-2xl font-bold text-white">💳 Receive Payment</h1>
+        <p className="text-slate-400 text-sm mt-1">Record funds received and auto-allocate to open invoices.</p>
+      </div>
+
+      <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow-lg">
+        {actionData?.error && (
+          <div className="m-6 mb-0 bg-red-500/10 border border-red-500/25 text-red-400 text-sm rounded-lg p-4">
+            <strong>Error:</strong> {actionData.error}
+          </div>
+        )}
+
+        <Form method="post" className="p-6 space-y-6">
+          {/* Section 1: Student & Balance */}
+          <div className="space-y-4 pb-6 border-b border-slate-700">
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Select Student</label>
+              <select 
+                name="student_id" 
+                required 
+                value={selectedStudent}
+                onChange={(e) => setSelectedStudent(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-3 text-sm text-slate-200 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+              >
+                <option value="">Search or select student...</option>
+                {students.map((s: any) => (
+                  <option key={s.id} value={s.id}>{s.full_name} ({s.admission_no})</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Dynamic Balance Indicator */}
+            <div className={`transition-all duration-300 overflow-hidden ${selectedStudent ? 'max-h-24 opacity-100' : 'max-h-0 opacity-0'}`}>
+              <div className="bg-slate-900/50 rounded-lg p-4 flex items-center justify-between border border-slate-700/50">
+                <div>
+                  <p className="text-xs text-slate-400 mb-1">Total Outstanding Balance</p>
+                  {isLoadingBalance ? (
+                    <div className="h-6 w-24 bg-slate-700 animate-pulse rounded"></div>
+                  ) : (
+                    <p className="text-lg font-bold text-slate-200">
+                      KES {Number(balanceData?.balance || 0).toLocaleString("en-KE")}
+                    </p>
+                  )}
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-slate-400 mb-1">Overdue Amount</p>
+                  {isLoadingBalance ? (
+                    <div className="h-6 w-24 bg-slate-700 animate-pulse rounded ml-auto"></div>
+                  ) : (
+                    <p className={`text-sm font-bold ${balanceData?.overdue ? 'text-red-400' : 'text-emerald-400'}`}>
+                      KES {Number(balanceData?.overdue || 0).toLocaleString("en-KE")}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Payment Details */}
+          <div className="space-y-4 pb-6 border-b border-slate-700">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Amount Received (KES)</label>
+                <input 
+                  type="number" 
+                  name="amount" 
+                  required 
+                  min="0.01" 
+                  step="0.01"
+                  className="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-3 text-sm text-slate-200 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition" 
+                  placeholder="e.g. 15000" 
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Payment Method</label>
+                <select 
+                  name="payment_method" 
+                  required 
+                  className="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-3 text-sm text-slate-200 outline-none focus:border-blue-500 transition"
+                >
+                  <option value="bank_transfer">Bank Transfer</option>
+                  <option value="bank_deposit">Bank Deposit</option>
+                  <option value="mpesa">M-Pesa</option>
+                  <option value="cash">Cash</option>
+                  <option value="cheque">Cheque</option>
+                  <option value="card">Card</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Transaction Reference / ID</label>
+              <input 
+                type="text" 
+                name="reference_number" 
+                className="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-3 text-sm text-slate-200 outline-none focus:border-blue-500 transition" 
+                placeholder="Bank receipt No, M-Pesa Code, or Cheque No." 
+              />
+              <p className="text-[10px] text-slate-500 mt-1.5">Required for M-Pesa, Bank, and Card payments.</p>
+            </div>
+          </div>
+
+          {/* Section 3: Payer Details (Optional) */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Payer Name (Optional)</label>
+            <input 
+              type="text" 
+              name="payer_name" 
+              className="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-3 text-sm text-slate-200 outline-none focus:border-blue-500 transition" 
+              placeholder="e.g. John Doe (Father)" 
+            />
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <Link to="/fees" className="px-6 py-3 bg-slate-700 text-slate-300 rounded-lg text-sm font-medium hover:bg-slate-600 transition">
+              Cancel
+            </Link>
+            <button 
+              type="submit" 
+              disabled={isSubmitting}
+              className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg text-sm font-bold hover:opacity-90 transition disabled:opacity-50 flex justify-center items-center gap-2"
+            >
+              {isSubmitting ? (
+                <>
+                  <span className="animate-spin text-lg">↻</span> Processing...
+                </>
+              ) : (
+                <>💰 Confirm & Allocate Payment</>
+              )}
+            </button>
+          </div>
+        </Form>
+      </div>
+    </div>
+  );
+}
