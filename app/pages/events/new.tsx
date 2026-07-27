@@ -1,6 +1,10 @@
+// ============================================================
+// app/pages/events/new.tsx
+// ============================================================
+
 import { Form, Link, redirect } from "react-router";
 import type { Route } from "./+types/new";
-import api, { type SchoolEvent } from "~/lib/api";
+import { api, type SchoolEvent } from "~/lib/api";
 
 export async function clientAction({ request }: Route.ActionArgs) {
   if (request.method !== "POST") {
@@ -31,24 +35,24 @@ export default function NewEventPage({ actionData }: Route.ComponentProps) {
   const error = actionData?.error;
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-white">Create New Event</h1>
-          <p className="text-slate-400 text-sm mt-1">Add a new school event to the calendar</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white">Create New Event</h1>
+          <p className="text-slate-400 text-xs sm:text-sm mt-1">Add a new school event to the calendar</p>
         </div>
-        <Link to="/events" className="text-slate-400 hover:text-white text-sm">
+        <Link to="/events" className="text-slate-400 hover:text-white text-xs sm:text-sm">
           ← Back to Events
         </Link>
       </div>
 
       {error && (
-        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">
+        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
           {error}
         </div>
       )}
 
-      <Form method="post" className="bg-slate-800 border border-slate-700 rounded-xl p-8">
+      <Form method="post" className="bg-slate-800 border border-slate-700 rounded-xl p-4 sm:p-8">
         <div className="space-y-6">
           {/* Event Title */}
           <div>
@@ -60,7 +64,7 @@ export default function NewEventPage({ actionData }: Route.ComponentProps) {
               id="title"
               name="title"
               required
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm sm:text-base text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="e.g., Year-End Celebration, Staff Training"
             />
           </div>
@@ -74,7 +78,7 @@ export default function NewEventPage({ actionData }: Route.ComponentProps) {
               id="type"
               name="type"
               required
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">Select Type</option>
               <option value="event">Event</option>
@@ -94,13 +98,13 @@ export default function NewEventPage({ actionData }: Route.ComponentProps) {
               id="description"
               name="description"
               rows={4}
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm sm:text-base text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Event details and description..."
             />
           </div>
 
           {/* Dates Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
               <label htmlFor="event_date" className="block text-sm font-medium text-slate-300 mb-2">
                 Start Date <span className="text-red-500">*</span>
@@ -110,7 +114,7 @@ export default function NewEventPage({ actionData }: Route.ComponentProps) {
                 id="event_date"
                 name="event_date"
                 required
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
@@ -122,7 +126,7 @@ export default function NewEventPage({ actionData }: Route.ComponentProps) {
                 type="date"
                 id="end_date"
                 name="end_date"
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
@@ -136,36 +140,36 @@ export default function NewEventPage({ actionData }: Route.ComponentProps) {
               type="text"
               id="venue"
               name="venue"
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm sm:text-base text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="e.g., Main Hall, Gymnasium, Auditorium"
             />
           </div>
 
           {/* Notifications */}
           <div className="border-t border-slate-700 pt-6">
-            <label className="flex items-center gap-3 cursor-pointer">
+            <label className="flex items-start sm:items-center gap-3 cursor-pointer">
               <input
                 type="checkbox"
                 name="notify_all"
-                className="w-4 h-4 bg-slate-900 border border-slate-700 rounded focus:ring-2 focus:ring-blue-500"
+                className="w-4 h-4 bg-slate-900 border border-slate-700 rounded focus:ring-2 focus:ring-blue-500 mt-0.5 sm:mt-0 shrink-0"
               />
-              <span className="text-slate-300 font-medium">Notify all users about this event</span>
+              <span className="text-slate-300 text-sm sm:text-base font-medium">Notify all users about this event</span>
             </label>
-            <p className="text-slate-500 text-sm mt-2">An email notification will be sent to all staff and parents</p>
+            <p className="text-slate-500 text-xs sm:text-sm mt-2">An email notification will be sent to all staff and parents</p>
           </div>
         </div>
 
         {/* Buttons */}
-        <div className="flex gap-4 mt-8">
+        <div className="flex flex-col sm:flex-row gap-4 mt-8">
           <button
             type="submit"
-            className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition"
+            className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition text-center"
           >
             Create Event
           </button>
           <Link
             to="/events"
-            className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg font-medium transition"
+            className="w-full sm:w-auto px-6 py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg font-medium transition text-center"
           >
             Cancel
           </Link>

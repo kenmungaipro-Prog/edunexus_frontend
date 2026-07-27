@@ -3,7 +3,7 @@
 // ============================================================
 import { Link, useNavigation, redirect, Form } from "react-router";
 import type { Route } from "./+types/edit";
-import api, { type Student, type ClassRoom, type UpdateStudentPayload } from "~/lib/api";
+import { api, type Student, type ClassRoom, type UpdateStudentPayload } from "~/lib/api";
 
 // ── Loader ──────────────────────────────────────────────────
 export async function clientLoader({ params }: Route.LoaderArgs) {
@@ -13,7 +13,6 @@ export async function clientLoader({ params }: Route.LoaderArgs) {
   ]);
   return {
     student: studentRes.data,
-    // FIX: classes.list returns ApiResponse<ClassRoom[]>, .data is the array
     classes: classesRes.data as ClassRoom[],
   };
 }
@@ -25,8 +24,6 @@ export async function clientAction({ request, params }: Route.ActionArgs) {
   }
 
   const form = await request.formData();
-
-  // Build payload, omitting blank strings so we don't accidentally clear optional fields
   const raw = Object.fromEntries(form.entries()) as Record<string, string>;
   const payload: UpdateStudentPayload = {};
 
@@ -35,7 +32,6 @@ export async function clientAction({ request, params }: Route.ActionArgs) {
     (payload as Record<string, unknown>)[k] = v;
   }
 
-  // Coerce numeric fields
   if (payload.class_id) payload.class_id = Number(payload.class_id) as unknown as typeof payload.class_id;
 
   try {
@@ -52,11 +48,11 @@ export async function clientAction({ request, params }: Route.ActionArgs) {
 
 // ── Shared styles ─────────────────────────────────────────────
 const s = {
-  page: { fontFamily: "'Sora', sans-serif", color: "#e2e8f0", maxWidth: "780px" } as React.CSSProperties,
-  breadcrumb: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "24px", fontSize: "13px" } as React.CSSProperties,
+  page: { fontFamily: "'Sora', sans-serif", color: "#e2e8f0", maxWidth: "780px", margin: "0 auto", boxSizing: "border-box" } as React.CSSProperties,
+  breadcrumb: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "24px", fontSize: "13px", flexWrap: "wrap" as const } as React.CSSProperties,
   heading: { fontSize: "22px", fontWeight: 700, marginBottom: "6px", letterSpacing: "-0.3px" } as React.CSSProperties,
   subheading: { fontSize: "13px", color: "#6b7a99", marginBottom: 0 } as React.CSSProperties,
-  card: { background: "#0f1424", border: "1px solid #1e2640", borderRadius: "14px", padding: "28px", marginBottom: "16px" } as React.CSSProperties,
+  card: { background: "#0f1424", border: "1px solid #1e2640", borderRadius: "14px", padding: "28px", marginBottom: "16px", boxSizing: "border-box" } as React.CSSProperties,
   sectionTitle: { fontSize: "11px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: "#4f8ef7", marginBottom: "18px", display: "flex", alignItems: "center", gap: "8px" } as React.CSSProperties,
   grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" } as React.CSSProperties,
   label: { display: "block", fontSize: "11px", fontWeight: 600, color: "#6b7a99", marginBottom: "6px", letterSpacing: "0.05em" } as React.CSSProperties,
@@ -80,7 +76,6 @@ const s = {
   btnSubmit: { flex: 2, padding: "11px 24px", background: "linear-gradient(135deg, #4f8ef7, #6366f1)", border: "none", borderRadius: "9px", color: "#fff", fontSize: "13px", fontWeight: 700, cursor: "pointer", fontFamily: "'Sora', sans-serif", transition: "opacity .15s", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" } as React.CSSProperties,
 } as const;
 
-// ── Field helpers ────────────────────────────────────────────
 function focusStyle(e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
   e.currentTarget.style.borderColor = "#4f8ef7";
 }
@@ -100,27 +95,21 @@ function Field({ label, error, children }: { label: string; error?: string; chil
 
 function SectionIcon({ emoji }: { emoji: string }) {
   return (
-    <span style={{ width: "20px", height: "20px", borderRadius: "5px", background: "rgba(79,142,247,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px" }}>
+    <span style={{ width: "20px", height: "20px", borderRadius: "5px", background: "rgba(79,142,247,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", flexShrink: 0 }}>
       {emoji}
     </span>
   );
 }
 
-/**
- * Safely converts any value to a string suitable for a controlled input.
- * Strips the time portion from ISO datetime strings so date inputs work correctly.
- */
 function toInputStr(v: unknown): string {
   if (v == null) return "";
-  const s = String(v);
-  if (s === "null" || s === "undefined") return "";
-  // Strip time portion from ISO dates: "2010-05-15T00:00:00.000Z" → "2010-05-15"
-  const isoDate = s.match(/^(\d{4}-\d{2}-\d{2})/);
+  const str = String(v);
+  if (str === "null" || str === "undefined") return "";
+  const isoDate = str.match(/^(\d{4}-\d{2}-\d{2})/);
   if (isoDate) return isoDate[1];
-  return s;
+  return str;
 }
 
-// ── Component ────────────────────────────────────────────────
 export default function StudentEditPage({ loaderData, actionData }: Route.ComponentProps) {
   const { student, classes } = loaderData as { student: Student; classes: ClassRoom[] };
   const errors      = (actionData as { errors?: Record<string, string[]> })?.errors ?? {};
@@ -129,22 +118,22 @@ export default function StudentEditPage({ loaderData, actionData }: Route.Compon
   const submitting  = navigation.state === "submitting";
 
   return (
-    <div style={s.page}>
+    <div style={s.page} className="responsive-container">
       {/* Breadcrumb */}
       <div style={s.breadcrumb}>
         <Link to="/students" style={{ color: "#4f8ef7", textDecoration: "none", fontWeight: 600 }}>Students</Link>
         <span style={{ color: "#2a3350" }}>›</span>
-        <Link to={`/students/${student.id}`} style={{ color: "#4f8ef7", textDecoration: "none", fontWeight: 600 }}>{student.full_name}</Link>
+        <Link to={`/students/${student.id}`} style={{ color: "#4f8ef7", textDecoration: "none", fontWeight: 600, wordBreak: "break-all" }}>{student.full_name}</Link>
         <span style={{ color: "#2a3350" }}>›</span>
         <span style={{ color: "#6b7a99" }}>Edit</span>
       </div>
 
       {/* Header with avatar */}
-      <div style={{ display: "flex", alignItems: "center", gap: "14px", marginBottom: "28px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "14px", marginBottom: "28px", flexWrap: "wrap" }}>
         <div style={{ width: "44px", height: "44px", borderRadius: "50%", background: "linear-gradient(135deg, #4f8ef7, #6366f1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "16px", fontWeight: 700, flexShrink: 0 }}>
           {student.full_name.split(" ").map((n) => n[0]).join("").substring(0, 2).toUpperCase()}
         </div>
-        <div>
+        <div style={{ minWidth: 0, flex: 1 }}>
           <h1 style={s.heading}>Edit Student</h1>
           <p style={s.subheading}>{student.admission_no} · {student.class_room?.name ?? "—"}</p>
         </div>
@@ -165,11 +154,10 @@ export default function StudentEditPage({ loaderData, actionData }: Route.Compon
       )}
 
       <Form method="post">
-
-        {/* ── Personal Information ── */}
-        <div style={s.card}>
+        {/* Personal Information */}
+        <div style={s.card} className="responsive-card">
           <div style={s.sectionTitle}><SectionIcon emoji="👤" /> Personal Information</div>
-          <div style={s.grid2}>
+          <div style={s.grid2} className="responsive-grid-2">
             <Field label="First Name" error={errors.first_name?.[0]}>
               <input name="first_name" defaultValue={toInputStr(student.first_name)} required style={{ ...s.input, ...(errors.first_name ? s.inputError : {}) }} onFocus={focusStyle} onBlur={blurStyle} />
             </Field>
@@ -177,7 +165,6 @@ export default function StudentEditPage({ loaderData, actionData }: Route.Compon
               <input name="last_name" defaultValue={toInputStr(student.last_name)} required style={{ ...s.input, ...(errors.last_name ? s.inputError : {}) }} onFocus={focusStyle} onBlur={blurStyle} />
             </Field>
             <Field label="Date of Birth" error={errors.date_of_birth?.[0]}>
-              {/* FIX: toInputStr strips the time portion so type="date" gets "YYYY-MM-DD" */}
               <input name="date_of_birth" type="date" defaultValue={toInputStr(student.date_of_birth)} style={{ ...s.input, ...(errors.date_of_birth ? s.inputError : {}) }} onFocus={focusStyle} onBlur={blurStyle} />
             </Field>
             <Field label="Admission Date" error={errors.admission_date?.[0]}>
@@ -213,10 +200,10 @@ export default function StudentEditPage({ loaderData, actionData }: Route.Compon
           </div>
         </div>
 
-        {/* ── Academic Details ── */}
-        <div style={s.card}>
+        {/* Academic Details */}
+        <div style={s.card} className="responsive-card">
           <div style={s.sectionTitle}><SectionIcon emoji="🎓" /> Academic Details</div>
-          <div style={s.grid2}>
+          <div style={s.grid2} className="responsive-grid-2">
             <Field label="Class / Section" error={errors.class_id?.[0]}>
               <select name="class_id" defaultValue={toInputStr(student.class_id)} style={{ ...s.select, ...(errors.class_id ? s.inputError : {}) }} onFocus={focusStyle} onBlur={blurStyle}>
                 {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -231,12 +218,11 @@ export default function StudentEditPage({ loaderData, actionData }: Route.Compon
             </Field>
           </div>
 
-          {/* Read-only identifiers */}
-          <div style={{ marginTop: "20px", background: "#0a0e1a", border: "1px solid #1e2640", borderRadius: "9px", padding: "14px 16px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+          <div className="responsive-grid-2" style={{ marginTop: "20px", background: "#0a0e1a", border: "1px solid #1e2640", borderRadius: "9px", padding: "14px 16px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
             {[["Admission No", student.admission_no], ["Roll Number", student.roll_number]].map(([label, val]) => (
               <div key={label}>
                 <div style={{ fontSize: "10px", color: "#4b5a7a", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "3px" }}>{label}</div>
-                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "13px", color: "#a0aec0" }}>{val}</div>
+                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "13px", color: "#a0aec0", wordBreak: "break-all" }}>{val}</div>
               </div>
             ))}
             <div style={{ gridColumn: "1/-1" }}>
@@ -245,8 +231,8 @@ export default function StudentEditPage({ loaderData, actionData }: Route.Compon
           </div>
         </div>
 
-        {/* ── Actions ── */}
-        <div style={s.actions}>
+        {/* Actions */}
+        <div style={s.actions} className="responsive-actions">
           <Link to={`/students/${student.id}`} style={s.btnCancel}>Cancel</Link>
           <button type="submit" disabled={submitting} style={{ ...s.btnSubmit, opacity: submitting ? 0.7 : 1 }}>
             {submitting ? (
@@ -259,7 +245,16 @@ export default function StudentEditPage({ loaderData, actionData }: Route.Compon
         </div>
       </Form>
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @media (max-width: 768px) {
+          .responsive-container { padding: 12px !important; }
+          .responsive-card { padding: 16px !important; }
+          .responsive-grid-2 { grid-template-columns: 1fr !important; }
+          .responsive-actions { flex-direction: column !important; }
+          .responsive-actions > * { width: 100% !important; }
+        }
+      `}</style>
     </div>
   );
 }

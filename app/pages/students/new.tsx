@@ -2,37 +2,30 @@
 // app/pages/students/new.tsx
 // ============================================================
 import { useState } from "react";
-import { Link, useNavigation, redirect,Form } from "react-router";
+import { Link, useNavigation, redirect, Form } from "react-router";
 import type { Route } from "./+types/new";
-import api, { type ClassRoom, type CreateStudentPayload } from "~/lib/api";
+import { api, type ClassRoom, type CreateStudentPayload } from "~/lib/api";
 
-// ── Loader ──────────────────────────────────────────────────
 export async function clientLoader() {
   const res = await api.classes.list({ per_page: 100 });
-  // FIX: classes.list returns ApiResponse<ClassRoom[]>, .data is the array
   return { classes: res.data as ClassRoom[] };
 }
 
-// ── Action ──────────────────────────────────────────────────
 export async function clientAction({ request }: Route.ActionArgs) {
   const form = await request.formData();
-
-  // Build payload, omitting empty strings so Laravel validation stays clean
   const raw = Object.fromEntries(form.entries()) as Record<string, string>;
   const payload: Partial<CreateStudentPayload> = {};
 
   for (const [k, v] of Object.entries(raw)) {
-    if (v === "" || v === undefined) continue; // skip blank optionals
+    if (v === "" || v === undefined) continue;
     (payload as Record<string, unknown>)[k] = v;
   }
 
-  // Coerce numeric fields
   if (payload.class_id)   payload.class_id   = Number(payload.class_id)   as unknown as typeof payload.class_id;
   if (payload.parent_id)  payload.parent_id  = Number(payload.parent_id)  as unknown as typeof payload.parent_id;
 
   try {
     const res = await api.students.create(payload as CreateStudentPayload);
-    // Redirect to the new student's profile
     const { redirect } = await import("react-router");
     return redirect(`/students/${res.data.id}`);
   } catch (e: unknown) {
@@ -44,13 +37,12 @@ export async function clientAction({ request }: Route.ActionArgs) {
   }
 }
 
-// ── Shared styles ─────────────────────────────────────────────
 const s = {
-  page: { fontFamily: "'Sora', sans-serif", color: "#e2e8f0", maxWidth: "780px" } as React.CSSProperties,
-  breadcrumb: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "24px", fontSize: "13px" } as React.CSSProperties,
+  page: { fontFamily: "'Sora', sans-serif", color: "#e2e8f0", maxWidth: "780px", margin: "0 auto", boxSizing: "border-box" } as React.CSSProperties,
+  breadcrumb: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "24px", fontSize: "13px", flexWrap: "wrap" as const } as React.CSSProperties,
   heading: { fontSize: "22px", fontWeight: 700, marginBottom: "6px", letterSpacing: "-0.3px" } as React.CSSProperties,
   subheading: { fontSize: "13px", color: "#6b7a99", marginBottom: "28px" } as React.CSSProperties,
-  card: { background: "#0f1424", border: "1px solid #1e2640", borderRadius: "14px", padding: "28px", marginBottom: "16px" } as React.CSSProperties,
+  card: { background: "#0f1424", border: "1px solid #1e2640", borderRadius: "14px", padding: "28px", marginBottom: "16px", boxSizing: "border-box" } as React.CSSProperties,
   sectionTitle: { fontSize: "11px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: "#4f8ef7", marginBottom: "18px", display: "flex", alignItems: "center", gap: "8px" } as React.CSSProperties,
   grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" } as React.CSSProperties,
   grid3: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px" } as React.CSSProperties,
@@ -75,7 +67,6 @@ const s = {
   btnSubmit: { flex: 2, padding: "11px 24px", background: "linear-gradient(135deg, #4f8ef7, #6366f1)", border: "none", borderRadius: "9px", color: "#fff", fontSize: "13px", fontWeight: 700, cursor: "pointer", fontFamily: "'Sora', sans-serif", transition: "opacity .15s", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" } as React.CSSProperties,
 } as const;
 
-// ── Helpers ──────────────────────────────────────────────────
 function focusStyle(e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
   e.currentTarget.style.borderColor = "#4f8ef7";
 }
@@ -99,13 +90,12 @@ function Field({ label, required, error, hint, children }: { label: string; requ
 
 function SectionIcon({ emoji }: { emoji: string }) {
   return (
-    <span style={{ width: "20px", height: "20px", borderRadius: "5px", background: "rgba(79,142,247,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px" }}>
+    <span style={{ width: "20px", height: "20px", borderRadius: "5px", background: "rgba(79,142,247,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", flexShrink: 0 }}>
       {emoji}
     </span>
   );
 }
 
-// ── Component ────────────────────────────────────────────────
 export default function NewStudentPage({ loaderData, actionData }: Route.ComponentProps) {
   const { classes } = loaderData as { classes: ClassRoom[] };
   const errors      = (actionData as { errors?: Record<string, string[]> })?.errors ?? {};
@@ -114,7 +104,7 @@ export default function NewStudentPage({ loaderData, actionData }: Route.Compone
   const submitting  = navigation.state === "submitting";
 
   return (
-    <div style={s.page}>
+    <div style={s.page} className="responsive-container">
       {/* Breadcrumb */}
       <div style={s.breadcrumb}>
         <Link to="/students" style={{ color: "#4f8ef7", textDecoration: "none", fontWeight: 600 }}>Students</Link>
@@ -142,10 +132,10 @@ export default function NewStudentPage({ loaderData, actionData }: Route.Compone
       )}
 
       <Form method="post">
-        {/* ── Personal Information ── */}
-        <div style={s.card}>
+        {/* Personal Information */}
+        <div style={s.card} className="responsive-card">
           <div style={s.sectionTitle}><SectionIcon emoji="👤" /> Personal Information</div>
-          <div style={s.grid2}>
+          <div style={s.grid2} className="responsive-grid-2">
             <Field label="First Name" required error={errors.first_name?.[0]}>
               <input name="first_name" required placeholder="Amara" style={{ ...s.input, ...(errors.first_name ? s.inputError : {}) }} onFocus={focusStyle} onBlur={blurStyle} />
             </Field>
@@ -173,7 +163,7 @@ export default function NewStudentPage({ loaderData, actionData }: Route.Compone
             </Field>
           </div>
 
-          <div style={{ ...s.grid2, marginTop: "16px" }}>
+          <div style={{ ...s.grid2, marginTop: "16px" }} className="responsive-grid-2">
             <Field label="Category" error={errors.category?.[0]}>
               <select name="category" defaultValue="" style={s.select} onFocus={focusStyle} onBlur={blurStyle}>
                 <option value="">Not specified</option>
@@ -192,10 +182,10 @@ export default function NewStudentPage({ loaderData, actionData }: Route.Compone
           </div>
         </div>
 
-        {/* ── Academic Details ── */}
-        <div style={s.card}>
+        {/* Academic Details */}
+        <div style={s.card} className="responsive-card">
           <div style={s.sectionTitle}><SectionIcon emoji="🎓" /> Academic Details</div>
-          <div style={{ maxWidth: "340px" }}>
+          <div style={{ maxWidth: "340px" }} className="responsive-full-width">
             <Field label="Class / Section" required error={errors.class_id?.[0]}>
               <select name="class_id" required defaultValue="" style={{ ...s.select, ...(errors.class_id ? s.inputError : {}) }} onFocus={focusStyle} onBlur={blurStyle}>
                 <option value="" disabled>Select a class…</option>
@@ -205,15 +195,15 @@ export default function NewStudentPage({ loaderData, actionData }: Route.Compone
           </div>
         </div>
 
-        {/* ── Parent / Guardian ── */}
-        <div style={s.card}>
+        {/* Parent / Guardian */}
+        <div style={s.card} className="responsive-card">
           <div style={s.sectionTitle}><SectionIcon emoji="👨‍👩‍👧" /> Parent / Guardian</div>
 
           <div style={{ background: "rgba(79,142,247,0.04)", border: "1px solid rgba(79,142,247,0.12)", borderRadius: "9px", padding: "12px 14px", marginBottom: "18px", fontSize: "12px", color: "#6b7a99" }}>
             💡 If the parent already has an account, enter their email below and the system will link them automatically. A temporary password <strong style={{ color: "#a0aec0" }}>Parent@123</strong> will be set for new parent accounts.
           </div>
 
-          <div style={s.grid3}>
+          <div style={s.grid3} className="responsive-grid-3">
             <Field label="Parent Name" error={errors.parent_name?.[0]} hint="Required only when creating a new parent account.">
               <input name="parent_name" placeholder="John Omondi" style={{ ...s.input, ...(errors.parent_name ? s.inputError : {}) }} onFocus={focusStyle} onBlur={blurStyle} />
             </Field>
@@ -226,8 +216,8 @@ export default function NewStudentPage({ loaderData, actionData }: Route.Compone
           </div>
         </div>
 
-        {/* ── Actions ── */}
-        <div style={s.actions}>
+        {/* Actions */}
+        <div style={s.actions} className="responsive-actions">
           <Link to="/students" style={s.btnCancel}>Cancel</Link>
           <button type="submit" disabled={submitting} style={{ ...s.btnSubmit, opacity: submitting ? 0.7 : 1 }}>
             {submitting ? (
@@ -240,7 +230,18 @@ export default function NewStudentPage({ loaderData, actionData }: Route.Compone
         </div>
       </Form>
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @media (max-width: 768px) {
+          .responsive-container { padding: 12px !important; }
+          .responsive-card { padding: 16px !important; }
+          .responsive-grid-2 { grid-template-columns: 1fr !important; }
+          .responsive-grid-3 { grid-template-columns: 1fr !important; }
+          .responsive-full-width { max-width: 100% !important; }
+          .responsive-actions { flex-direction: column !important; }
+          .responsive-actions > * { width: 100% !important; }
+        }
+      `}</style>
     </div>
   );
 }

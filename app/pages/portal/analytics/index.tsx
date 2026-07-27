@@ -2,7 +2,7 @@
 // app/pages/portal/analytics/index.tsx
 // ============================================================
 import { Link } from "react-router";
-import api from "~/lib/api";
+import { api } from "~/lib/api";
 
 export async function clientLoader() {
   const response = await api.portal.analytics();
@@ -33,9 +33,9 @@ export default function ParentAnalyticsPage({ loaderData }: { loaderData: Loader
   const { analytics } = loaderData;
 
   return (
-    <div className="min-h-screen" style={{ color: "#e8edf8", fontFamily: "'Sora', sans-serif" }}>
+    <div className="min-h-screen px-3 sm:px-6 py-4" style={{ color: "#e8edf8", fontFamily: "'Sora', sans-serif", boxSizing: "border-box", maxWidth: "1200px", margin: "0 auto" }}>
       <div className="mb-6">
-        <h1 className="text-xl font-bold mb-1 text-slate-100 flex items-center gap-2">
+        <h1 className="text-xl sm:text-2xl font-bold mb-1 text-slate-100 flex items-center gap-2 flex-wrap">
           <span className="text-blue-400">📊</span> Parent Analytics
         </h1>
         <p className="text-slate-400 text-sm">
@@ -43,7 +43,7 @@ export default function ParentAnalyticsPage({ loaderData }: { loaderData: Loader
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-6">
         <div className="rounded-2xl border border-slate-700 bg-slate-800 p-5">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500 mb-3">Children</p>
           <p className="text-3xl font-semibold text-white">{analytics.total_children}</p>
@@ -54,14 +54,14 @@ export default function ParentAnalyticsPage({ loaderData }: { loaderData: Loader
           <p className="text-3xl font-semibold text-amber-400">{analytics.outstanding_children}</p>
           <p className="text-slate-400 text-sm mt-2">Children with outstanding fee balances</p>
         </div>
-        <div className="rounded-2xl border border-slate-700 bg-slate-800 p-5">
+        <div className="rounded-2xl border border-slate-700 bg-slate-800 p-5 sm:col-span-2 md:col-span-1">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500 mb-3">Total Balance</p>
-          <p className="text-3xl font-semibold text-emerald-400">{formatKES(analytics.total_balance)}</p>
+          <p className="text-3xl font-semibold text-emerald-400 break-words">{formatKES(analytics.total_balance)}</p>
           <p className="text-slate-400 text-sm mt-2">Total amount due across all children</p>
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-700 bg-slate-800 p-5">
+      <div className="rounded-2xl border border-slate-700 bg-slate-800 p-4 sm:p-5">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
           <div>
             <h2 className="text-lg font-semibold text-slate-100">Children summary</h2>
@@ -69,14 +69,14 @@ export default function ParentAnalyticsPage({ loaderData }: { loaderData: Loader
           </div>
           <Link
             to="/portal/payments"
-            className="inline-flex items-center justify-center rounded-full bg-blue-500 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-600 transition"
+            className="inline-flex items-center justify-center rounded-full bg-blue-500 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-600 transition w-full sm:w-auto text-center"
           >
             Go to Payments
           </Link>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
+        <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+          <table className="min-w-[600px] w-full border-separate border-spacing-0 text-left text-sm">
             <thead>
               <tr className="border-b border-slate-700 text-slate-500">
                 <th className="px-4 py-3">Child</th>
@@ -98,7 +98,7 @@ export default function ParentAnalyticsPage({ loaderData }: { loaderData: Loader
                     <td className="px-4 py-4 text-slate-100 font-semibold">{child.full_name}</td>
                     <td className="px-4 py-4 text-slate-400">{child.admission_no}</td>
                     <td className="px-4 py-4 text-slate-400">{child.class_name ?? "—"}</td>
-                    <td className="px-4 py-4 text-right font-semibold" style={{ color: child.balance > 0 ? "#fbbf24" : "#34d399" }}>
+                    <td className="px-4 py-4 text-right font-semibold whitespace-nowrap" style={{ color: child.balance > 0 ? "#fbbf24" : "#34d399" }}>
                       {formatKES(child.balance)}
                     </td>
                   </tr>

@@ -20,8 +20,8 @@ interface LiveVehicle {
 
 export async function clientLoader() {
   try {
-    const res = await api.get<ApiResponse<LiveVehicle[]>>("/transport/live");
-    return { initialVehicles: res.data.data };
+    const res = await api.transport.live();
+    return { initialVehicles: res.data };
   } catch (error) {
     console.error("Failed fetching dynamic vehicle feeds:", error);
     return { initialVehicles: [] };
@@ -31,7 +31,6 @@ export async function clientLoader() {
 export default function FleetLiveMapPage() {
   const { initialVehicles } = useLoaderData<typeof clientLoader>();
   
-  // Maintain local state for vehicles to update them via WebSockets
   const [vehicles, setVehicles] = useState<LiveVehicle[]>(initialVehicles);
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
 
@@ -89,25 +88,24 @@ export default function FleetLiveMapPage() {
     };
   }, []);
 
-  // Derived state for the active vehicle dashboard
   const activeFocusVehicle = vehicles.find(v => v.vehicle_id === selectedVehicleId);
 
   return (
-    <div className="p-6 space-y-6 flex flex-col h-[calc(100vh-110px)]">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 flex flex-col h-auto lg:h-[calc(100vh-110px)]">
       {/* Header section layout elements */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 flex-shrink-0 text-left">
         <div>
           <div className="flex items-center gap-3">
-            <Link to="/transport" className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-lg transition border border-slate-700">
+            <Link to="/transport" className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-lg transition border border-slate-700 shrink-0">
               ⬅️
             </Link>
-            <h1 className="text-2xl font-bold text-white tracking-tight">📡 Real-Time Fleet Telemetry</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">📡 Real-Time Fleet Telemetry</h1>
           </div>
-          <p className="text-slate-400 text-sm mt-1 ml-11">
+          <p className="text-slate-400 text-xs sm:text-sm mt-1 sm:ml-11">
             Monitoring active school transit vehicles and transit pilot telemetry tracks.
           </p>
         </div>
-        <div className="bg-slate-800 px-4 py-2 rounded-xl border border-slate-700 flex items-center gap-3 font-medium text-xs text-slate-300">
+        <div className="bg-slate-800 px-4 py-2 rounded-xl border border-slate-700 flex items-center gap-3 font-medium text-xs text-slate-300 self-start md:self-auto">
           <span className="flex h-2 w-2 relative">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
@@ -119,8 +117,8 @@ export default function FleetLiveMapPage() {
       {/* Main Grid Interactive Module Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0">
         {/* Left Side Roster Selection Deck */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col min-h-0 overflow-hidden text-left">
-          <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3 flex-shrink-0">
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col h-[300px] lg:h-auto min-h-0 overflow-hidden text-left">
+          <h2 className="text-xs sm:text-sm font-bold text-slate-400 uppercase tracking-wider mb-3 flex-shrink-0">
             Active Vehicles ({vehicles.length})
           </h2>
           <div className="space-y-2 overflow-y-auto flex-1 pr-1 custom-scrollbar">
@@ -140,7 +138,7 @@ export default function FleetLiveMapPage() {
                         : "bg-slate-800/40 border-slate-800 text-slate-300 hover:bg-slate-800 hover:border-slate-700"
                     }`}
                   >
-                    <div className="flex justify-between items-start">
+                    <div className="flex justify-between items-start gap-2">
                       <div>
                         <div className="font-mono font-bold text-white text-sm">{vehicle.number}</div>
                         <div className="text-xs text-slate-400 mt-0.5 truncate max-w-[180px]">
@@ -150,7 +148,7 @@ export default function FleetLiveMapPage() {
                           Driver: {vehicle.driver || "Unallocated"}
                         </div>
                       </div>
-                      <div className="flex flex-col items-end gap-1.5">
+                      <div className="flex flex-col items-end gap-1.5 shrink-0">
                         {hasSignal ? (
                           <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                             isMoving ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
@@ -179,7 +177,7 @@ export default function FleetLiveMapPage() {
         </div>
 
         {/* Center/Right Map Simulation Projection Frame */}
-        <div className="lg:col-span-2 bg-slate-950 border border-slate-800 rounded-xl relative overflow-hidden flex flex-col justify-between p-6">
+        <div className="lg:col-span-2 bg-slate-950 border border-slate-800 rounded-xl relative overflow-hidden flex flex-col justify-between p-4 sm:p-6 min-h-[400px] lg:min-h-0">
           <div className="absolute inset-0 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px] opacity-40"></div>
           
           <div className="relative z-10 flex justify-between items-start pointer-events-none text-left">
@@ -194,9 +192,9 @@ export default function FleetLiveMapPage() {
           </div>
 
           {/* Coordinate Anchor Pinpoint Viewpoint Frame */}
-          <div className="my-auto py-12 flex flex-col items-center justify-center relative z-10">
+          <div className="my-auto py-8 sm:py-12 flex flex-col items-center justify-center relative z-10">
             {activeFocusVehicle ? (
-              <div className="bg-slate-900/90 border border-slate-700/60 p-6 rounded-2xl shadow-2xl text-center space-y-3 border-t-2 border-t-blue-500 max-w-xs animate-fadeIn">
+              <div className="bg-slate-900/90 border border-slate-700/60 p-5 sm:p-6 rounded-2xl shadow-2xl text-center space-y-3 border-t-2 border-t-blue-500 max-w-xs animate-fadeIn w-full">
                 <div className="h-12 w-12 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-xl mx-auto animate-bounce">
                   🚌
                 </div>
@@ -216,7 +214,7 @@ export default function FleetLiveMapPage() {
                 </div>
               </div>
             ) : (
-              <div className="text-center space-y-2">
+              <div className="text-center space-y-2 px-4">
                 <div className="text-4xl opacity-30">🗺️</div>
                 <p className="text-sm text-slate-500 font-medium">Select a transit device node to isolate vector coordinates</p>
               </div>
@@ -227,20 +225,20 @@ export default function FleetLiveMapPage() {
           {activeFocusVehicle && (
             <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 grid grid-cols-2 md:grid-cols-4 gap-4 flex-shrink-0 text-left relative z-10 animate-slideUp">
               <div>
-                <div className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Active Tracker Node</div>
-                <div className="text-base font-mono font-bold text-blue-400 mt-0.5">{activeFocusVehicle.number}</div>
+                <div className="text-[10px] sm:text-xs text-slate-500 uppercase tracking-wider font-semibold">Active Tracker Node</div>
+                <div className="text-sm sm:text-base font-mono font-bold text-blue-400 mt-0.5">{activeFocusVehicle.number}</div>
               </div>
               <div>
-                <div className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Dispatched Pathway Route</div>
-                <div className="text-base font-bold text-slate-200 mt-0.5 truncate">{activeFocusVehicle.route || "Idle Status"}</div>
+                <div className="text-[10px] sm:text-xs text-slate-500 uppercase tracking-wider font-semibold">Pathway Route</div>
+                <div className="text-sm sm:text-base font-bold text-slate-200 mt-0.5 truncate">{activeFocusVehicle.route || "Idle Status"}</div>
               </div>
               <div>
-                <div className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Speed Metrics Log</div>
-                <div className="text-base font-bold text-emerald-400 mt-0.5 font-mono">{(activeFocusVehicle.speed ?? 0) > 0 ? `${activeFocusVehicle.speed} KM/H` : "Stationary"}</div>
+                <div className="text-[10px] sm:text-xs text-slate-500 uppercase tracking-wider font-semibold">Speed Metrics</div>
+                <div className="text-sm sm:text-base font-bold text-emerald-400 mt-0.5 font-mono">{(activeFocusVehicle.speed ?? 0) > 0 ? `${activeFocusVehicle.speed} KM/H` : "Stationary"}</div>
               </div>
               <div>
-                <div className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Roster Driver Assigned</div>
-                <div className="text-base font-bold text-slate-200 mt-0.5 truncate">{activeFocusVehicle.driver || "Unallocated"}</div>
+                <div className="text-[10px] sm:text-xs text-slate-500 uppercase tracking-wider font-semibold">Driver Assigned</div>
+                <div className="text-sm sm:text-base font-bold text-slate-200 mt-0.5 truncate">{activeFocusVehicle.driver || "Unallocated"}</div>
               </div>
             </div>
           )}

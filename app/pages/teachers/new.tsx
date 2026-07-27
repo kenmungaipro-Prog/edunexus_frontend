@@ -1,12 +1,11 @@
 // ============================================================
-// app/pages/teachers/new.tsx  — Database-driven form
+// app/pages/teachers/new.tsx  — Mobile Responsive
 // ============================================================
 import { useState, useEffect } from "react";
 import { Link, Form, redirect, useNavigation, useActionData } from "react-router";
 import type { Route } from "./+types/new";
 import { api } from "~/lib/api";
 
-// ── Types ────────────────────────────────────────────────────
 interface ActionErrors {
   name?:     string;
   email?:    string;
@@ -26,7 +25,6 @@ interface ClassRoom {
   name: string;
 }
 
-// ── Action ───────────────────────────────────────────────────
 export async function clientAction({ request }: Route.ClientActionArgs) {
   const form = await request.formData();
   const errors: ActionErrors = {};
@@ -36,7 +34,6 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
   const username = String(form.get("username")   ?? "").trim();
   const password = String(form.get("password")   ?? "");
 
-  // Client-side validation
   if (!name)                           errors.name     = "Full name is required.";
   if (!email || !email.includes("@")) errors.email    = "A valid email is required.";
   if (!dept)                           errors.dept     = "Department is required.";
@@ -46,30 +43,29 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
   if (Object.keys(errors).length > 0) return { errors };
 
   try {
-    // Collect selected subject and classroom IDs from form
     const selectedSubjects = Array.from(form.getAll("subject_ids")) as string[];
     const selectedClasses  = Array.from(form.getAll("classroom_ids")) as string[];
 
-    await api.post("/teachers", {
+    await api.teachers.create({
       name, 
       email,
-      phone:           form.get("phone"),
-      gender:          form.get("gender"),
-      dob:             form.get("dob"),
-      nationality:     form.get("nationality"),
+      phone:           String(form.get("phone") || ""),
+      gender:          String(form.get("gender") || ""),
+      dob:             String(form.get("dob") || ""),
+      nationality:     String(form.get("nationality") || ""),
       department:      dept,
-      qualification:   form.get("qualification"),
+      qualification:   String(form.get("qualification") || ""),
       experience_yrs:  Number(form.get("experience") ?? 0),
-      join_date:       form.get("join_date"),
-      employment_type: form.get("employment_type"),
-      bio:             form.get("bio"),
+      join_date:       String(form.get("join_date") || ""),
+      employment_type: String(form.get("employment_type") || ""),
+      bio:             String(form.get("bio") || ""),
       subjects:        selectedSubjects.length > 0 
         ? selectedSubjects.map(s => parseInt(s))
         : undefined,
       username, 
       password,
-      role:   form.get("role"),
-      status: form.get("status") ?? "active",
+      role:   String(form.get("role") || ""),
+      status: String(form.get("status") ?? "active"),
     });
     return redirect("/teachers");
   } catch (err: any) {
@@ -90,7 +86,6 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
   }
 }
 
-// ── Constants ─────────────────────────────────────────────────
 const DEPTS = [
   "Mathematics", "Science", "English", "Social Studies",
   "Computer", "Hindi", "Art", "Physical Education",
@@ -103,7 +98,6 @@ const STEPS = [
   { label: "Account Setup",        icon: "🔐", desc: "Login credentials & role" },
 ];
 
-// ── Component ─────────────────────────────────────────────────
 export default function NewTeacherPage() {
   const actionData   = useActionData<typeof clientAction>();
   const navigation   = useNavigation();
@@ -125,16 +119,15 @@ export default function NewTeacherPage() {
   const [password, setPassword] = useState("");
   const [showPwd,  setShowPwd]  = useState(false);
 
-  // Load subjects and classrooms on mount
   useEffect(() => {
     async function loadData() {
       try {
         const [subRes, classRes] = await Promise.all([
-          api.get("/subjects?per_page=999"),
-          api.get("/classes?per_page=999"),
+          api.subjects.list(),
+          api.classes.list({ per_page: 999 }),
         ]);
-        setSubjects(subRes.data?.data || []);
-        setClassRooms(classRes.data?.data || []);
+        setSubjects(subRes.data || []);
+        setClassRooms(classRes.data || []);
       } catch (err) {
         console.error("Failed to load subjects/classrooms:", err);
       } finally {
@@ -144,7 +137,6 @@ export default function NewTeacherPage() {
     loadData();
   }, []);
 
-  // Auto-focus wizard view back to targeted layout coordinates when action errors are generated
   useEffect(() => {
     if (errors.name || errors.email) {
       setStep(0);
@@ -182,7 +174,6 @@ export default function NewTeacherPage() {
     setSelectedClassIds(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
   }
 
-  // ── Field component ────────────────────────────────────────
   const Field = ({
     label, required, error, hint, children
   }: {
@@ -214,26 +205,28 @@ export default function NewTeacherPage() {
   const selectCls = inputCls() + " cursor-pointer";
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto px-4 sm:px-6 pb-12">
 
       {/* ── Header ────────────────────────────────────────── */}
-      <div className="flex items-center gap-4 mb-8">
-        <Link
-          to="/teachers"
-          className="w-9 h-9 flex items-center justify-center bg-slate-800 border border-slate-700 text-slate-400 rounded-xl hover:bg-slate-700 hover:text-slate-200 transition-all flex-shrink-0"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </Link>
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-100">Add New Teacher</h1>
-          <p className="text-slate-500 text-sm mt-0.5">Create a staff profile in {STEPS.length} quick steps</p>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
+        <div className="flex items-center gap-4">
+          <Link
+            to="/teachers"
+            className="w-9 h-9 flex items-center justify-center bg-slate-800 border border-slate-700 text-slate-400 rounded-xl hover:bg-slate-700 hover:text-slate-200 transition-all flex-shrink-0"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </Link>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-slate-100">Add New Teacher</h1>
+            <p className="text-slate-500 text-sm mt-0.5">Create a staff profile in {STEPS.length} quick steps</p>
+          </div>
         </div>
 
         {/* Avatar preview */}
-        <div className="ml-auto flex items-center gap-3">
-          <div className="text-right">
+        <div className="sm:ml-auto flex items-center gap-3">
+          <div className="text-right hidden sm:block">
             <p className="text-xs text-slate-500">Preview</p>
             <p className="text-xs text-slate-300 font-medium">{name || "—"}</p>
           </div>
@@ -245,7 +238,6 @@ export default function NewTeacherPage() {
 
       {/* ── Step Progress ─────────────────────────────────── */}
       <div className="mb-6">
-        {/* Progress bar */}
         <div className="h-1 bg-slate-800 rounded-full mb-5 overflow-hidden">
           <div
             className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-500 ease-out"
@@ -253,15 +245,14 @@ export default function NewTeacherPage() {
           />
         </div>
 
-        {/* Step pills */}
-        <div className="flex items-start gap-2">
+        <div className="grid grid-cols-4 gap-1 sm:gap-2">
           {STEPS.map(({ label, icon }, i) => {
             const isDone    = i < step;
             const isCurrent = i === step;
             return (
               <div key={label} className="flex-1">
                 <div className={`
-                  flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all
+                  flex items-center justify-center sm:justify-start gap-1 sm:gap-2 px-1 sm:px-3 py-2 rounded-xl text-xs font-medium transition-all
                   ${isCurrent ? "bg-blue-500/10 border border-blue-500/25 text-blue-400" :
                     isDone ? "text-emerald-400" : "text-slate-600"}
                 `}>
@@ -273,7 +264,7 @@ export default function NewTeacherPage() {
                   `}>
                     {isDone ? "✓" : i + 1}
                   </span>
-                  <span className="leading-tight hidden sm:block">{label}</span>
+                  <span className="leading-tight hidden md:block">{label}</span>
                 </div>
               </div>
             );
@@ -281,7 +272,6 @@ export default function NewTeacherPage() {
         </div>
       </div>
 
-      {/* ── Step meta ─────────────────────────────────────── */}
       <div className="flex items-center gap-2 mb-5">
         <span className="text-xl">{STEPS[step].icon}</span>
         <div>
@@ -291,7 +281,6 @@ export default function NewTeacherPage() {
         <span className="ml-auto text-xs text-slate-600">Step {step + 1} of {STEPS.length}</span>
       </div>
 
-      {/* ── Error banner ──────────────────────────────────── */}
       {errors.general && (
         <div className="mb-5 flex items-start gap-3 px-4 py-3.5 bg-red-500/8 border border-red-500/25 text-red-400 text-sm rounded-xl">
           <span className="w-5 h-5 rounded-full bg-red-500/15 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">!</span>
@@ -300,7 +289,6 @@ export default function NewTeacherPage() {
       )}
 
       <Form method="post">
-        {/* Hidden transport boundaries for multi-select records */}
         {selectedSubjectIds.map(id => (
           <input key={`subj-${id}`} type="hidden" name="subject_ids" value={id} />
         ))}
@@ -309,9 +297,9 @@ export default function NewTeacherPage() {
         ))}
 
         {/* ── Step 0: Personal Info ─────────────────────── */}
-        <div className={`bg-slate-900/40 border border-slate-700/50 rounded-2xl p-6 space-y-5 ${step === 0 ? "" : "hidden"}`}>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
+        <div className={`bg-slate-900/40 border border-slate-700/50 rounded-2xl p-4 sm:p-6 space-y-5 ${step === 0 ? "" : "hidden"}`}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-2">
               <Field label="Full Name" required error={stepErrors.name ?? errors.name}>
                 <input
                   name="name" value={name}
@@ -348,7 +336,7 @@ export default function NewTeacherPage() {
               <input name="dob" type="date" className={inputCls()} />
             </Field>
 
-            <div className="col-span-2">
+            <div className="sm:col-span-2">
               <Field label="Nationality">
                 <input name="nationality" className={inputCls()} placeholder="e.g. Kenyan" />
               </Field>
@@ -357,9 +345,9 @@ export default function NewTeacherPage() {
         </div>
 
         {/* ── Step 1: Professional ──────────────────────── */}
-        <div className={`bg-slate-900/40 border border-slate-700/50 rounded-2xl p-6 space-y-5 ${step === 1 ? "" : "hidden"}`}>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
+        <div className={`bg-slate-900/40 border border-slate-700/50 rounded-2xl p-4 sm:p-6 space-y-5 ${step === 1 ? "" : "hidden"}`}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-2">
               <Field label="Department" required error={stepErrors.dept ?? errors.dept}>
                 <select name="department" value={dept}
                   onChange={e => setDept(e.target.value)}
@@ -394,7 +382,7 @@ export default function NewTeacherPage() {
               </select>
             </Field>
 
-            <div className="col-span-2">
+            <div className="sm:col-span-2">
               <Field label="Bio / Notes">
                 <textarea name="bio" rows={3}
                   className={inputCls() + " resize-y min-h-[80px]"}
@@ -406,8 +394,7 @@ export default function NewTeacherPage() {
 
         {/* ── Step 2: Subjects & Classes ────────────────── */}
         <div className={`space-y-4 ${step === 2 ? "" : "hidden"}`}>
-          {/* Subjects */}
-          <div className="bg-slate-900/40 border border-slate-700/50 rounded-2xl p-5">
+          <div className="bg-slate-900/40 border border-slate-700/50 rounded-2xl p-4 sm:p-5">
             <div className="flex items-center gap-2 mb-4">
               <span className="text-base">📖</span>
               <p className="text-sm font-semibold text-slate-200">Teaching Subjects</p>
@@ -439,8 +426,7 @@ export default function NewTeacherPage() {
             )}
           </div>
 
-          {/* Classrooms */}
-          <div className="bg-slate-900/40 border border-slate-700/50 rounded-2xl p-5">
+          <div className="bg-slate-900/40 border border-slate-700/50 rounded-2xl p-4 sm:p-5">
             <div className="flex items-center gap-2 mb-4">
               <span className="text-base">🏫</span>
               <p className="text-sm font-semibold text-slate-200">Assigned Classrooms</p>
@@ -474,23 +460,22 @@ export default function NewTeacherPage() {
         </div>
 
         {/* ── Step 3: Account Setup ─────────────────────── */}
-        <div className={`bg-slate-900/40 border border-slate-700/50 rounded-2xl p-6 space-y-5 ${step === 3 ? "" : "hidden"}`}>
-          {/* Summary banner */}
-          <div className="flex items-center gap-4 p-4 bg-slate-800/60 border border-slate-700/50 rounded-xl">
+        <div className={`bg-slate-900/40 border border-slate-700/50 rounded-2xl p-4 sm:p-6 space-y-5 ${step === 3 ? "" : "hidden"}`}>
+          <div className="flex items-center gap-4 p-4 bg-slate-800/60 border border-slate-700/50 rounded-xl overflow-hidden">
             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
               {initials}
             </div>
-            <div>
-              <p className="font-semibold text-slate-100">{name || "—"}</p>
-              <p className="text-xs text-slate-500">{email || "—"} · {dept || "—"}</p>
+            <div className="truncate">
+              <p className="font-semibold text-slate-100 truncate">{name || "—"}</p>
+              <p className="text-xs text-slate-500 truncate">{email || "—"} · {dept || "—"}</p>
             </div>
-            <div className="ml-auto text-right">
+            <div className="ml-auto text-right flex-shrink-0 hidden sm:block">
               <p className="text-xs text-slate-500">{selectedSubjectIds.length} subjects</p>
               <p className="text-xs text-slate-500">{selectedClassIds.length} classes</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Username" required error={errors.username} hint="Used for login">
               <input name="username" value={username}
                 onChange={e => setUsername(e.target.value)}
@@ -509,7 +494,6 @@ export default function NewTeacherPage() {
                   {showPwd ? "Hide" : "Show"}
                 </button>
               </div>
-              {/* Password strength */}
               {password.length > 0 && (
                 <div className="flex gap-1 mt-1.5">
                   {[8, 12, 16].map((len, i) => (
@@ -543,11 +527,11 @@ export default function NewTeacherPage() {
         </div>
 
         {/* ── Footer ────────────────────────────────────── */}
-        <div className="flex items-center justify-between mt-6 pt-6 border-t border-slate-800">
-          <div>
+        <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-3 mt-6 pt-6 border-t border-slate-800">
+          <div className="w-full sm:w-auto">
             {step > 0 && (
               <button type="button" onClick={back}
-                className="flex items-center gap-2 px-4 py-2.5 bg-slate-800/60 border border-slate-700 text-slate-400 text-sm rounded-xl hover:bg-slate-700 hover:text-slate-200 transition-all">
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800/60 border border-slate-700 text-slate-400 text-sm rounded-xl hover:bg-slate-700 hover:text-slate-200 transition-all">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
@@ -556,15 +540,15 @@ export default function NewTeacherPage() {
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <Link to="/teachers"
-              className="px-4 py-2.5 text-slate-500 text-sm rounded-xl hover:text-slate-300 transition-colors">
+              className="text-center px-4 py-2.5 text-slate-500 text-sm rounded-xl hover:text-slate-300 transition-colors">
               Cancel
             </Link>
 
             {step < STEPS.length - 1 ? (
               <button type="button" onClick={next}
-                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-sm font-semibold rounded-xl hover:from-blue-400 hover:to-indigo-400 transition-all shadow-lg shadow-blue-500/20">
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-sm font-semibold rounded-xl hover:from-blue-400 hover:to-indigo-400 transition-all shadow-lg shadow-blue-500/20">
                 Continue
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -574,7 +558,7 @@ export default function NewTeacherPage() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-sm font-semibold rounded-xl hover:from-blue-400 hover:to-indigo-400 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-6 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-sm font-semibold rounded-xl hover:from-blue-400 hover:to-indigo-400 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? (
                   <>

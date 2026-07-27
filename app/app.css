@@ -4,10 +4,137 @@
 ============================================================ */
 
 @import "tailwindcss";
+
 @theme {
-   --font-sora: 'Sora', sans-serif;
-   --font-mono: 'JetBrains Mono', monospace;
- }
- * { scrollbar-width: thin; scrollbar-color: #2a3350 transparent; }
- ::-webkit-scrollbar { width: 4px; }
- ::-webkit-scrollbar-thumb { background: #2a3350; border-radius: 4px; }
+  --font-sora: 'Sora', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: #2a3350 transparent;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  background: #0a0e1a;
+  color: #e8edf8;
+}
+
+img,
+svg,
+video {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+input,
+select,
+textarea,
+button {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+::selection {
+  background: rgba(79, 142, 247, 0.35);
+  color: #f8fafc;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2a3350;
+  border-radius: 999px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  min-width: 0;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 768px) {
+  h1 {
+    font-size: clamp(1.35rem, 4vw, 1.85rem);
+  }
+
+  h2 {
+    font-size: clamp(1.1rem, 3vw, 1.35rem);
+  }
+
+  .mobile-stack {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .mobile-full {
+    width: 100% !important;
+  }
+
+  .mobile-px {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+
+  .p-6 {
+    padding: 1rem !important;
+  }
+
+  .p-4 {
+    padding: 0.875rem !important;
+  }
+
+  .px-6 {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+
+  .py-6 {
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+  }
+
+  .gap-6,
+  .gap-8 {
+    gap: 1rem !important;
+  }
+
+  .max-w-2xl,
+  .max-w-4xl,
+  .max-w-5xl,
+  .max-w-6xl,
+  .max-w-7xl {
+    max-width: 100% !important;
+  }
+}

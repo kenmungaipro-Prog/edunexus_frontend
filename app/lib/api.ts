@@ -902,12 +902,13 @@ const determineBaseURL = () => {
 };
 
 const http: AxiosInstance = axios.create({
-  baseURL: "/api/v1",
+  baseURL: determineBaseURL(),
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
-  },  xsrfCookieName: "XSRF-TOKEN",
+  },
+  xsrfCookieName: "XSRF-TOKEN",
   xsrfHeaderName: "X-XSRF-TOKEN",
 });
 
@@ -1762,27 +1763,11 @@ export const settings = {
       : put<ApiResponse<School>>("/settings/school", payload),
 };
 
-// Â§ 23 â€” The raw Axios instance (Critical for your existing code)
-export const api = axios.create({
-  baseURL: determineBaseURL(),
-  headers: {
-    "Content-Type": "application/json",
-    "Accept": "application/json",
-  },
-  withCredentials: true,
-});
-
-// Attach the interceptor to the instance
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("edunexus_token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+// Note: removed unused `rawApi` instance — main `http` client handles
+// auth headers and response unwrapping via its interceptors.
 
 // Â§ 24 â€” Your new grouped object as the DEFAULT export
-const apiService = {
+export const apiService = {
   auth,
   dashboard,
   academicSessions,
@@ -1810,4 +1795,5 @@ const apiService = {
   smsAdmin,
 };
 
+export const api = apiService;
 export default apiService;

@@ -6,18 +6,15 @@ import { useEffect } from "react";
 import type { Route as TransRoute } from "./+types/index";
 import { api, type ApiResponse, type TransportRoute, type LiveVehicle } from "~/lib/api";
 
-/**
- * Loads both the static route configuration and the current live vehicle status
- */
 export async function clientLoader() {
   const [routesRes, liveRes] = await Promise.all([
-    api.get<ApiResponse<TransportRoute[]>>("/transport/routes"),
-    api.get<ApiResponse<LiveVehicle[]>>("/transport/live"),
+    api.transport.list(),
+    api.transport.live(),
   ]);
 
   return { 
-    routes: routesRes.data.data, // Laravel returns { success: true, data: [...] }
-    liveVehicles: liveRes.data.data 
+    routes: routesRes.data,
+    liveVehicles: liveRes.data,
   };
 }
 
@@ -25,7 +22,6 @@ export default function TransportPage({ loaderData }: TransRoute.ComponentProps)
   const { routes, liveVehicles } = loaderData;
   const revalidator = useRevalidator();
 
-  // Simple polling to keep "Live" status updated every 30 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       if (document.visibilityState === "visible") {
@@ -35,7 +31,6 @@ export default function TransportPage({ loaderData }: TransRoute.ComponentProps)
     return () => clearInterval(interval);
   }, [revalidator]);
 
-  // Derived Stats
   const stats = {
     totalVehicles: new Set(routes.map(r => r.vehicle_id)).size,
     totalRoutes: routes.length,
@@ -44,33 +39,33 @@ export default function TransportPage({ loaderData }: TransRoute.ComponentProps)
   };
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 sm:p-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
         <div>
-          <h1 className="text-xl font-bold text-white">🚌 Transport Management</h1>
-          <p className="text-slate-400 text-sm mt-0.5">Real-time fleet tracking and route management</p>
+          <h1 className="text-lg sm:text-xl font-bold text-white">🚌 Transport Management</h1>
+          <p className="text-slate-400 text-xs sm:text-sm mt-0.5">Real-time fleet tracking and route management</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-2 sm:gap-3">
           <button 
             onClick={() => revalidator.revalidate()}
-            className="px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-sm font-medium hover:bg-slate-700 transition"
+            className="px-3 sm:px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-xs sm:text-sm font-medium hover:bg-slate-700 transition"
           >
             🔄 Refresh
           </button>
-          <Link to="/transport/vehicles/new" className="px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-sm font-medium hover:bg-slate-700 transition">
+          <Link to="/transport/vehicles/new" className="px-3 sm:px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-xs sm:text-sm font-medium hover:bg-slate-700 transition">
             🚛 Add Vehicle
           </Link>
-          <Link to="/transport/drivers/new" className="px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-sm font-medium hover:bg-slate-700 transition">
+          <Link to="/transport/drivers/new" className="px-3 sm:px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-xs sm:text-sm font-medium hover:bg-slate-700 transition">
             👨‍✈️ Add Driver
           </Link>
-          <Link to="/transport/new" className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg text-sm font-semibold hover:opacity-90 transition shadow-lg shadow-blue-500/20">
+          <Link to="/transport/new" className="px-3 sm:px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg text-xs sm:text-sm font-semibold hover:opacity-90 transition shadow-lg shadow-blue-500/20">
             ➕ Add Route
           </Link>
         </div>
       </div>
 
       {/* Dynamic Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[
           { icon: "🚌", val: stats.totalVehicles, label: "Registered Vehicles", color: "text-blue-400" },
           { icon: "🗺️", val: stats.totalRoutes, label: "Active Routes", color: "text-emerald-400" },
@@ -78,7 +73,7 @@ export default function TransportPage({ loaderData }: TransRoute.ComponentProps)
           { icon: "📡", val: `${stats.activeNow} / ${stats.totalVehicles}`, label: "Live on Road", color: "text-violet-400" },
         ].map(s => (
           <div key={s.label} className="bg-slate-800 border border-slate-700 rounded-xl p-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-slate-900/50 flex items-center justify-center text-2xl shadow-inner">
+            <div className="w-12 h-12 rounded-lg bg-slate-900/50 flex items-center justify-center text-2xl shadow-inner shrink-0">
               {s.icon}
             </div>
             <div>
@@ -91,7 +86,7 @@ export default function TransportPage({ loaderData }: TransRoute.ComponentProps)
 
       <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
+          <table className="w-full text-sm text-left min-w-[800px]">
             <thead className="bg-slate-900/50">
               <tr className="border-b border-slate-700">
                 <th className="py-4 px-4 text-xs text-slate-500 uppercase font-bold">Route Name</th>
@@ -106,7 +101,6 @@ export default function TransportPage({ loaderData }: TransRoute.ComponentProps)
             <tbody className="divide-y divide-slate-700/50">
               {routes.length > 0 ? (
                 routes.map((route) => {
-                  // Check if this route's vehicle is currently live
                   const liveInfo = liveVehicles.find(lv => lv.vehicle_id === route.vehicle_id);
                   const isMoving = liveInfo && (liveInfo.speed ?? 0) > 0;
 

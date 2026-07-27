@@ -1,14 +1,13 @@
-// ============================================================\
-// app/pages/teachers/timetable.tsx
-// ============================================================\
+// ============================================================
+// app/pages/teachers/timetable.tsx — Mobile Responsive
+// ============================================================
 import { Link } from "react-router";
 import type { Route } from "./+types/timetable";
 import { api } from "~/lib/api";
 
-// ── Types ────────────────────────────────────────────────────
 interface TimetableSlot {
   id: number;
-  day_of_week: string; // e.g., "Monday", "Tuesday"
+  day_of_week: string;
   period_number: number;
   start_time: string;
   end_time: string;
@@ -18,18 +17,16 @@ interface TimetableSlot {
 
 type TimetableData = Record<string, TimetableSlot[]>;
 
-// ── Client Loader ────────────────────────────────────────────
 export async function clientLoader({ params }: Route.LoaderArgs) {
   try {
     const [teacherRes, timetableRes] = await Promise.all([
-      api.get(`/teachers/${params.id}`),
-      api.get(`/teachers/${params.id}/timetable`),
+      api.teachers.get(Number(params.id)),
+      api.teachers.timetable(Number(params.id)),
     ]);
 
-    // Unwrapping Axios + Laravel wrappers safely
     return {
-      teacher: teacherRes.data.data,
-      timetable: timetableRes.data.data as TimetableData,
+      teacher: teacherRes.data,
+      timetable: timetableRes.data as TimetableData,
     };
   } catch (error: any) {
     console.error("Error loading timetable data:", error);
@@ -39,25 +36,23 @@ export async function clientLoader({ params }: Route.LoaderArgs) {
 
 const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
-// ── Component ────────────────────────────────────────────────
 export default function TeacherTimetable({ loaderData }: Route.ComponentProps) {
   const { teacher, timetable } = loaderData;
   const teacherName = teacher?.user?.name || "Teacher";
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6 text-slate-100">
+    <div className="p-3 sm:p-6 max-w-7xl mx-auto space-y-6 text-slate-100">
       
-      {/* Breadcrumb / Header Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-800 pb-5">
         <div>
-          <div className="flex items-center gap-2 text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">
+          <div className="flex flex-wrap items-center gap-1.5 text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">
             <Link to="/teachers" className="hover:text-blue-400 transition-colors">Teachers</Link>
             <span>/</span>
-            <Link to={`/teachers/${teacher?.id}`} className="hover:text-blue-400 transition-colors">{teacherName}</Link>
+            <Link to={`/teachers/${teacher?.id}`} className="hover:text-blue-400 transition-colors truncate max-w-[120px] sm:max-w-none">{teacherName}</Link>
             <span>/</span>
             <span className="text-slate-300">Timetable</span>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
             Weekly Schedule — {teacherName}
           </h1>
           <p className="text-sm text-slate-400 mt-1">Department: {teacher?.department || "Unassigned"}</p>
@@ -66,7 +61,7 @@ export default function TeacherTimetable({ loaderData }: Route.ComponentProps) {
         <div>
           <Link
             to={`/teachers/${teacher?.id}`}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 border border-slate-700 text-sm font-medium text-slate-300 rounded-xl hover:bg-slate-700 transition-colors"
+            className="inline-flex items-center justify-center w-full md:w-auto gap-2 px-4 py-2 bg-slate-800 border border-slate-700 text-sm font-medium text-slate-300 rounded-xl hover:bg-slate-700 transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -76,20 +71,19 @@ export default function TeacherTimetable({ loaderData }: Route.ComponentProps) {
         </div>
       </div>
 
-      {/* Timetable Grid View Matrix */}
       <div className="space-y-4">
         {DAYS_OF_WEEK.map((day) => {
           const slots = timetable[day] || [];
           
           return (
             <div key={day} className="bg-slate-900/50 border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
-              <div className="bg-slate-800/40 border-b border-slate-800 px-5 py-3.5">
+              <div className="bg-slate-800/40 border-b border-slate-800 px-4 sm:px-5 py-3.5">
                 <h3 className="text-sm font-semibold text-slate-200 tracking-wide">{day}</h3>
               </div>
               
-              <div className="p-5">
+              <div className="p-4 sm:p-5">
                 {slots.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                     {slots.map((slot) => (
                       <div 
                         key={slot.id} 

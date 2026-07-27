@@ -1,5 +1,5 @@
 // ============================================================
-// app/pages/teachers/index.tsx  — Improved
+// app/pages/teachers/index.tsx  — Mobile Responsive
 // ============================================================
 import { useState, useCallback } from "react";
 import {
@@ -11,7 +11,7 @@ import {
   redirect,
 } from "react-router";
 import type { Route } from "./+types/index";
-import api, { type Teacher, type TeacherFilters, type PaginationMeta, type ValidationError } from "~/lib/api";
+import { api, type Teacher, type TeacherFilters, type PaginationMeta, type ValidationError } from "~/lib/api";
 
 const DEPARTMENTS = [
   "Mathematics", "Science", "English", "Social Studies",
@@ -29,7 +29,6 @@ const DEPT_COLORS: Record<string, string> = {
   "Physical Education":"bg-lime-500/10 text-lime-400 border-lime-500/20",
 };
 
-// ── Avatar palette ──────────────────────────────────────────
 const AVATAR_COLORS = [
   "from-blue-500 to-indigo-600",
   "from-emerald-500 to-teal-600",
@@ -40,7 +39,6 @@ const AVATAR_COLORS = [
 ];
 const avatarColor = (id: number) => AVATAR_COLORS[id % AVATAR_COLORS.length];
 
-// ── Loader ──────────────────────────────────────────────────
 export async function clientLoader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const filters: TeacherFilters = {
@@ -60,7 +58,6 @@ export async function clientLoader({ request }: Route.LoaderArgs) {
   };
 }
 
-// ── Action ──────────────────────────────────────────────────
 export async function clientAction({ request }: Route.ClientActionArgs) {
   const form   = await request.formData();
   const intent = form.get("intent") as string;
@@ -81,23 +78,21 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
   return redirect("/teachers");
 }
 
-// ── Sub-components ──────────────────────────────────────────
 function Toast({ message, ok }: { message: string; ok: boolean }) {
   return (
     <div className={`
-      fixed bottom-6 right-6 z-50 px-5 py-3 rounded-2xl text-sm font-semibold
-      flex items-center gap-3 shadow-2xl border backdrop-blur-xl
-      animate-[slideUp_0.3s_ease-out]
+      fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 px-4 sm:px-5 py-3 rounded-2xl text-sm font-semibold
+      flex items-center gap-3 shadow-2xl border backdrop-blur-xl max-w-[90vw]
       ${ok
         ? "bg-slate-900/90 border-emerald-500/30 text-emerald-400"
         : "bg-slate-900/90 border-red-500/30 text-red-400"}
     `}
       style={{ animation: "slideUp 0.3s ease-out" }}
     >
-      <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${ok ? "bg-emerald-500/20" : "bg-red-500/20"}`}>
+      <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs flex-shrink-0 ${ok ? "bg-emerald-500/20" : "bg-red-500/20"}`}>
         {ok ? "✓" : "✕"}
       </span>
-      {message}
+      <span className="truncate">{message}</span>
     </div>
   );
 }
@@ -117,7 +112,6 @@ function StatusBadge({ status }: { status: Teacher["status"] }) {
   );
 }
 
-// ── Page ────────────────────────────────────────────────────
 export default function TeachersPage({ loaderData, actionData }: Route.ComponentProps) {
   const { teachers, meta, filters } = loaderData;
   const actionResult = actionData as { ok?: boolean; message?: string } | undefined;
@@ -169,7 +163,7 @@ export default function TeachersPage({ loaderData, actionData }: Route.Component
   const inactiveCount = teachers.filter(t => t.status === "inactive").length;
 
   return (
-    <div className="text-slate-200 min-h-screen">
+    <div className="text-slate-200 min-h-screen px-3 sm:px-6 pb-12">
       <style>{`
         @keyframes slideUp { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
@@ -181,19 +175,19 @@ export default function TeachersPage({ loaderData, actionData }: Route.Component
       )}
 
       {/* ── Header ─────────────────────────────────────── */}
-      <div className="flex items-start justify-between mb-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-sm shadow-lg shadow-blue-500/20">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-sm shadow-lg shadow-blue-500/20 flex-shrink-0">
               👨‍🏫
             </div>
-            <h1 className="text-2xl font-bold tracking-tight">Teacher Management</h1>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Teacher Management</h1>
           </div>
-          <p className="text-slate-500 text-sm ml-12">Staff profiles, assignments and performance</p>
+          <p className="text-slate-500 text-xs sm:text-sm sm:ml-12">Staff profiles, assignments and performance</p>
         </div>
         <Link
           to="/teachers/new"
-          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl text-sm font-semibold hover:from-blue-400 hover:to-indigo-400 transition-all shadow-lg shadow-blue-500/20"
+          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl text-sm font-semibold hover:from-blue-400 hover:to-indigo-400 transition-all shadow-lg shadow-blue-500/20"
         >
           <span className="text-base leading-none">+</span>
           Add Teacher
@@ -201,7 +195,7 @@ export default function TeachersPage({ loaderData, actionData }: Route.Component
       </div>
 
       {/* ── Stats row ──────────────────────────────────── */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 mb-6">
         {[
           {
             label: "Total Staff", val: meta?.total ?? 0,
@@ -224,14 +218,14 @@ export default function TeachersPage({ loaderData, actionData }: Route.Component
             icon: "⛔", gradient: "from-slate-500/20 to-slate-600/10", border: "border-slate-600/30", text: "text-slate-400",
           },
         ].map(s => (
-          <div key={s.label} className={`relative overflow-hidden bg-gradient-to-br ${s.gradient} border ${s.border} rounded-2xl p-5`}>
+          <div key={s.label} className={`relative overflow-hidden bg-gradient-to-br ${s.gradient} border ${s.border} rounded-2xl p-4 sm:p-5`}>
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-xs text-slate-500 font-medium mb-1">{s.label}</p>
-                <p className={`text-3xl font-bold ${s.text}`}>{s.val}</p>
-                <p className="text-[11px] text-slate-600 mt-1">{s.sub}</p>
+                <p className="text-[11px] sm:text-xs text-slate-500 font-medium mb-1">{s.label}</p>
+                <p className={`text-2xl sm:text-3xl font-bold ${s.text}`}>{s.val}</p>
+                <p className="text-[10px] sm:text-[11px] text-slate-600 mt-1 truncate">{s.sub}</p>
               </div>
-              <span className="text-2xl opacity-60">{s.icon}</span>
+              <span className="text-xl sm:text-2xl opacity-60">{s.icon}</span>
             </div>
           </div>
         ))}
@@ -241,9 +235,8 @@ export default function TeachersPage({ loaderData, actionData }: Route.Component
       <div className="bg-slate-900/50 border border-slate-700/60 rounded-2xl overflow-hidden">
 
         {/* Toolbar */}
-        <div className="flex flex-wrap items-center gap-3 p-5 border-b border-slate-700/60">
-          {/* Search */}
-          <div className="relative flex-1 min-w-[200px] max-w-xs">
+        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 p-4 sm:p-5 border-b border-slate-700/60">
+          <div className="relative w-full sm:flex-1 min-w-[200px] sm:max-w-xs">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
@@ -257,21 +250,19 @@ export default function TeachersPage({ loaderData, actionData }: Route.Component
             />
           </div>
 
-          {/* Dept filter */}
           <select
             value={filters.department ?? ""}
             onChange={e => setParam("department", e.target.value || null)}
-            className="bg-slate-800/60 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-300 outline-none focus:border-blue-500/70 transition-all cursor-pointer"
+            className="w-full sm:w-auto bg-slate-800/60 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-300 outline-none focus:border-blue-500/70 transition-all cursor-pointer"
           >
             <option value="">All Departments</option>
             {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
           </select>
 
-          {/* Status filter */}
           <select
             value={filters.status ?? ""}
             onChange={e => setParam("status", e.target.value || null)}
-            className="bg-slate-800/60 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-300 outline-none focus:border-blue-500/70 transition-all cursor-pointer"
+            className="w-full sm:w-auto bg-slate-800/60 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-300 outline-none focus:border-blue-500/70 transition-all cursor-pointer"
           >
             <option value="">All Statuses</option>
             <option value="active">Active</option>
@@ -279,9 +270,8 @@ export default function TeachersPage({ loaderData, actionData }: Route.Component
             <option value="inactive">Inactive</option>
           </select>
 
-          {/* Active filter pills */}
           {(filters.search || filters.department || filters.status) && (
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
               {filters.search && (
                 <span className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-500/10 border border-blue-500/20 rounded-lg text-xs text-blue-400">
                   "{filters.search}"
@@ -297,9 +287,8 @@ export default function TeachersPage({ loaderData, actionData }: Route.Component
             </div>
           )}
 
-          {/* Bulk actions */}
           {selected.size > 0 && (
-            <div className="ml-auto flex items-center gap-2 animate-[fadeIn_0.2s_ease-out]">
+            <div className="w-full sm:ml-auto sm:w-auto flex items-center gap-2 animate-[fadeIn_0.2s_ease-out]">
               <span className="text-xs font-medium text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2.5 py-1 rounded-lg">
                 {selected.size} selected
               </span>
@@ -315,15 +304,15 @@ export default function TeachersPage({ loaderData, actionData }: Route.Component
 
         {/* Table */}
         <div className={`overflow-x-auto transition-opacity duration-300 ${isLoading ? "opacity-40" : "opacity-100"}`}>
-          <table className="w-full text-sm">
+          <table className="w-full text-sm min-w-[700px]">
             <thead>
               <tr className="border-b border-slate-700/60">
-                <th className="py-3 px-5 w-10 text-left">
+                <th className="py-3 px-4 sm:px-5 w-10 text-left">
                   <input type="checkbox" checked={allSelected} onChange={toggleAll}
                     className="w-4 h-4 cursor-pointer accent-blue-500 rounded" />
                 </th>
                 {["Teacher", "ID", "Department", "Subjects", "Classes", "Exp.", "Status", ""].map(h => (
-                  <th key={h} className="text-left py-3 px-4 text-[11px] text-slate-500 uppercase font-semibold tracking-widest">
+                  <th key={h} className="text-left py-3 px-3 sm:px-4 text-[11px] text-slate-500 uppercase font-semibold tracking-widest whitespace-nowrap">
                     {h}
                   </th>
                 ))}
@@ -334,8 +323,9 @@ export default function TeachersPage({ loaderData, actionData }: Route.Component
                 teachers.map((t) => {
                   const isChecked = selected.has(t.id);
                   const isHovered = hoveredRow === t.id;
-                  const initials  = t.user?.name.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase();
-                  const deptCls   = DEPT_COLORS[t.department] ?? "bg-slate-700/30 text-slate-400 border-slate-600/30";
+                  const initials = (t.user?.name ?? "T").split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase();
+                  const deptKey = t.department ?? "";
+                  const deptCls = DEPT_COLORS[deptKey] ?? "bg-slate-700/30 text-slate-400 border-slate-600/30";
 
                   return (
                     <tr
@@ -345,82 +335,71 @@ export default function TeachersPage({ loaderData, actionData }: Route.Component
                       onMouseEnter={() => setHoveredRow(t.id)}
                       onMouseLeave={() => setHoveredRow(null)}
                     >
-                      <td className="py-3.5 px-5">
+                      <td className="py-3.5 px-4 sm:px-5">
                         <input type="checkbox" checked={isChecked} onChange={() => toggleOne(t.id)}
                           className="w-4 h-4 cursor-pointer accent-blue-500 rounded" />
                       </td>
 
-                      {/* Name / email */}
-                      <td className="py-3.5 px-4">
+                      <td className="py-3.5 px-3 sm:px-4">
                         <div className="flex items-center gap-3">
                           <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${avatarColor(t.id)} flex items-center justify-center text-xs font-bold text-white flex-shrink-0 shadow-sm`}>
                             {initials}
                           </div>
                           <div>
-                            <Link to={`/teachers/${t.id}`} className="font-semibold text-slate-100 hover:text-blue-400 transition-colors">
+                            <Link to={`/teachers/${t.id}`} className="font-semibold text-slate-100 hover:text-blue-400 transition-colors whitespace-nowrap">
                               {t.user?.name}
                             </Link>
-                            <p className="text-[11px] text-slate-500 mt-0.5">{t.user?.email}</p>
+                            <p className="text-[11px] text-slate-500 mt-0.5 truncate max-w-[150px] sm:max-w-none">{t.user?.email}</p>
                           </div>
                         </div>
                       </td>
 
-                      {/* Employee ID */}
-                      <td className="py-3.5 px-4">
+                      <td className="py-3.5 px-3 sm:px-4 whitespace-nowrap">
                         <code className="text-xs text-slate-400 bg-slate-800/60 border border-slate-700/50 px-2 py-0.5 rounded-md font-mono">
                           {t.employee_id}
                         </code>
                       </td>
 
-                      {/* Department */}
-                      <td className="py-3.5 px-4">
+                      <td className="py-3.5 px-3 sm:px-4 whitespace-nowrap">
                         <span className={`text-[11px] px-2.5 py-1 rounded-lg border font-medium ${deptCls}`}>
                           {t.department}
                         </span>
                       </td>
 
-                      {/* Subjects */}
-                      <td className="py-3.5 px-4 max-w-[160px]">
+                      <td className="py-3.5 px-3 sm:px-4 max-w-[160px]">
                         <div className="flex flex-wrap gap-1">
                           {t.subjects?.slice(0, 2).map(s => (
-                            <span key={s.name} className="text-[10px] px-1.5 py-0.5 bg-slate-800 border border-slate-700/50 rounded text-slate-400">
+                            <span key={s.name} className="text-[10px] px-1.5 py-0.5 bg-slate-800 border border-slate-700/50 rounded text-slate-400 whitespace-nowrap">
                               {s.name}
                             </span>
                           ))}
                           {(t.subjects?.length ?? 0) > 2 && (
                             <span className="text-[10px] px-1.5 py-0.5 bg-slate-800 border border-slate-700/50 rounded text-slate-500">
-                              +{t.subjects.length - 2}
+                              +{(t.subjects?.length ?? 0) - 2}
                             </span>
                           )}
                           {!t.subjects?.length && <span className="text-slate-600 text-xs">—</span>}
                         </div>
                       </td>
 
-                      {/* Classes */}
-                      <td className="py-3.5 px-4">
+                      <td className="py-3.5 px-3 sm:px-4 whitespace-nowrap">
                         <div className="flex items-center gap-1.5">
                           <span className={`text-sm font-bold ${(t.class_rooms?.length ?? 0) > 0 ? "text-slate-200" : "text-slate-600"}`}>
                             {t.class_rooms?.length ?? 0}
                           </span>
-                          {(t.class_rooms?.length ?? 0) > 0 && (
-                            <span className="text-[10px] text-slate-600">classes</span>
-                          )}
                         </div>
                       </td>
 
-                      {/* Experience */}
-                      <td className="py-3.5 px-4">
+                      <td className="py-3.5 px-3 sm:px-4 whitespace-nowrap">
                         <span className="text-slate-400 text-xs">{t.experience_yrs} <span className="text-slate-600">yrs</span></span>
                       </td>
 
-                      {/* Status */}
-                      <td className="py-3.5 px-4">
+                      <td className="py-3.5 px-3 sm:px-4 whitespace-nowrap">
                         <StatusBadge status={t.status} />
                       </td>
 
-                      {/* Actions */}
-                      <td className="py-3.5 px-4">
-                        <div className={`flex gap-1.5 transition-opacity duration-150 ${isHovered ? "opacity-100" : "opacity-0"}`}>
+                      <td className="py-3.5 px-3 sm:px-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
                           <Link
                             to={`/teachers/${t.id}`}
                             title="View Profile"
@@ -488,12 +467,12 @@ export default function TeachersPage({ loaderData, actionData }: Route.Component
 
         {/* Pagination */}
         {meta && meta.last_page > 1 && (
-          <div className="flex items-center justify-between px-5 py-4 border-t border-slate-700/60">
-            <p className="text-xs text-slate-500">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-5 py-4 border-t border-slate-700/60">
+            <p className="text-xs text-slate-500 text-center sm:text-left">
               Showing <span className="text-slate-300 font-medium">{meta.from}–{meta.to}</span> of{" "}
               <span className="text-slate-300 font-medium">{meta.total}</span> teachers
             </p>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center justify-center gap-1.5 flex-wrap">
               <button
                 disabled={meta.current_page === 1}
                 onClick={() => goToPage(meta.current_page - 1)}
@@ -502,7 +481,6 @@ export default function TeachersPage({ loaderData, actionData }: Route.Component
                 ← Prev
               </button>
 
-              {/* Page numbers */}
               {Array.from({ length: Math.min(meta.last_page, 5) }, (_, i) => {
                 const page = meta.last_page <= 5 ? i + 1 :
                   meta.current_page <= 3 ? i + 1 :

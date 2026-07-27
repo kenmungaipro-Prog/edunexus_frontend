@@ -3,7 +3,7 @@
 // ============================================================
 import { redirect, Form, useActionData, useNavigation } from "react-router";
 import type { Route } from "./+types/login";
-import api from "~/lib/api";
+import { api } from "~/lib/api";
 
 // 1. Guard against authenticated users
 export async function clientLoader() {
@@ -40,8 +40,8 @@ export default function LoginPage() {
   const isLoading = navigation.state === "submitting";
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 text-white">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-3 sm:p-6 text-white">
+      <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="w-14 h-14 rounded-2xl overflow-hidden bg-white mx-auto mb-4 shadow-lg">

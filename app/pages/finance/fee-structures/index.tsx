@@ -1,6 +1,10 @@
+// ============================================================
+// app/pages/finance/fee-structures/index.tsx
+// ============================================================
+
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { useState, useEffect } from "react";
-import api, { type FeeStructure, type FeeCategory, type AcademicSession, type ClassRoom, type PaginationMeta } from "~/lib/api";
+import { api, type FeeStructure, type FeeCategory, type AcademicSession, type ClassRoom, type PaginationMeta } from "~/lib/api";
 
 export async function clientLoader({ request }: { request: Request }) {
   const url = new URL(request.url);
@@ -51,7 +55,6 @@ export default function FeeStructuresPage({
   const [editingStructure, setEditingStructure] = useState<FeeStructure | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
-  // Fetch categories for the modal
   const [categories, setCategories] = useState<FeeCategory[]>([]);
   useEffect(() => {
     api.finance.feeCategories({ per_page: 200 }).then((r) => setCategories(r.data.data));
@@ -80,29 +83,29 @@ export default function FeeStructuresPage({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-2 sm:p-0">
       {/* Header */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Fee Structures</h1>
-          <p className="text-sm text-slate-400 mt-1">
+          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Fee Structures</h1>
+          <p className="text-xs sm:text-sm text-slate-400 mt-1">
             Define billing templates per class, session, and term
           </p>
         </div>
         <button
           onClick={() => { setEditingStructure(null); setShowModal(true); }}
-          className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-600 transition-colors"
+          className="w-full sm:w-auto rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-600 transition-colors"
         >
           + Create Structure
         </button>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-col sm:flex-row gap-3">
         <select
           value={searchParams.get("status") ?? ""}
           onChange={(e) => setParam("status", e.target.value)}
-          className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-200"
+          className="w-full sm:w-auto rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-slate-200"
         >
           <option value="">All statuses</option>
           <option value="draft">Draft</option>
@@ -112,7 +115,7 @@ export default function FeeStructuresPage({
         <select
           value={searchParams.get("class_id") ?? ""}
           onChange={(e) => setParam("class_id", e.target.value)}
-          className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-200"
+          className="w-full sm:w-auto rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-slate-200"
         >
           <option value="">All classes</option>
           {classes.map((c) => (
@@ -127,14 +130,14 @@ export default function FeeStructuresPage({
           <table className="w-full min-w-[900px] text-sm">
             <thead>
               <tr className="border-b border-slate-700 text-left text-xs uppercase tracking-wide text-slate-500">
-                <th className="px-5 py-3">Name</th>
-                <th className="px-5 py-3">Class</th>
-                <th className="px-5 py-3">Session</th>
-                <th className="px-5 py-3">Period</th>
-                <th className="px-5 py-3">Items</th>
-                <th className="px-5 py-3">Total</th>
-                <th className="px-5 py-3">Status</th>
-                <th className="px-5 py-3 text-right">Actions</th>
+                <th className="px-4 sm:px-5 py-3">Name</th>
+                <th className="px-4 sm:px-5 py-3">Class</th>
+                <th className="px-4 sm:px-5 py-3">Session</th>
+                <th className="px-4 sm:px-5 py-3">Period</th>
+                <th className="px-4 sm:px-5 py-3">Items</th>
+                <th className="px-4 sm:px-5 py-3">Total</th>
+                <th className="px-4 sm:px-5 py-3">Status</th>
+                <th className="px-4 sm:px-5 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-700/60">
@@ -142,35 +145,35 @@ export default function FeeStructuresPage({
                 const total = structure.items?.reduce((sum, item) => sum + Number(item.amount ?? 0), 0) ?? 0;
                 return (
                   <tr key={structure.id} className="hover:bg-slate-700/30 transition-colors group">
-                    <td className="px-5 py-3 font-medium text-white">{structure.name}</td>
-                    <td className="px-5 py-3 text-slate-300">{structure.class_room?.name ?? "All Classes"}</td>
-                    <td className="px-5 py-3 text-slate-300">{structure.session?.name ?? "-"}</td>
-                    <td className="px-5 py-3 text-slate-400 capitalize">{structure.billing_period}</td>
-                    <td className="px-5 py-3 text-slate-300">{structure.items?.length ?? 0} items</td>
-                    <td className="px-5 py-3 font-semibold text-white">{money(total)}</td>
-                    <td className="px-5 py-3">
+                    <td className="px-4 sm:px-5 py-3 font-medium text-white">{structure.name}</td>
+                    <td className="px-4 sm:px-5 py-3 text-slate-300">{structure.class_room?.name ?? "All Classes"}</td>
+                    <td className="px-4 sm:px-5 py-3 text-slate-300">{structure.session?.name ?? "-"}</td>
+                    <td className="px-4 sm:px-5 py-3 text-slate-400 capitalize">{structure.billing_period}</td>
+                    <td className="px-4 sm:px-5 py-3 text-slate-300">{structure.items?.length ?? 0} items</td>
+                    <td className="px-4 sm:px-5 py-3 font-semibold text-white">{money(total)}</td>
+                    <td className="px-4 sm:px-5 py-3">
                       <span className={`rounded-full border px-2 py-1 text-xs font-semibold ${statusClass(structure.status)}`}>
                         {structure.status}
                       </span>
                     </td>
-                    <td className="px-5 py-3 text-right">
-                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <td className="px-4 sm:px-5 py-3 text-right">
+                      <div className="flex items-center justify-end gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                         <Link
                           to={`/finance/fee-structures/${structure.id}`}
-                          className="rounded p-1.5 text-slate-400 hover:bg-slate-600 hover:text-white transition-colors"
+                          className="rounded p-2 sm:p-1.5 text-slate-400 hover:bg-slate-600 hover:text-white transition-colors"
                           title="View"
                         >
-                          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <svg className="h-4 w-4 sm:h-3.5 sm:w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                           </svg>
                         </Link>
                         <button
                           onClick={() => { setEditingStructure(structure); setShowModal(true); }}
-                          className="rounded p-1.5 text-slate-400 hover:bg-slate-600 hover:text-white transition-colors"
+                          className="rounded p-2 sm:p-1.5 text-slate-400 hover:bg-slate-600 hover:text-white transition-colors"
                           title="Edit"
                         >
-                          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <svg className="h-4 w-4 sm:h-3.5 sm:w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                               d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                           </svg>
@@ -178,10 +181,10 @@ export default function FeeStructuresPage({
                         <button
                           onClick={() => handleDelete(structure)}
                           disabled={deletingId === structure.id}
-                          className="rounded p-1.5 text-slate-400 hover:bg-red-500/20 hover:text-red-400 transition-colors disabled:opacity-50"
+                          className="rounded p-2 sm:p-1.5 text-slate-400 hover:bg-red-500/20 hover:text-red-400 transition-colors disabled:opacity-50"
                           title="Delete"
                         >
-                          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <svg className="h-4 w-4 sm:h-3.5 sm:w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                               d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
@@ -202,20 +205,20 @@ export default function FeeStructuresPage({
         </div>
 
         {meta?.last_page > 1 && (
-          <div className="flex items-center justify-between border-t border-slate-700 px-5 py-4 text-xs text-slate-400">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-700 px-5 py-4 text-xs text-slate-400">
             <span>Showing {meta.from}-{meta.to} of {meta.total}</span>
-            <div className="flex gap-2">
+            <div className="flex gap-2 w-full sm:w-auto justify-end">
               <button
                 disabled={meta.current_page === 1}
                 onClick={() => setParam("page", String(meta.current_page - 1))}
-                className="rounded bg-slate-700 px-3 py-1 disabled:opacity-40"
+                className="rounded bg-slate-700 px-3 py-1.5 disabled:opacity-40"
               >
                 Previous
               </button>
               <button
                 disabled={meta.current_page === meta.last_page}
                 onClick={() => setParam("page", String(meta.current_page + 1))}
-                className="rounded bg-blue-500 px-3 py-1 text-white disabled:opacity-40"
+                className="rounded bg-blue-500 px-3 py-1.5 text-white disabled:opacity-40"
               >
                 Next
               </button>
@@ -224,7 +227,6 @@ export default function FeeStructuresPage({
         )}
       </div>
 
-      {/* Modal */}
       {showModal && (
         <FeeStructureModal
           structure={editingStructure}
@@ -238,8 +240,6 @@ export default function FeeStructuresPage({
     </div>
   );
 }
-
-// ─── Fee Structure Modal ────────────────────────────────────────────────────────────
 
 interface FeeStructureItem {
   fee_category_id: number;
@@ -334,15 +334,15 @@ function FeeStructureModal({ structure, categories, classes, sessions, onClose, 
   const total = formData.items.reduce((sum, item) => sum + item.amount, 0);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-700 bg-slate-800 shadow-2xl">
-        <div className="flex items-center justify-between border-b border-slate-700 px-6 py-4 sticky top-0 bg-slate-800">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 sm:p-4 backdrop-blur-sm overflow-y-auto">
+      <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-700 bg-slate-800 shadow-2xl my-auto">
+        <div className="flex items-center justify-between border-b border-slate-700 px-4 sm:px-6 py-4 sticky top-0 bg-slate-800 z-10">
           <h2 className="text-base font-semibold text-white">
             {isEdit ? "Edit Fee Structure" : "New Fee Structure"}
           </h2>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-700 hover:text-white transition-colors"
+            className="rounded-lg p-2 text-slate-400 hover:bg-slate-700 hover:text-white transition-colors"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -350,14 +350,14 @@ function FeeStructureModal({ structure, categories, classes, sessions, onClose, 
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4">
           {error && (
-            <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+            <div className="rounded-lg border border-red-500/30 bg-red-500/15 px-4 py-3 text-sm text-red-400">
               {error}
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="mb-1.5 block text-xs font-semibold text-slate-400 uppercase tracking-wide">
                 Session
@@ -366,7 +366,7 @@ function FeeStructureModal({ structure, categories, classes, sessions, onClose, 
                 required
                 value={formData.session_id}
                 onChange={(e) => setFormData({ ...formData, session_id: Number(e.target.value) })}
-                className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none transition-colors"
+                className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-white focus:border-blue-500 focus:outline-none transition-colors"
               >
                 {sessions.map((s) => (
                   <option key={s.id} value={s.id}>{s.name}</option>
@@ -380,7 +380,7 @@ function FeeStructureModal({ structure, categories, classes, sessions, onClose, 
               <select
                 value={formData.class_id ?? ""}
                 onChange={(e) => setFormData({ ...formData, class_id: e.target.value ? Number(e.target.value) : null })}
-                className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none transition-colors"
+                className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-white focus:border-blue-500 focus:outline-none transition-colors"
               >
                 <option value="">All Classes</option>
                 {classes.map((c) => (
@@ -390,8 +390,8 @@ function FeeStructureModal({ structure, categories, classes, sessions, onClose, 
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div className="col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="sm:col-span-2">
               <label className="mb-1.5 block text-xs font-semibold text-slate-400 uppercase tracking-wide">
                 Name
               </label>
@@ -400,7 +400,7 @@ function FeeStructureModal({ structure, categories, classes, sessions, onClose, 
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-white placeholder-slate-600 focus:border-blue-500 focus:outline-none transition-colors"
+                className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-white placeholder-slate-600 focus:border-blue-500 focus:outline-none transition-colors"
                 placeholder="e.g. Term 1 2026"
               />
             </div>
@@ -411,7 +411,7 @@ function FeeStructureModal({ structure, categories, classes, sessions, onClose, 
               <select
                 value={formData.billing_period}
                 onChange={(e) => setFormData({ ...formData, billing_period: e.target.value })}
-                className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none transition-colors"
+                className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-white focus:border-blue-500 focus:outline-none transition-colors"
               >
                 <option value="term">Term</option>
                 <option value="month">Month</option>
@@ -421,7 +421,7 @@ function FeeStructureModal({ structure, categories, classes, sessions, onClose, 
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="mb-1.5 block text-xs font-semibold text-slate-400 uppercase tracking-wide">
                 Status
@@ -429,7 +429,7 @@ function FeeStructureModal({ structure, categories, classes, sessions, onClose, 
               <select
                 value={formData.status}
                 onChange={(e) => setFormData({ ...formData, status: e.target.value as "draft" | "active" | "inactive" })}
-                className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none transition-colors"
+                className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-white focus:border-blue-500 focus:outline-none transition-colors"
               >
                 <option value="draft">Draft</option>
                 <option value="active">Active</option>
@@ -446,7 +446,7 @@ function FeeStructureModal({ structure, categories, classes, sessions, onClose, 
                 maxLength={3}
                 value={formData.currency}
                 onChange={(e) => setFormData({ ...formData, currency: e.target.value.toUpperCase() })}
-                className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-white placeholder-slate-600 focus:border-blue-500 focus:outline-none transition-colors"
+                className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-white placeholder-slate-600 focus:border-blue-500 focus:outline-none transition-colors"
                 placeholder="KES"
               />
             </div>
@@ -461,59 +461,61 @@ function FeeStructureModal({ structure, categories, classes, sessions, onClose, 
               <button
                 type="button"
                 onClick={addItem}
-                className="text-xs text-blue-400 hover:text-blue-300"
+                className="text-xs text-blue-400 hover:text-blue-300 py-1 px-2"
               >
                 + Add Item
               </button>
             </div>
             <div className="space-y-2">
               {formData.items.map((item, index) => (
-                <div key={index} className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/50 p-2">
+                <div key={index} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/50 p-2.5">
                   <select
                     value={item.fee_category_id}
                     onChange={(e) => updateItem(index, "fee_category_id", Number(e.target.value))}
-                    className="flex-1 rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-sm text-white"
+                    className="flex-1 rounded border border-slate-600 bg-slate-800 px-2 py-2 text-sm text-white"
                   >
                     <option value={0}>Select category...</option>
                     {categories.map((c) => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
                   </select>
-                  <input
-                    type="number"
-                    placeholder="Amount"
-                    value={item.amount}
-                    onChange={(e) => updateItem(index, "amount", Number(e.target.value))}
-                    className="w-24 rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-sm text-white"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeItem(index)}
-                    className="rounded p-1 text-slate-400 hover:text-red-400"
-                  >
-                    ✕
-                  </button>
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      placeholder="Amount"
+                      value={item.amount}
+                      onChange={(e) => updateItem(index, "amount", Number(e.target.value))}
+                      className="w-full sm:w-28 rounded border border-slate-600 bg-slate-800 px-2.5 py-2 text-sm text-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeItem(index)}
+                      className="rounded p-2 text-slate-400 hover:text-red-400 bg-slate-800 sm:bg-transparent"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
-            <div className="mt-2 text-right">
+            <div className="mt-3 text-right">
               <span className="text-sm text-slate-400">Total: </span>
-              <span className="text-lg font-bold text-white">{money(total)}</span>
+              <span className="text-base sm:text-lg font-bold text-white">{money(total)}</span>
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 transition-colors"
+              className="w-full sm:w-auto rounded-lg border border-slate-600 px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="rounded-lg bg-blue-500 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-600 disabled:opacity-50 transition-colors"
+              className="w-full sm:w-auto rounded-lg bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-600 disabled:opacity-50 transition-colors"
             >
               {saving ? "Saving…" : isEdit ? "Update" : "Create"}
             </button>

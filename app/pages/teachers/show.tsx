@@ -1,5 +1,5 @@
 // ============================================================
-// app/pages/teachers/show.tsx  — Improved
+// app/pages/teachers/show.tsx  — Mobile Responsive
 // ============================================================
 import { Link } from "react-router";
 import type { Route as ShowRoute } from "./+types/show";
@@ -7,13 +7,12 @@ import { api } from "~/lib/api";
 
 export async function clientLoader({ params }: ShowRoute.LoaderArgs) {
   const [teacher, perf] = await Promise.all([
-    api.get(`/teachers/${params.id}`),
-    api.get(`/teachers/${params.id}/performance`),
+    api.teachers.get(Number(params.id)),
+    api.teachers.performance(Number(params.id)),
   ]);
-  return { teacher: teacher.data.data, perf: perf.data };
+  return { teacher: teacher.data, perf: perf.data };
 }
 
-// ── Types ──────────────────────────────────────────────────
 type TeacherStatus = "active" | "on_leave" | "inactive";
 
 interface TeacherData {
@@ -38,7 +37,6 @@ interface PerfData {
   students_count:    number;
 }
 
-// ── Helpers ────────────────────────────────────────────────
 const AVATAR_PALETTE = [
   ["from-blue-500", "to-indigo-600", "shadow-blue-500/20"],
   ["from-emerald-500","to-teal-600","shadow-emerald-500/20"],
@@ -68,7 +66,6 @@ function RadialProgress({ value, color, label }: { value: number; color: string;
   );
 }
 
-// ── Page component ─────────────────────────────────────────
 export default function TeacherShowPage({ loaderData }: ShowRoute.ComponentProps) {
   const { teacher, perf } = loaderData as { teacher: TeacherData; perf: PerfData };
 
@@ -84,9 +81,8 @@ export default function TeacherShowPage({ loaderData }: ShowRoute.ComponentProps
   const status = statusMap[teacher.status] ?? statusMap.inactive;
 
   return (
-    <div className="text-slate-200">
+    <div className="text-slate-200 px-3 sm:px-6 pb-12">
 
-      {/* ── Breadcrumb ──────────────────────────────────── */}
       <div className="flex items-center gap-2 mb-6 text-sm">
         <Link to="/teachers" className="text-slate-500 hover:text-slate-300 transition-colors flex items-center gap-1.5">
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -95,15 +91,13 @@ export default function TeacherShowPage({ loaderData }: ShowRoute.ComponentProps
           Teachers
         </Link>
         <span className="text-slate-700">/</span>
-        <span className="text-slate-400">{teacher.user?.name}</span>
+        <span className="text-slate-400 truncate">{teacher.user?.name}</span>
       </div>
 
-      <div className="grid grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
         {/* ── LEFT: Profile card ────────────────────────── */}
         <div className="space-y-4">
-
-          {/* Identity */}
           <div className="bg-slate-900/50 border border-slate-700/60 rounded-2xl p-6 text-center">
             <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${grad1} ${grad2} flex items-center justify-center text-2xl font-bold mx-auto mb-4 shadow-xl ${shadow}`}>
               {initials}
@@ -121,7 +115,6 @@ export default function TeacherShowPage({ loaderData }: ShowRoute.ComponentProps
               </span>
             </div>
 
-            {/* Actions */}
             <div className="flex gap-2 mt-5">
               <Link to={`/teachers/${teacher.id}/edit`}
                 className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold rounded-xl hover:bg-blue-500/20 transition-all">
@@ -140,7 +133,6 @@ export default function TeacherShowPage({ loaderData }: ShowRoute.ComponentProps
             </div>
           </div>
 
-          {/* Contact details */}
           <div className="bg-slate-900/50 border border-slate-700/60 rounded-2xl p-5">
             <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest mb-4">Contact & Info</p>
             <div className="space-y-3">
@@ -198,13 +190,10 @@ export default function TeacherShowPage({ loaderData }: ShowRoute.ComponentProps
         </div>
 
         {/* ── RIGHT: Main content ───────────────────────── */}
-        <div className="col-span-2 space-y-4">
-
-          {/* Performance metrics */}
+        <div className="lg:col-span-2 space-y-4">
           <div className="bg-slate-900/50 border border-slate-700/60 rounded-2xl p-5">
             <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest mb-5">Performance Overview</p>
-            <div className="grid grid-cols-4 gap-4">
-              {/* Stat cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
                 {
                   label: "Students",
@@ -229,7 +218,6 @@ export default function TeacherShowPage({ loaderData }: ShowRoute.ComponentProps
                 </div>
               ))}
 
-              {/* Radial progress charts */}
               <div className="col-span-1 flex flex-col items-center justify-center bg-slate-800/30 border border-slate-700/40 rounded-xl p-3">
                 <RadialProgress
                   value={perf?.avg_student_score ?? 0}
@@ -247,7 +235,6 @@ export default function TeacherShowPage({ loaderData }: ShowRoute.ComponentProps
             </div>
           </div>
 
-          {/* Subjects */}
           <div className="bg-slate-900/50 border border-slate-700/60 rounded-2xl p-5">
             <div className="flex items-center justify-between mb-4">
               <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest">Teaching Subjects</p>
@@ -277,7 +264,6 @@ export default function TeacherShowPage({ loaderData }: ShowRoute.ComponentProps
             </div>
           </div>
 
-          {/* Assigned classes */}
           <div className="bg-slate-900/50 border border-slate-700/60 rounded-2xl p-5">
             <div className="flex items-center justify-between mb-4">
               <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest">Assigned Classes</p>
@@ -285,9 +271,9 @@ export default function TeacherShowPage({ loaderData }: ShowRoute.ComponentProps
             </div>
 
             {teacher.class_rooms?.length > 0 ? (
-              <div className="grid grid-cols-3 gap-3">
-                {teacher.class_rooms.map((c, i) => {
-                  const capacity = 40; // estimated
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                {teacher.class_rooms.map((c) => {
+                  const capacity = 40;
                   const pct = Math.min(((c.students_count ?? 0) / capacity) * 100, 100);
                   return (
                     <Link
@@ -302,7 +288,6 @@ export default function TeacherShowPage({ loaderData }: ShowRoute.ComponentProps
                         </svg>
                       </div>
                       <p className="text-xs text-slate-500 mb-3">{c.students_count ?? 0} students</p>
-                      {/* Occupancy bar */}
                       <div className="h-1 bg-slate-700 rounded-full overflow-hidden">
                         <div
                           className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all duration-500"

@@ -73,16 +73,16 @@ export default function ChartOfAccountsPage({
             {accounts.length} accounts across {accountTypes.length} categories
           </p>
         </div>
-        <div className="flex gap-2 shrink-0">
+        <div className="flex flex-col sm:flex-row gap-2 shrink-0 w-full sm:w-auto">
           <Link
             to="/accounting/journals"
-            className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 transition-colors"
+            className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 transition-colors text-center"
           >
             Journal Entries
           </Link>
           <button
             onClick={() => { setEditingAccount(null); setShowModal(true); }}
-            className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-600 transition-colors"
+            className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-600 transition-colors text-center"
           >
             + Add Account
           </button>
@@ -91,10 +91,12 @@ export default function ChartOfAccountsPage({
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {accountTypes.map((type) => (
+        {accountTypes.map((type, idx) => (
           <div
             key={type}
-            className={`rounded-xl border bg-slate-800/60 px-4 py-3 ${typeConfig[type].accent}`}
+            className={`rounded-xl border bg-slate-800/60 px-4 py-3 ${typeConfig[type].accent} ${
+              idx === accountTypes.length - 1 && accountTypes.length % 2 !== 0 ? "col-span-2 sm:col-span-1" : ""
+            }`}
           >
             <div className="flex items-center gap-2 mb-1">
               <span className={`h-2 w-2 rounded-full ${typeConfig[type].dot}`} />
@@ -160,32 +162,32 @@ export default function ChartOfAccountsPage({
                       key={account.id}
                       className="flex items-center justify-between px-5 py-3 hover:bg-slate-700/30 transition-colors group"
                     >
-                      <div className="flex items-center gap-4 min-w-0">
-                        <span className="font-mono text-sm font-medium text-slate-400 w-16 shrink-0">
+                      <div className="flex items-center gap-4 min-w-0 pr-2">
+                        <span className="font-mono text-xs sm:text-sm font-medium text-slate-400 w-14 sm:w-16 shrink-0">
                           {account.account_code}
                         </span>
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-sm text-slate-200 truncate">
+                        <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                          <span className="text-xs sm:text-sm text-slate-200 truncate">
                             {account.account_name}
                           </span>
-                          <div className="flex items-center gap-1.5 shrink-0">
+                          <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
                             {account.is_system && (
-                              <span className="rounded bg-slate-600/80 px-1.5 py-0.5 text-xs text-slate-300">
+                              <span className="rounded bg-slate-600/80 px-1.5 py-0.5 text-[10px] sm:text-xs text-slate-300">
                                 System
                               </span>
                             )}
                             {account.is_bank_account && (
-                              <span className="rounded bg-blue-500/15 px-1.5 py-0.5 text-xs text-blue-400">
+                              <span className="rounded bg-blue-500/15 px-1.5 py-0.5 text-[10px] sm:text-xs text-blue-400">
                                 Bank
                               </span>
                             )}
                             {account.is_control_account && (
-                              <span className="rounded bg-purple-500/15 px-1.5 py-0.5 text-xs text-purple-400">
+                              <span className="rounded bg-purple-500/15 px-1.5 py-0.5 text-[10px] sm:text-xs text-purple-400">
                                 Control
                               </span>
                             )}
                             {!account.is_active && (
-                              <span className="rounded bg-red-500/15 px-1.5 py-0.5 text-xs text-red-400">
+                              <span className="rounded bg-red-500/15 px-1.5 py-0.5 text-[10px] sm:text-xs text-red-400">
                                 Inactive
                               </span>
                             )}
@@ -193,15 +195,15 @@ export default function ChartOfAccountsPage({
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3 shrink-0 ml-4">
+                      <div className="flex items-center gap-2 sm:gap-3 shrink-0 ml-2">
                         <span className="hidden sm:block text-xs text-slate-500 capitalize w-12 text-right">
                           {account.normal_balance}
                         </span>
                         <span className="hidden md:block text-xs text-slate-600 w-10 text-right">
                           {account.currency}
                         </span>
-                        {/* Actions — only visible on hover, hidden for system accounts */}
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {/* Actions — always visible on touch/mobile, hover-enhanced on desktop */}
+                        <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={() => { setEditingAccount(account); setShowModal(true); }}
                             className="rounded p-1.5 text-slate-400 hover:bg-slate-600 hover:text-white transition-colors"
@@ -279,7 +281,6 @@ function AccountModal({ account, onClose, onSaved }: AccountModalProps) {
     is_active:          account?.is_active          ?? true,
   });
 
-  // Auto-set normal balance when account type changes
   const handleTypeChange = (type: AccountType) => {
     const defaultBalance: Record<AccountType, NormalBalance> = {
       asset:     "debit",
@@ -312,10 +313,10 @@ function AccountModal({ account, onClose, onSaved }: AccountModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-800 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm overflow-y-auto">
+      <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-800 shadow-2xl max-h-[90vh] flex flex-col my-auto overflow-hidden">
         {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-slate-700 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-slate-700 px-6 py-4 shrink-0">
           <h2 className="text-base font-semibold text-white">
             {isEdit ? "Edit Account" : "New Account"}
           </h2>
@@ -329,14 +330,14 @@ function AccountModal({ account, onClose, onSaved }: AccountModalProps) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
           {error && (
             <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
               {error}
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="mb-1.5 block text-xs font-semibold text-slate-400 uppercase tracking-wide">
                 Account Code
@@ -381,7 +382,7 @@ function AccountModal({ account, onClose, onSaved }: AccountModalProps) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="mb-1.5 block text-xs font-semibold text-slate-400 uppercase tracking-wide">
                 Account Type
@@ -423,7 +424,7 @@ function AccountModal({ account, onClose, onSaved }: AccountModalProps) {
                 type="checkbox"
                 checked={formData.is_control_account}
                 onChange={(e) => setFormData({ ...formData, is_control_account: e.target.checked })}
-                className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-blue-500 focus:ring-blue-500 focus:ring-offset-slate-900"
+                className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-blue-500 focus:ring-blue-500 focus:ring-offset-slate-900 shrink-0"
               />
               <div>
                 <span className="text-sm text-slate-200">Control Account</span>
@@ -435,7 +436,7 @@ function AccountModal({ account, onClose, onSaved }: AccountModalProps) {
                 type="checkbox"
                 checked={formData.is_bank_account}
                 onChange={(e) => setFormData({ ...formData, is_bank_account: e.target.checked })}
-                className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-blue-500 focus:ring-blue-500 focus:ring-offset-slate-900"
+                className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-blue-500 focus:ring-blue-500 focus:ring-offset-slate-900 shrink-0"
               />
               <div>
                 <span className="text-sm text-slate-200">Bank Account</span>
@@ -447,7 +448,7 @@ function AccountModal({ account, onClose, onSaved }: AccountModalProps) {
                 type="checkbox"
                 checked={formData.is_active}
                 onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-blue-500 focus:ring-blue-500 focus:ring-offset-slate-900"
+                className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-blue-500 focus:ring-blue-500 focus:ring-offset-slate-900 shrink-0"
               />
               <div>
                 <span className="text-sm text-slate-200">Active</span>
@@ -457,18 +458,18 @@ function AccountModal({ account, onClose, onSaved }: AccountModalProps) {
           </div>
 
           {/* Footer */}
-          <div className="flex justify-end gap-2 pt-1">
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-1">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 transition-colors"
+              className="w-full sm:w-auto rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 transition-colors text-center"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="rounded-lg bg-blue-500 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-600 disabled:opacity-50 transition-colors"
+              className="w-full sm:w-auto rounded-lg bg-blue-500 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-600 disabled:opacity-50 transition-colors text-center"
             >
               {saving ? "Saving…" : isEdit ? "Update Account" : "Create Account"}
             </button>

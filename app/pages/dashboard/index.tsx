@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import apiService from "~/lib/api";
+import { apiService } from "~/lib/api";
 import type { Route } from "./+types/index";
 import { getDashboardTitle, getDashboardSubtitle, type UserRole } from "~/lib/rbac";
 import { useUser } from "~/layouts/dashboard";
@@ -45,20 +45,20 @@ export default function DashboardPage({ loaderData }: Route.ComponentProps) {
   const dashboardSubtitle = getDashboardSubtitle(userRole);
 
   return (
-    <div className="p-6 space-y-8 max-w-[1600px] mx-auto text-slate-200">
+    <div className="space-y-6 sm:space-y-8 max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 text-slate-200">
       
       {/* 1. Header & Quick Actions */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-6">
         <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">{dashboardTitle}</h1>
-          <p className="text-slate-400 text-sm mt-1">{dashboardSubtitle}</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">{dashboardTitle}</h1>
+          <p className="text-slate-400 text-xs sm:text-sm mt-1">{dashboardSubtitle}</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="text-right hidden sm:block">
-            <p className="text-xs font-bold text-emerald-400 uppercase tracking-widest">System Status</p>
+        <div className="flex items-center justify-between sm:justify-end gap-3">
+          <div className="text-left sm:text-right">
+            <p className="text-[10px] sm:text-xs font-bold text-emerald-400 uppercase tracking-widest">System Status</p>
             <p className="text-[10px] text-slate-500 italic">Last sync: {new Date().toLocaleTimeString()}</p>
           </div>
-          <span className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)] animate-pulse" />
+          <span className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)] animate-pulse shrink-0" />
         </div>
       </div>
 
@@ -66,7 +66,7 @@ export default function DashboardPage({ loaderData }: Route.ComponentProps) {
       {(userRole === "admin" || userRole === "superadmin") && (
         <>
           {/* 2. Top-Level Stats (Database Totals) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6">
             <MetricCard 
               title="Total Students" 
               value={stats.students} 
@@ -95,35 +95,37 @@ export default function DashboardPage({ loaderData }: Route.ComponentProps) {
             />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
             
-            {/* 3. Enrollment Analytics (Dynamic Chart) */}
-            <div className="lg:col-span-2 bg-slate-900/40 border border-slate-800 rounded-2xl p-6 backdrop-blur-md">
-              <div className="flex justify-between items-center mb-10">
-                <h3 className="text-lg font-bold text-white">Enrollment Trend</h3>
+            {/* 3. Enrollment Analytics (Dynamic Chart with mobile scroll wrapper) */}
+            <div className="lg:col-span-2 bg-slate-900/40 border border-slate-800 rounded-2xl p-4 sm:p-6 backdrop-blur-md">
+              <div className="flex justify-between items-center mb-6 sm:mb-10">
+                <h3 className="text-base sm:text-lg font-bold text-white">Enrollment Trend</h3>
                 <span className="text-xs bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full border border-blue-500/20">Monthly</span>
               </div>
-              <div className="flex items-end justify-between gap-2 h-56 px-2">
-                {Object.entries(charts.enrollment || {}).map(([month, count]: [string, any]) => (
-                  <div key={month} className="flex-1 flex flex-col items-center gap-3 group">
-                    <div 
-                      className="w-full max-w-[40px] rounded-t-md bg-blue-600/20 border-t-2 border-blue-500 group-hover:bg-blue-500/40 transition-all duration-500 relative"
-                      style={{ height: `${Math.max((count / 100) * 100, 5)}%` }} // Scaled to 100 max for UI
-                    >
-                      <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                        {count} Students
+              <div className="overflow-x-auto pb-2">
+                <div className="flex items-end justify-between gap-2 h-56 px-2 min-w-[450px]">
+                  {Object.entries(charts.enrollment || {}).map(([month, count]: [string, any]) => (
+                    <div key={month} className="flex-1 flex flex-col items-center gap-3 group">
+                      <div 
+                        className="w-full max-w-[40px] rounded-t-md bg-blue-600/20 border-t-2 border-blue-500 group-hover:bg-blue-500/40 transition-all duration-500 relative"
+                        style={{ height: `${Math.max((count / 100) * 100, 5)}%` }}
+                      >
+                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                          {count} Students
+                        </div>
                       </div>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase">{month}</span>
                     </div>
-                    <span className="text-[10px] font-bold text-slate-500 uppercase">{month}</span>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
 
             {/* 4. Real-Time Fee Status (Segmented Progress) */}
-            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6">
-              <h3 className="text-lg font-bold text-white mb-8">Fee Collection Analytics</h3>
-              <div className="space-y-8">
+            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-4 sm:p-6">
+              <h3 className="text-base sm:text-lg font-bold text-white mb-6 sm:mb-8">Fee Collection Analytics</h3>
+              <div className="space-y-6 sm:space-y-8">
                 <div className="flex h-4 w-full rounded-full overflow-hidden bg-slate-800 shadow-inner">
                   <div className="h-full bg-emerald-500" style={{ width: `${getPercent(feeDetails.paid)}%` }} />
                   <div className="h-full bg-amber-500" style={{ width: `${getPercent(feeDetails.pending)}%` }} />
@@ -138,32 +140,32 @@ export default function DashboardPage({ loaderData }: Route.ComponentProps) {
                 
                 <div className="pt-6 border-t border-slate-800 text-center">
                   <p className="text-[10px] text-slate-500 uppercase tracking-tighter">Total Expected Revenue</p>
-                  <p className="text-xl font-bold text-white">{formatKES(totalFees)}</p>
+                  <p className="text-lg sm:text-xl font-bold text-white truncate">{formatKES(totalFees)}</p>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
             
             {/* 5. Top Performers (From Analytics Service) */}
             <div className="bg-slate-900/40 border border-slate-800 rounded-2xl overflow-hidden">
-              <div className="p-6 bg-slate-800/30 border-b border-slate-800">
-                <h3 className="font-bold text-white text-lg">Top Performers</h3>
+              <div className="p-4 sm:p-6 bg-slate-800/30 border-b border-slate-800">
+                <h3 className="font-bold text-white text-base sm:text-lg">Top Performers</h3>
               </div>
               <div className="divide-y divide-slate-800/50">
                 {topPerformers.length > 0 ? topPerformers.slice(0, 5).map((student: any, i: number) => (
-                  <div key={i} className="p-4 flex items-center justify-between hover:bg-slate-800/20 transition-colors">
-                    <div className="flex items-center gap-4">
-                      <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-blue-400">
+                  <div key={i} className="p-3 sm:p-4 flex items-center justify-between hover:bg-slate-800/20 transition-colors">
+                    <div className="flex items-center gap-3 sm:gap-4 truncate pr-2">
+                      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-blue-400 shrink-0">
                         {i + 1}
                       </div>
-                      <div>
-                        <p className="text-sm font-semibold text-slate-200">{student.name}</p>
-                        <p className="text-[11px] text-slate-500">{student.grade_name || 'Grade N/A'}</p>
+                      <div className="truncate">
+                        <p className="text-xs sm:text-sm font-semibold text-slate-200 truncate">{student.name}</p>
+                        <p className="text-[11px] text-slate-500 truncate">{student.grade_name || 'Grade N/A'}</p>
                       </div>
                     </div>
-                    <span className="text-sm font-mono font-bold text-emerald-400">{student.percentage}%</span>
+                    <span className="text-xs sm:text-sm font-mono font-bold text-emerald-400 shrink-0">{student.percentage}%</span>
                   </div>
                 )) : (
                   <div className="p-10 text-center text-slate-500 text-sm italic">No ranking data available</div>
@@ -172,10 +174,9 @@ export default function DashboardPage({ loaderData }: Route.ComponentProps) {
             </div>
 
             {/* 6. Class Distribution */}
-            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6">
-              <h3 className="font-bold text-white text-lg mb-6">Class Load Distribution</h3>
+            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-4 sm:p-6">
+              <h3 className="font-bold text-white text-base sm:text-lg mb-6">Class Load Distribution</h3>
               <div className="space-y-6">
-                {/* Logic: Map through unique grade categories from your student data if available */}
                 {["Primary", "Secondary", "Higher Secondary"].map((level, i) => (
                   <div key={level}>
                     <div className="flex justify-between text-xs mb-2">
@@ -183,7 +184,7 @@ export default function DashboardPage({ loaderData }: Route.ComponentProps) {
                       <span className="text-white font-bold">{[45, 32, 23][i]}%</span>
                     </div>
                     <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-                      <div className={`h-full bg-blue-500 rounded-full`} style={{ width: `${[45, 32, 23][i]}%` }} />
+                      <div className="h-full bg-blue-500 rounded-full" style={{ width: `${[45, 32, 23][i]}%` }} />
                     </div>
                   </div>
                 ))}
@@ -191,16 +192,16 @@ export default function DashboardPage({ loaderData }: Route.ComponentProps) {
             </div>
 
             {/* 7. Recent System Activity */}
-            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl flex flex-col h-[400px]">
-              <div className="p-6 border-b border-slate-800">
-                <h3 className="font-bold text-white text-lg">System Logs</h3>
+            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl flex flex-col h-[350px] sm:h-[400px]">
+              <div className="p-4 sm:p-6 border-b border-slate-800">
+                <h3 className="font-bold text-white text-base sm:text-lg">System Logs</h3>
               </div>
-              <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
                 {activity.map((a: any, i: number) => (
-                  <div key={i} className="flex gap-4 items-start group">
-                    <div className="w-2 h-2 rounded-full bg-blue-500/40 mt-1.5 ring-4 ring-blue-500/10 group-hover:bg-blue-400 group-hover:ring-blue-400/20 transition-all" />
+                  <div key={i} className="flex gap-3 sm:gap-4 items-start group">
+                    <div className="w-2 h-2 rounded-full bg-blue-500/40 mt-1.5 ring-4 ring-blue-500/10 group-hover:bg-blue-400 group-hover:ring-blue-400/20 transition-all shrink-0" />
                     <div>
-                      <p className="text-sm text-slate-300 group-hover:text-white transition-colors">{a.text}</p>
+                      <p className="text-xs sm:text-sm text-slate-300 group-hover:text-white transition-colors">{a.text}</p>
                       <p className="text-[11px] text-slate-600 font-medium mt-1">{a.time}</p>
                     </div>
                   </div>
@@ -214,7 +215,7 @@ export default function DashboardPage({ loaderData }: Route.ComponentProps) {
       {/* Accountant Dashboard - Finance Focus */}
       {userRole === "accountant" && (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-8">
             <MetricCard 
               title="Total Fee Collected" 
               value={formatKES(feeDetails.paid)} 
@@ -238,31 +239,31 @@ export default function DashboardPage({ loaderData }: Route.ComponentProps) {
             />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6">
-              <h3 className="text-lg font-bold text-white mb-8">Fee Collection Status</h3>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
+            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-4 sm:p-6">
+              <h3 className="text-base sm:text-lg font-bold text-white mb-6 sm:mb-8">Fee Collection Status</h3>
               <div className="flex h-6 w-full rounded-full overflow-hidden bg-slate-800 shadow-inner mb-6">
                 <div className="h-full bg-emerald-500" style={{ width: `${getPercent(feeDetails.paid)}%` }} />
                 <div className="h-full bg-amber-500" style={{ width: `${getPercent(feeDetails.pending)}%` }} />
                 <div className="h-full bg-rose-500" style={{ width: `${getPercent(feeDetails.overdue)}%` }} />
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <FeeRow label="Collected" amount={feeDetails.paid} color="bg-emerald-500" percent={getPercent(feeDetails.paid)} />
                 <FeeRow label="Pending" amount={feeDetails.pending} color="bg-amber-500" percent={getPercent(feeDetails.pending)} />
                 <FeeRow label="Overdue" amount={feeDetails.overdue} color="bg-rose-500" percent={getPercent(feeDetails.overdue)} />
               </div>
             </div>
 
-            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl flex flex-col h-[400px]">
-              <div className="p-6 border-b border-slate-800">
-                <h3 className="font-bold text-white text-lg">Recent Transactions</h3>
+            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl flex flex-col h-[350px] sm:h-[400px]">
+              <div className="p-4 sm:p-6 border-b border-slate-800">
+                <h3 className="font-bold text-white text-base sm:text-lg">Recent Transactions</h3>
               </div>
-              <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
                 {activity.slice(0, 8).map((a: any, i: number) => (
-                  <div key={i} className="flex gap-4 items-start pb-4 border-b border-slate-800 last:border-0">
-                    <div className="w-2 h-2 rounded-full bg-blue-500/40 mt-1.5 ring-4 ring-blue-500/10" />
+                  <div key={i} className="flex gap-3 sm:gap-4 items-start pb-4 border-b border-slate-800 last:border-0">
+                    <div className="w-2 h-2 rounded-full bg-blue-500/40 mt-1.5 ring-4 ring-blue-500/10 shrink-0" />
                     <div>
-                      <p className="text-sm text-slate-300">{a.text}</p>
+                      <p className="text-xs sm:text-sm text-slate-300">{a.text}</p>
                       <p className="text-[11px] text-slate-600 font-medium mt-1">{a.time}</p>
                     </div>
                   </div>
@@ -276,7 +277,7 @@ export default function DashboardPage({ loaderData }: Route.ComponentProps) {
       {/* Teacher Dashboard - Class & Student Focus */}
       {userRole === "teacher" && (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-8">
             <MetricCard 
               title="My Classes" 
               value={stats.classes_count || "—"} 
@@ -297,19 +298,19 @@ export default function DashboardPage({ loaderData }: Route.ComponentProps) {
             />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6">
-              <h3 className="font-bold text-white text-lg mb-6">Top Students</h3>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
+            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-4 sm:p-6">
+              <h3 className="font-bold text-white text-base sm:text-lg mb-6">Top Students</h3>
               <div className="divide-y divide-slate-800/50">
                 {topPerformers.length > 0 ? topPerformers.slice(0, 5).map((student: any, i: number) => (
-                  <div key={i} className="py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-blue-400">
+                  <div key={i} className="py-3 sm:py-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3 truncate pr-2">
+                      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-blue-400 shrink-0">
                         {i + 1}
                       </div>
-                      <p className="text-sm font-semibold text-slate-200">{student.name}</p>
+                      <p className="text-xs sm:text-sm font-semibold text-slate-200 truncate">{student.name}</p>
                     </div>
-                    <span className="text-sm font-mono font-bold text-emerald-400">{student.percentage}%</span>
+                    <span className="text-xs sm:text-sm font-mono font-bold text-emerald-400 shrink-0">{student.percentage}%</span>
                   </div>
                 )) : (
                   <div className="py-10 text-center text-slate-500 text-sm italic">No student data available</div>
@@ -317,21 +318,21 @@ export default function DashboardPage({ loaderData }: Route.ComponentProps) {
               </div>
             </div>
 
-            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl flex flex-col h-[400px]">
-              <div className="p-6 border-b border-slate-800">
-                <h3 className="font-bold text-white text-lg">Quick Links</h3>
+            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl flex flex-col h-[350px] sm:h-[400px]">
+              <div className="p-4 sm:p-6 border-b border-slate-800">
+                <h3 className="font-bold text-white text-base sm:text-lg">Quick Links</h3>
               </div>
-              <div className="flex-1 p-6 space-y-3 flex flex-col">
-                <Link to="/attendance" className="block px-4 py-2 bg-blue-500/10 text-blue-400 rounded-lg hover:bg-blue-500/20 transition">
+              <div className="flex-1 p-4 sm:p-6 space-y-3 flex flex-col justify-around">
+                <Link to="/attendance" className="block px-4 py-2.5 bg-blue-500/10 text-blue-400 rounded-lg hover:bg-blue-500/20 transition text-sm">
                   📋 Mark Attendance
                 </Link>
-                <Link to="/exams" className="block px-4 py-2 bg-purple-500/10 text-purple-400 rounded-lg hover:bg-purple-500/20 transition">
+                <Link to="/exams" className="block px-4 py-2.5 bg-purple-500/10 text-purple-400 rounded-lg hover:bg-purple-500/20 transition text-sm">
                   📝 Manage Exams
                 </Link>
-                <Link to="/students" className="block px-4 py-2 bg-green-500/10 text-green-400 rounded-lg hover:bg-green-500/20 transition">
+                <Link to="/students" className="block px-4 py-2.5 bg-green-500/10 text-green-400 rounded-lg hover:bg-green-500/20 transition text-sm">
                   🎓 View Students
                 </Link>
-                <Link to="/messages" className="block px-4 py-2 bg-amber-500/10 text-amber-400 rounded-lg hover:bg-amber-500/20 transition">
+                <Link to="/messages" className="block px-4 py-2.5 bg-amber-500/10 text-amber-400 rounded-lg hover:bg-amber-500/20 transition text-sm">
                   💬 Messages
                 </Link>
               </div>
@@ -343,7 +344,7 @@ export default function DashboardPage({ loaderData }: Route.ComponentProps) {
       {/* Librarian Dashboard - Library Focus */}
       {userRole === "librarian" && (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-8">
             <MetricCard 
               title="Total Books" 
               value={stats.total_books || "—"} 
@@ -358,13 +359,13 @@ export default function DashboardPage({ loaderData }: Route.ComponentProps) {
             />
           </div>
 
-          <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6">
-            <h3 className="font-bold text-white text-lg mb-6">Quick Actions</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <Link to="/library" className="p-4 bg-blue-500/10 text-blue-400 rounded-lg hover:bg-blue-500/20 transition text-center">
+          <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-4 sm:p-6">
+            <h3 className="font-bold text-white text-base sm:text-lg mb-6">Quick Actions</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Link to="/library" className="p-4 bg-blue-500/10 text-blue-400 rounded-lg hover:bg-blue-500/20 transition text-center text-sm">
                 📚 Manage Books
               </Link>
-              <Link to="/library" className="p-4 bg-green-500/10 text-green-400 rounded-lg hover:bg-green-500/20 transition text-center">
+              <Link to="/library" className="p-4 bg-green-500/10 text-green-400 rounded-lg hover:bg-green-500/20 transition text-center text-sm">
                 ✅ Process Returns
               </Link>
             </div>
@@ -379,7 +380,7 @@ export default function DashboardPage({ loaderData }: Route.ComponentProps) {
 
 function MetricCard({ title, value, subText, icon, trend }: any) {
   return (
-    <div className="bg-slate-900/40 border border-slate-800 p-6 rounded-2xl hover:border-slate-700 transition-all group">
+    <div className="bg-slate-900/40 border border-slate-800 p-4 sm:p-6 rounded-2xl hover:border-slate-700 transition-all group">
       <div className="flex justify-between items-start mb-4">
         <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
           {icon}
@@ -390,8 +391,8 @@ function MetricCard({ title, value, subText, icon, trend }: any) {
           </span>
         )}
       </div>
-      <h4 className="text-3xl font-extrabold text-white tracking-tight">{value || 0}</h4>
-      <p className="text-xs font-bold text-slate-500 uppercase mt-1 tracking-wider">{title}</p>
+      <h4 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight truncate">{value || 0}</h4>
+      <p className="text-[11px] sm:text-xs font-bold text-slate-500 uppercase mt-1 tracking-wider">{title}</p>
       <p className="text-[11px] text-slate-400 mt-4 border-t border-slate-800 pt-3">{subText}</p>
     </div>
   );
@@ -403,12 +404,12 @@ const formatKES = (value: number | null | undefined) =>
 function FeeRow({ label, amount, color, percent }: any) {
   return (
     <div className="flex items-center justify-between group">
-      <div className="flex items-center gap-3">
-        <div className={`w-2.5 h-2.5 rounded-sm ${color}`} />
-        <span className="text-sm text-slate-400 group-hover:text-slate-200 transition-colors">{label}</span>
+      <div className="flex items-center gap-3 truncate pr-2">
+        <div className={`w-2.5 h-2.5 rounded-sm ${color} shrink-0`} />
+        <span className="text-xs sm:text-sm text-slate-400 group-hover:text-slate-200 transition-colors truncate">{label}</span>
       </div>
-      <div className="text-right">
-        <p className="text-sm font-bold text-slate-200">{formatKES(amount)}</p>
+      <div className="text-right shrink-0">
+        <p className="text-xs sm:text-sm font-bold text-slate-200">{formatKES(amount)}</p>
         <p className="text-[10px] text-slate-500">{percent.toFixed(1)}%</p>
       </div>
     </div>

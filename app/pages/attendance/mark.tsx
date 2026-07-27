@@ -3,7 +3,7 @@
 // ============================================================
 import { useState, useEffect } from "react";
 import { Form, Link, useSearchParams, useNavigation } from "react-router";
-import api from "~/lib/api";
+import { api } from "~/lib/api";
 
 export async function clientLoader({ request }: { request: Request }) {
   const url = new URL(request.url);
@@ -54,10 +54,8 @@ export default function MarkAttendancePage({ loaderData, actionData }: {
   const navigation = useNavigation();
   const isSwitchingClass = navigation.state === "loading" && navigation.formMethod !== "POST";
 
-  // State to hold the current marks
   const [statuses, setStatuses] = useState<Record<number, string>>({});
 
-  // Reset all to present when students change
   useEffect(() => {
     setStatuses(Object.fromEntries(students.map(s => [s.id, "present"])));
   }, [students]);
@@ -66,7 +64,7 @@ export default function MarkAttendancePage({ loaderData, actionData }: {
 
   if ((actionData as { success?: boolean })?.success) {
     return (
-      <div className="max-w-md mx-auto text-center py-16">
+      <div className="max-w-md mx-auto text-center py-16 px-4">
         <div className="text-5xl mb-4">✅</div>
         <h2 className="text-xl font-bold mb-2">Attendance Saved</h2>
         <p className="text-slate-400 text-sm mb-6">All records have been recorded successfully.</p>
@@ -79,7 +77,7 @@ export default function MarkAttendancePage({ loaderData, actionData }: {
   }
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-2xl mx-auto">
       <h1 className="text-xl font-bold mb-6">📝 Mark Attendance</h1>
       
       {actionData?.error && (
@@ -88,9 +86,9 @@ export default function MarkAttendancePage({ loaderData, actionData }: {
         </div>
       )}
 
-      <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
+      <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 sm:p-6">
         <Form method="post">
-          <div className="grid grid-cols-2 gap-4 mb-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
             <div>
               <label className="block text-xs font-semibold text-slate-400 mb-2">Class</label>
               <select 
@@ -109,8 +107,8 @@ export default function MarkAttendancePage({ loaderData, actionData }: {
             </div>
           </div>
 
-          <div className="flex gap-2 mb-4">
-            <span className="text-xs text-slate-500 self-center mr-1">Mark all:</span>
+          <div className="flex flex-wrap gap-2 mb-4 items-center">
+            <span className="text-xs text-slate-500 mr-1">Mark all:</span>
             {["present","absent","late"].map(s => (
               <button key={s} type="button" onClick={() => markAll(s)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
@@ -123,28 +121,28 @@ export default function MarkAttendancePage({ loaderData, actionData }: {
             ))}
           </div>
 
-          <div className={`space-y-1 max-h-96 overflow-y-auto pr-2 ${isSwitchingClass ? "opacity-50" : ""}`}>
+          <div className={`space-y-2 max-h-96 overflow-y-auto pr-1 ${isSwitchingClass ? "opacity-50" : ""}`}>
             {students.length === 0 ? (
               <p className="text-center text-sm text-slate-500 py-4">No students found in this class.</p>
             ) : (
               students.map((s: any) => (
-                <div key={s.id} className="flex items-center justify-between py-2.5 px-3 bg-slate-900/40 rounded-lg border border-slate-700/50 hover:bg-slate-900 transition-colors">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-full bg-blue-500/15 text-blue-400 flex items-center justify-center text-xs font-bold overflow-hidden">
+                <div key={s.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-3 px-3 bg-slate-900/40 rounded-lg border border-slate-700/50 hover:bg-slate-900 transition-colors">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-blue-500/15 text-blue-400 flex items-center justify-center text-xs font-bold overflow-hidden flex-shrink-0">
                       {s.profile_photo ? <img src={s.profile_photo} alt={s.first_name} className="w-full h-full object-cover" /> : s.first_name[0] + s.last_name[0]}
                     </div>
-                    <div>
-                      <p className="text-sm font-medium">{s.full_name || `${s.first_name} ${s.last_name}`}</p>
-                      <p className="text-xs text-slate-500 font-mono">{s.roll_number || s.admission_no}</p>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{s.full_name || `${s.first_name} ${s.last_name}`}</p>
+                      <p className="text-xs text-slate-500 font-mono truncate">{s.roll_number || s.admission_no}</p>
                     </div>
                   </div>
-                  <div className="flex gap-1.5">
+                  <div className="flex gap-1.5 self-end sm:self-auto">
                     {(["present", "absent", "late"] as const).map(status => (
                       <label key={status}>
                         <input type="radio" name={`status_${s.id}`} value={status} className="sr-only"
                           checked={statuses[s.id] === status}
                           onChange={() => setStatuses(prev => ({ ...prev, [s.id]: status }))} />
-                        <span className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-all ${
+                        <span className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-all inline-block ${
                           statuses[s.id] === status
                             ? status === "present" ? "bg-emerald-500 text-white" : status === "absent" ? "bg-red-500 text-white" : "bg-amber-500 text-white"
                             : "bg-slate-700 text-slate-400 hover:bg-slate-600"
@@ -159,7 +157,7 @@ export default function MarkAttendancePage({ loaderData, actionData }: {
             )}
           </div>
 
-          <div className="flex gap-3 mt-5 pt-4 border-t border-slate-700">
+          <div className="flex flex-col sm:flex-row gap-3 mt-5 pt-4 border-t border-slate-700">
             <Link to="/attendance" className="flex-1 text-center py-2.5 bg-slate-700 text-slate-300 rounded-lg text-sm hover:bg-slate-600 transition">Cancel</Link>
             <button 
               type="submit" 

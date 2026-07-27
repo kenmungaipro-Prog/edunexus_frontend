@@ -1,5 +1,5 @@
 // ============================================================
-// app/pages/teachers/edit.tsx — Database-driven form
+// app/pages/teachers/edit.tsx — Database-driven form (Mobile Responsive)
 // ============================================================
 import { useState, useEffect } from "react";
 import {
@@ -34,22 +34,14 @@ interface ClassRoom {
 export async function clientLoader({ params }: Route.LoaderArgs) {
   try {
     const [teacherRes, subjectsRes, classesRes] = await Promise.all([
-      api.get(`/teachers/${params.id}`),
-      api.get("/subjects?per_page=999"),
-      api.get("/classes?per_page=999"),
+      api.teachers.get(Number(params.id)),
+      api.subjects.list(),
+      api.classes.list({ per_page: 999 }),
     ]);
 
-    console.log("Teacher API Response:", teacherRes);
-
-    // The API response interceptor unwraps res.data, so response is: 
-    // { success: true, data: {...teacher object with user, subjects, classRooms...} }
-    const teacher = (teacherRes as any)?.data.data;
-    const subjects = (subjectsRes as any)?.data?.data || (subjectsRes as any)?.data || [];
-    const classes = (classesRes as any)?.data?.data || (classesRes as any)?.data || [];
-
-    console.log("Extracted Teacher:", teacher);
-    console.log("Extracted Subjects:", subjects);
-    console.log("Extracted Classes:", classes);
+    const teacher = teacherRes.data;
+    const subjects = subjectsRes.data;
+    const classes = classesRes.data;
 
     if (!teacher) {
       throw new Error("Teacher data not found in API response. Check console for details.");
@@ -82,11 +74,10 @@ export async function clientAction({ request, params }: Route.ClientActionArgs) 
   if (Object.keys(errors).length > 0) return { errors };
 
   try {
-    // Collect selected subject and classroom IDs from form
     const selectedSubjects = Array.from(form.getAll("subject_ids")) as string[];
     const selectedClasses  = Array.from(form.getAll("classroom_ids")) as string[];
 
-    await api.put(`/teachers/${params.id}`, {
+    await api.teachers.update(Number(params.id), {
       name, 
       email,
       phone:           form.get("phone") || undefined,
@@ -121,13 +112,11 @@ export async function clientAction({ request, params }: Route.ClientActionArgs) 
   }
 }
 
-// ── Constants ─────────────────────────────────────────────────
 const DEPTS = [
   "Mathematics", "Science", "English", "Social Studies",
   "Computer", "Hindi", "Art", "Physical Education",
 ];
 
-// ── Component ─────────────────────────────────────────────────
 export default function EditTeacherPage({ loaderData }: Route.ComponentProps) {
   const { teacher, allSubjects, allClasses }  = loaderData as any;
   const actionData   = useActionData<typeof clientAction>();
@@ -135,12 +124,10 @@ export default function EditTeacherPage({ loaderData }: Route.ComponentProps) {
   const isSubmitting = navigation.state === "submitting";
   const errors       = (actionData as { errors?: ActionErrors } | undefined)?.errors ?? {};
 
-  // Form State initialized with teacher data
   const [name, setName]       = useState(teacher?.user?.name ?? "");
   const [email, setEmail]     = useState(teacher?.user?.email ?? "");
   const [dept, setDept]       = useState(teacher?.department ?? "");
   
-  // Track selected subject and classroom IDs
   const initialSubjectIds = Array.isArray(teacher?.subjects) 
     ? teacher.subjects.map((s: any) => s.id) 
     : [];
@@ -153,7 +140,6 @@ export default function EditTeacherPage({ loaderData }: Route.ComponentProps) {
 
   const initials = name.trim().split(" ").filter(Boolean).map((n: string) => n[0]).join("").substring(0, 2).toUpperCase() || "?";
 
-  // Toggle selection handlers
   function toggleSubject(id: number) {
     setSelectedSubjectIds(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
   }
@@ -162,7 +148,6 @@ export default function EditTeacherPage({ loaderData }: Route.ComponentProps) {
     setSelectedClassIds(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
   }
 
-  // ── Field Component ─────────────────────────────────────────
   const Field = ({
     label, required, error, hint, children
   }: {
@@ -194,35 +179,36 @@ export default function EditTeacherPage({ loaderData }: Route.ComponentProps) {
   const selectCls = inputCls() + " cursor-pointer";
 
   return (
-    <div className="max-w-3xl mx-auto text-slate-200 pb-12">
+    <div className="max-w-3xl mx-auto text-slate-200 px-4 sm:px-6 pb-12">
       
       {/* ── Header ────────────────────────────────────────── */}
-      <div className="flex items-center gap-4 mb-8">
-        <Link
-          to={`/teachers/${teacher?.id}`}
-          className="w-9 h-9 flex items-center justify-center bg-slate-800 border border-slate-700 text-slate-400 rounded-xl hover:bg-slate-700 hover:text-slate-200 transition-all flex-shrink-0"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </Link>
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-100">Edit Teacher Profile</h1>
-          <div className="flex items-center gap-2 text-sm text-slate-500 mt-0.5">
-            <span>Updating profile for</span>
-            <span className="font-semibold text-slate-400">{teacher?.user?.name}</span>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
+        <div className="flex items-center gap-4">
+          <Link
+            to={`/teachers/${teacher?.id}`}
+            className="w-9 h-9 flex items-center justify-center bg-slate-800 border border-slate-700 text-slate-400 rounded-xl hover:bg-slate-700 hover:text-slate-200 transition-all flex-shrink-0"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </Link>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-slate-100">Edit Teacher Profile</h1>
+            <div className="flex flex-wrap items-center gap-1.5 text-sm text-slate-500 mt-0.5">
+              <span>Updating profile for</span>
+              <span className="font-semibold text-slate-400">{teacher?.user?.name}</span>
+            </div>
           </div>
         </div>
 
         {/* Avatar preview */}
-        <div className="ml-auto flex items-center gap-3">
+        <div className="sm:ml-auto flex items-center gap-3">
           <div className="w-11 h-11 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-sm font-bold text-white shadow-lg shadow-amber-500/20">
             {initials}
           </div>
         </div>
       </div>
 
-      {/* ── Error banner ──────────────────────────────────── */}
       {errors.general && (
         <div className="mb-6 flex items-start gap-3 px-4 py-3.5 bg-red-500/8 border border-red-500/25 text-red-400 text-sm rounded-xl">
           <span className="w-5 h-5 rounded-full bg-red-500/15 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">!</span>
@@ -231,7 +217,6 @@ export default function EditTeacherPage({ loaderData }: Route.ComponentProps) {
       )}
 
       <Form method="post" className="space-y-6">
-        {/* Hidden fields for subject and classroom IDs */}
         {selectedSubjectIds.map(id => (
           <input key={`subj-${id}`} type="hidden" name="subject_ids" value={id} />
         ))}
@@ -240,14 +225,14 @@ export default function EditTeacherPage({ loaderData }: Route.ComponentProps) {
         ))}
 
         {/* ── Section 1: Personal Info ──────────────────── */}
-        <div className="bg-slate-900/40 border border-slate-700/50 rounded-2xl p-6">
+        <div className="bg-slate-900/40 border border-slate-700/50 rounded-2xl p-4 sm:p-6">
           <div className="flex items-center gap-2 mb-6 border-b border-slate-800 pb-4">
             <span className="text-lg">👤</span>
             <h2 className="font-semibold text-slate-200">Personal Information</h2>
           </div>
           
-          <div className="grid grid-cols-2 gap-5">
-            <div className="col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+            <div className="sm:col-span-2">
               <Field label="Full Name" required error={errors.name}>
                 <input
                   name="name" value={name}
@@ -292,14 +277,14 @@ export default function EditTeacherPage({ loaderData }: Route.ComponentProps) {
         </div>
 
         {/* ── Section 2: Professional Details ───────────── */}
-        <div className="bg-slate-900/40 border border-slate-700/50 rounded-2xl p-6">
+        <div className="bg-slate-900/40 border border-slate-700/50 rounded-2xl p-4 sm:p-6">
           <div className="flex items-center gap-2 mb-6 border-b border-slate-800 pb-4">
             <span className="text-lg">💼</span>
             <h2 className="font-semibold text-slate-200">Professional Details</h2>
           </div>
 
-          <div className="grid grid-cols-2 gap-5">
-            <div className="col-span-2 p-4 bg-slate-800/40 border border-slate-700/30 rounded-xl">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+            <div className="sm:col-span-2 p-4 bg-slate-800/40 border border-slate-700/30 rounded-xl">
               <p className="text-xs text-slate-500 font-semibold uppercase">Employee ID</p>
               <p className="text-sm text-slate-200 mt-1 font-mono">{teacher?.employee_id || "—"}</p>
               <p className="text-xs text-slate-600 mt-1">Auto-generated. Contact admin to change.</p>
@@ -346,7 +331,7 @@ export default function EditTeacherPage({ loaderData }: Route.ComponentProps) {
               </select>
             </Field>
 
-            <div className="col-span-2">
+            <div className="sm:col-span-2">
               <Field label="Bio / Notes">
                 <textarea name="bio" rows={3}
                   defaultValue={teacher?.bio ?? ""}
@@ -358,15 +343,13 @@ export default function EditTeacherPage({ loaderData }: Route.ComponentProps) {
         </div>
 
         {/* ── Section 3: Teaching Assignments ───────────── */}
-        <div className="bg-slate-900/40 border border-slate-700/50 rounded-2xl p-6">
+        <div className="bg-slate-900/40 border border-slate-700/50 rounded-2xl p-4 sm:p-6">
           <div className="flex items-center gap-2 mb-6 border-b border-slate-800 pb-4">
             <span className="text-lg">📚</span>
             <h2 className="font-semibold text-slate-200">Teaching Assignments</h2>
           </div>
 
           <div className="space-y-6">
-            
-            {/* Subjects */}
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <span className="text-base">📖</span>
@@ -397,7 +380,6 @@ export default function EditTeacherPage({ loaderData }: Route.ComponentProps) {
               )}
             </div>
 
-            {/* Classrooms */}
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <span className="text-base">🏫</span>
@@ -431,15 +413,15 @@ export default function EditTeacherPage({ loaderData }: Route.ComponentProps) {
         </div>
 
         {/* ── Footer Actions ──────────────────────────────── */}
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+        <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-3 pt-4 border-t border-slate-800">
           <Link to={`/teachers/${teacher?.id}`}
-            className="px-5 py-2.5 text-slate-400 text-sm font-medium rounded-xl hover:text-slate-200 transition-colors">
+            className="w-full sm:w-auto text-center px-5 py-2.5 text-slate-400 text-sm font-medium rounded-xl hover:text-slate-200 transition-colors">
             Cancel
           </Link>
           <button
             type="submit"
             disabled={isSubmitting}
-            className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 text-white text-sm font-semibold rounded-xl hover:from-amber-400 hover:to-orange-500 transition-all shadow-lg shadow-amber-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 text-white text-sm font-semibold rounded-xl hover:from-amber-400 hover:to-orange-500 transition-all shadow-lg shadow-amber-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? (
               <>

@@ -3,7 +3,7 @@
 
 import { useState, type FormEvent } from "react";
 import { Link, useFetcher } from "react-router";
-import api, { type ApiResponse, type ParentProfile, type Student } from "~/lib/api";
+import { api, type ApiResponse, type ParentProfile, type Student } from "~/lib/api";
 
 interface ParentChild extends Student {
   finance_balance?: { balance: number };
@@ -50,16 +50,16 @@ export default function ParentPaymentPortal({ loaderData }: { loaderData: { chil
   }
 
   return (
-    <div className="max-w-xl mx-auto space-y-6 pt-8">
+    <div className="max-w-xl mx-auto space-y-6 pt-4 sm:pt-8 px-4 sm:px-0 box-border">
       <div>
-        <h1 className="text-2xl font-bold text-white tracking-tight">Pay School Fees</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Pay School Fees</h1>
         <p className="text-sm text-slate-400 mt-1">
           Instantly pay via M-Pesa. A prompt will be sent to your phone.
         </p>
       </div>
 
       {fetcher.data?.success && (
-        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-5 text-center">
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 sm:p-5 text-center">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
             ✓
           </div>
@@ -76,8 +76,8 @@ export default function ParentPaymentPortal({ loaderData }: { loaderData: { chil
         </div>
       )}
 
-      <div className="rounded-xl border border-slate-700 bg-slate-800 overflow-hidden">
-        <form onSubmit={handlePay} className="p-6 space-y-5">
+      <div className="rounded-xl border border-slate-700 bg-slate-800 overflow-hidden shadow-lg">
+        <form onSubmit={handlePay} className="p-4 sm:p-6 space-y-5">
           {/* Student Selector */}
           <div>
             <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -100,13 +100,13 @@ export default function ParentPaymentPortal({ loaderData }: { loaderData: { chil
 
           {/* Balance Display */}
           {selectedChild && (
-            <div className="rounded-lg bg-slate-900/50 p-4 border border-slate-700 flex justify-between items-center">
+            <div className="rounded-lg bg-slate-900/50 p-4 border border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
               <div>
                 <p className="text-xs text-slate-500 uppercase font-semibold">Current Balance</p>
                 <p className="text-sm text-slate-300">Outstanding fees</p>
               </div>
-              <div className="text-right">
-                <p className={`text-xl font-bold ${Number(selectedChild.finance_balance?.balance) > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
+              <div className="text-left sm:text-right">
+                <p className={`text-lg sm:text-xl font-bold break-words ${Number(selectedChild.finance_balance?.balance) > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
                   {money(selectedChild.finance_balance?.balance ?? 0)}
                 </p>
               </div>
@@ -114,7 +114,7 @@ export default function ParentPaymentPortal({ loaderData }: { loaderData: { chil
           )}
 
           {/* Payment Details */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Amount to Pay
@@ -150,14 +150,14 @@ export default function ParentPaymentPortal({ loaderData }: { loaderData: { chil
           <button
             type="submit"
             disabled={isSubmitting || !selectedChildId}
-            className="w-full rounded-lg bg-emerald-500 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-600 disabled:opacity-50 transition-colors shadow-lg shadow-emerald-500/20"
+            className="w-full rounded-lg bg-emerald-500 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-600 disabled:opacity-50 transition-colors shadow-lg shadow-emerald-500/20 cursor-pointer"
           >
             {isSubmitting ? "Sending Request to Safaricom..." : "Pay via M-Pesa"}
           </button>
         </form>
       </div>
       
-      <div className="text-center text-xs text-slate-500">
+      <div className="text-center text-xs text-slate-500 px-2">
         <p>Payments are processed instantly and will automatically reflect on your child's statement.</p>
         <p className="mt-1">Powered by Safaricom Daraja</p>
       </div>

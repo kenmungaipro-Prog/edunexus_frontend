@@ -4,7 +4,7 @@
 import { useState, useMemo } from "react";
 import { Link, useSearchParams, useNavigation } from "react-router";
 import type { Route } from "./+types/index";
-import api from "~/lib/api"; 
+import { api } from "~/lib/api";
 
 // ── Types ─────────────────────────────────────────────────────
 interface WeeklyDay {
@@ -91,10 +91,8 @@ export default function AttendancePage({ loaderData }: Route.ComponentProps) {
       
       if (dayRecords.length === 0) return "unmarked" as AttStatus;
       
-      // Determine overall class status for the day (Simplified logic)
       if (dayRecords.some((r: any) => r.status === "holiday")) return "holiday" as AttStatus;
       
-      // Calculate majority presence
       const presentCount = dayRecords.filter((r: any) => r.status === "present" || r.status === "late").length;
       return (presentCount / dayRecords.length) >= 0.5 ? "present" as AttStatus : "absent" as AttStatus;
     });
@@ -107,13 +105,13 @@ export default function AttendancePage({ loaderData }: Route.ComponentProps) {
   return (
     <div className={isLoading ? "opacity-60 pointer-events-none transition-opacity" : ""}>
 
-      {/* ── Header ──────────────────────────────────────── */}
-      <div className="flex items-center justify-between mb-6">
+      {/* ── Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
           <h1 className="text-xl font-bold">✅ Attendance Tracker</h1>
           <p className="text-slate-400 text-sm mt-0.5">Real-time attendance monitoring and reporting</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             className="px-3 py-2 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg text-sm hover:bg-slate-700 transition"
             onClick={() => window.open(`${import.meta.env.VITE_API_URL || "http://localhost:8000"}/api/v1/attendance/export?class_id=${classId || classes?.[0]?.id || ""}&month=${month}&year=${year}`, "_blank")}
@@ -122,15 +120,15 @@ export default function AttendancePage({ loaderData }: Route.ComponentProps) {
           </button>
           <Link
             to={`/attendance/mark${classId ? `?class_id=${classId}` : ''}`}
-            className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg text-sm font-semibold hover:opacity-90 transition"
+            className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg text-sm font-semibold hover:opacity-90 transition text-center"
           >
             📝 Mark Attendance
           </Link>
         </div>
       </div>
 
-      {/* ── Stats ───────────────────────────────────────── */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      {/* ── Stats ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         {[
           { icon: "🟢", label: "Present today",  val: stats?.present_today ?? 0, color: "text-emerald-400" },
           { icon: "🔴", label: "Absent today",   val: stats?.absent_today  ?? 0, color: "text-red-400"     },
@@ -138,21 +136,21 @@ export default function AttendancePage({ loaderData }: Route.ComponentProps) {
           { icon: "📊", label: "Overall rate",   val: `${stats?.overall_rate ?? 0}%`, color: "text-blue-400" },
         ].map(s => (
           <div key={s.label} className="bg-slate-800 border border-slate-700 rounded-xl p-4 flex items-center gap-3">
-            <span className="text-2xl">{s.icon}</span>
-            <div>
-              <div className={`text-xl font-bold ${s.color}`}>{s.val}</div>
-              <div className="text-xs text-slate-400">{s.label}</div>
+            <span className="text-xl sm:text-2xl flex-shrink-0">{s.icon}</span>
+            <div className="min-w-0">
+              <div className={`text-lg sm:text-xl font-bold truncate ${s.color}`}>{s.val}</div>
+              <div className="text-xs text-slate-400 truncate">{s.label}</div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* ── Main panels ─────────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-5">
+      {/* ── Main panels ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
-        {/* ── Dot grid calendar ───────────────────────── */}
-        <div className="bg-slate-800 border border-slate-700 rounded-xl p-5">
-          <div className="flex items-center justify-between mb-4">
+        {/* ── Dot grid calendar ── */}
+        <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 sm:p-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
             <h3 className="text-sm font-semibold">📅 {monthLabel}</h3>
             <select
               value={classId || ""}
@@ -180,7 +178,7 @@ export default function AttendancePage({ loaderData }: Route.ComponentProps) {
                 <div
                   key={i}
                   title={`Day ${i + 1}: ${status}`}
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold cursor-pointer hover:scale-110 transition-transform ${cfg.bg}`}
+                  className={`w-full aspect-square rounded-lg flex items-center justify-center text-xs font-bold cursor-pointer hover:scale-110 transition-transform ${cfg.bg}`}
                 >
                   {cfg.label}
                 </div>
@@ -202,8 +200,8 @@ export default function AttendancePage({ loaderData }: Route.ComponentProps) {
           </div>
         </div>
 
-        {/* ── Trend + low alerts ──────────────────────── */}
-        <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 flex flex-col">
+        {/* ── Trend + low alerts ── */}
+        <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 sm:p-5 flex flex-col">
           <h3 className="text-sm font-semibold mb-4">📈 Weekly Trend</h3>
           <div className="space-y-3 mb-6">
             {weeklyData.map(d => {
@@ -231,13 +229,13 @@ export default function AttendancePage({ loaderData }: Route.ComponentProps) {
               lowList.slice(0, 5).map((s: any) => (
                 <div
                   key={s.id}
-                  className="flex items-center justify-between p-2.5 bg-red-500/5 border border-red-500/15 rounded-lg"
+                  className="flex items-center justify-between p-2.5 bg-red-500/5 border border-red-500/15 rounded-lg gap-2"
                 >
-                  <div>
-                    <p className="text-sm font-medium text-slate-200">{s.name}</p>
-                    <p className="text-xs text-slate-500">{s.class}</p>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-slate-200 truncate">{s.name}</p>
+                    <p className="text-xs text-slate-500 truncate">{s.class}</p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <span className="font-mono text-sm font-bold text-red-400">{s.percentage}%</span>
                     <Link
                       to={`/students/${s.id}`}

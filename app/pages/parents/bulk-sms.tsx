@@ -4,7 +4,7 @@
 // ============================================================
 import { useState } from "react";
 import type { Route } from "./+types/bulk-sms";
-import api, { type ParentProfile } from "~/lib/api";
+import { api, type ParentProfile } from "~/lib/api";
 
 export async function clientLoader() {
   try {
@@ -69,46 +69,46 @@ export default function BulkSmsPage({ loaderData }: Route.ComponentProps) {
   };
 
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+    <div style={{ color: "#f8fafc", fontFamily: "'Sora', sans-serif", padding: "12px", maxWidth: "1200px", margin: "0 auto", boxSizing: "border-box" }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={{ margin: 0 }}>Bulk SMS</h1>
-          <p style={{ margin: 0, color: '#94a3b8' }}>Send announcements to parent phone numbers.</p>
+          <h1 style={{ margin: 0, fontSize: "clamp(22px, 4vw, 26px)" }}>Bulk SMS</h1>
+          <p style={{ margin: 0, color: '#94a3b8', fontSize: "14px" }}>Send announcements to parent phone numbers.</p>
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 16 }}>
-        <div style={{ flex: 1 }}>
+      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+        <div style={{ flex: '1 1 300px', minWidth: 0 }}>
           <textarea
             value={message}
             onChange={e => setMessage(e.target.value)}
             placeholder="Type message to send to parents..."
             rows={6}
-            style={{ width: '100%', padding: 12, borderRadius: 8, background: '#0b1220', color: '#e6eef8', border: '1px solid #233046' }}
+            style={{ width: '100%', padding: 12, borderRadius: 8, background: '#0b1220', color: '#e6eef8', border: '1px solid #233046', boxSizing: 'border-box', outline: 'none', fontSize: '14px' }}
           />
 
-          <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
-            <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <label style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>
               <input type="checkbox" checked={selectAll} onChange={handleSelectAll} />
-              <span style={{ color: '#94a3b8' }}>Send to all parents</span>
+              <span style={{ color: '#94a3b8', fontSize: '14px' }}>Send to all parents</span>
             </label>
 
-            <button onClick={send} disabled={isSending} style={{ marginLeft: 'auto', background: '#3b82f6', color: '#fff', padding: '8px 12px', borderRadius: 8, border: 'none', cursor: 'pointer' }}>
+            <button onClick={send} disabled={isSending} style={{ marginLeft: 'auto', background: '#3b82f6', color: '#fff', padding: '10px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '14px', width: '100%', smWidth: 'auto' }}>
               {isSending ? 'Sending...' : 'Send SMS'}
             </button>
           </div>
 
-          {result && <div style={{ marginTop: 12, color: '#cbd5e1' }}>{result}</div>}
+          {result && <div style={{ marginTop: 12, color: '#cbd5e1', fontSize: '14px', wordBreak: 'break-word' }}>{result}</div>}
         </div>
 
-        <div style={{ width: 320, borderLeft: '1px solid #1e293b', paddingLeft: 12 }}>
-          <div style={{ marginBottom: 8, color: '#94a3b8' }}>Select recipients</div>
-          <div style={{ maxHeight: 440, overflow: 'auto' }}>
+        <div style={{ flex: '1 1 280px', maxWidth: '100%', borderTop: '1px solid #1e293b', paddingTop: 16 }}>
+          <div style={{ marginBottom: 8, color: '#94a3b8', fontSize: '14px', fontWeight: 600 }}>Select recipients</div>
+          <div style={{ maxHeight: 440, overflow: 'auto', background: '#0b1220', border: '1px solid #233046', borderRadius: 8, padding: 8, WebkitOverflowScrolling: 'touch' }}>
             {parents.map(p => (
-              <label key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 4px' }}>
+              <label key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 4px', cursor: 'pointer', borderBottom: '1px solid #1e293b' }}>
                 <input type="checkbox" checked={selected.includes(p.id)} onChange={() => toggle(p.id)} />
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ color: '#fff', fontWeight: 600 }}>{p.user?.name ?? '—'}</span>
+                <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                  <span style={{ color: '#fff', fontWeight: 600, fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.user?.name ?? '—'}</span>
                   <span style={{ color: '#94a3b8', fontSize: 12 }}>{p.phone ?? 'No phone'}</span>
                 </div>
               </label>

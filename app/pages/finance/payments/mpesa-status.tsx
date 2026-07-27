@@ -1,6 +1,10 @@
+// ============================================================
+// app/pages/finance/payments/mpesa-status.tsx
+// ============================================================
+
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
-import api, { type MpesaStatusEntry } from "~/lib/api";
+import { api, type MpesaStatusEntry } from "~/lib/api";
 
 function money(value: number | string | null | undefined) {
   const numeric = Number(value ?? 0);
@@ -63,24 +67,24 @@ export default function MpesaStatusPage() {
   }, []);
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <div className="space-y-5 p-2 sm:p-0">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Gateway Status</h1>
-          <p className="mt-1 text-sm text-slate-400">Recent payment gateway activity, callbacks, and processing state across M-Pesa and bank integrations.</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-white">Gateway Status</h1>
+          <p className="mt-1 text-xs sm:text-sm text-slate-400">Recent payment gateway activity, callbacks, and processing state across M-Pesa and bank integrations.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <select value={selectedGateway} onChange={(e) => setSelectedGateway(e.target.value)} className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <select value={selectedGateway} onChange={(e) => setSelectedGateway(e.target.value)} className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-slate-200">
             <option value="all">All Gateways</option>
             <option value="mpesa">M-Pesa</option>
             <option value="coop_400222">Co-op Bank 400222</option>
             <option value="bank_transfer">Bank Transfer</option>
           </select>
-          <span className="rounded-full bg-slate-700/60 px-3 py-1 text-xs font-semibold text-slate-200">Includes Co-op Bank 400222</span>
+          <span className="text-center rounded-full bg-slate-700/60 px-3 py-1.5 text-xs font-semibold text-slate-200">Includes Co-op Bank 400222</span>
         </div>
       </div>
 
-      <div className="rounded-xl border border-slate-700 bg-slate-800 p-5">
+      <div className="rounded-xl border border-slate-700 bg-slate-800 p-4 sm:p-5">
         {loading ? (
           <p className="text-sm text-slate-400">Loading gateway activity…</p>
         ) : error ? (
@@ -92,16 +96,16 @@ export default function MpesaStatusPage() {
             <table className="w-full min-w-[1100px] text-sm">
               <thead>
                 <tr className="border-b border-slate-700 text-left text-xs uppercase tracking-wide text-slate-500">
-                  <th className="py-2 pr-3">Gateway</th>
-                  <th className="py-2 pr-3">Status</th>
-                  <th className="py-2 pr-3">Merchant</th>
-                  <th className="py-2 pr-3">Checkout</th>
-                  <th className="py-2 pr-3">Reference</th>
-                  <th className="py-2 pr-3">Amount</th>
-                  <th className="py-2 pr-3">Receipt</th>
-                  <th className="py-2 pr-3">Callback</th>
-                  <th className="py-2 pr-3">Processed</th>
-                  <th className="py-2 pr-3">Updated</th>
+                  <th className="py-2.5 pr-3">Gateway</th>
+                  <th className="py-2.5 pr-3">Status</th>
+                  <th className="py-2.5 pr-3">Merchant</th>
+                  <th className="py-2.5 pr-3">Checkout</th>
+                  <th className="py-2.5 pr-3">Reference</th>
+                  <th className="py-2.5 pr-3">Amount</th>
+                  <th className="py-2.5 pr-3">Receipt</th>
+                  <th className="py-2.5 pr-3">Callback</th>
+                  <th className="py-2.5 pr-3">Processed</th>
+                  <th className="py-2.5 pr-3">Updated</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/60">

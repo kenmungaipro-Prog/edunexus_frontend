@@ -3,7 +3,7 @@
 // ============================================================
 import { Link, Form, useSearchParams, useNavigation } from "react-router";
 import type { Route } from "./+types/index";
-import api from "~/lib/api";
+import { api } from "~/lib/api";
 
 // ── Types ─────────────────────────────────────────────────────
 type ExamStatus = "scheduled" | "ongoing" | "completed" | "cancelled";
@@ -46,14 +46,13 @@ export async function clientLoader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const status = url.searchParams.get("status") ?? "";
 
-  // ✅ Fetch both the exam list and the new analytics endpoint
   const [examsRes, analyticsRes] = await Promise.all([
     api.exams.list({
       status: ["scheduled", "ongoing", "completed", "cancelled"].includes(status) 
         ? (status as any) : undefined,
       per_page: 20,
     }),
-    api.analytics.examPerformance() // This calls your updated Laravel method
+    api.analytics.examPerformance()
   ]);
 
   return {
@@ -89,41 +88,42 @@ export default function ExamsPage({ loaderData }: Route.ComponentProps) {
   };
 
   return (
-    <div className={`p-6 transition-opacity ${navigation.state === "loading" ? "opacity-50" : "opacity-100"}`}>
-      <div className="flex items-center justify-between mb-8">
+    <div className={`p-4 sm:p-6 transition-opacity ${navigation.state === "loading" ? "opacity-50" : "opacity-100"}`}>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
         <div>
           <h1 className="text-2xl font-bold">📝 Exams</h1>
-          <p className="text-slate-400 text-sm">Real-time examination performance and scheduling</p>
+          <p className="text-slate-400 text-xs sm:text-sm">Real-time examination performance and scheduling</p>
         </div>
-        <Link to="/exams/new" className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-500 transition">
+        <Link to="/exams/new" className="px-4 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-500 transition text-center text-sm shadow-md">
           + Schedule Exam
         </Link>
       </div>
 
       {/* Stats Section */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
         {[
           { label: "Total Exams", val: stats.total, color: "text-slate-100" },
           { label: "Scheduled", val: stats.upcoming, color: "text-blue-400" },
           { label: "Ongoing", val: stats.ongoing, color: "text-amber-400" },
           { label: "Completed", val: stats.completed, color: "text-emerald-400" },
         ].map(s => (
-          <div key={s.label} className="bg-slate-800 border border-slate-700 p-4 rounded-xl">
-            <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">{s.label}</p>
-            <p className={`text-2xl font-black mt-1 ${s.color}`}>{s.val}</p>
+          <div key={s.label} className="bg-slate-800 border border-slate-700 p-3.5 sm:p-4 rounded-xl">
+            <p className="text-[10px] sm:text-xs text-slate-500 uppercase font-bold tracking-wider">{s.label}</p>
+            <p className={`text-xl sm:text-2xl font-black mt-1 ${s.color}`}>{s.val}</p>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
         {/* Left: Exam List */}
         <div className="lg:col-span-2 bg-slate-800 border border-slate-700 rounded-xl overflow-hidden">
-          <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-800/50">
-            <h3 className="font-bold">Exam Schedule</h3>
+          <div className="p-4 border-b border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-800/50">
+            <h3 className="font-bold text-sm sm:text-base">Exam Schedule</h3>
             <select 
               value={statusParam} 
               onChange={(e) => setSearchParams({ status: e.target.value })}
-              className="bg-slate-900 border border-slate-700 text-sm rounded-lg px-3 py-1.5 outline-none focus:border-blue-500"
+              className="bg-slate-900 border border-slate-700 text-xs sm:text-sm rounded-lg px-3 py-2 outline-none focus:border-blue-500 w-full sm:w-auto"
             >
               <option value="">All Status</option>
               <option value="scheduled">Scheduled</option>
@@ -134,28 +134,37 @@ export default function ExamsPage({ loaderData }: Route.ComponentProps) {
 
           <div className="divide-y divide-slate-700">
             {exams.length > 0 ? exams.map((exam) => (
-              <div key={exam.id} className="p-4 flex items-center gap-4 hover:bg-slate-700/30 transition group">
-                <div className="text-center min-w-[50px] bg-slate-900 rounded-lg py-2 border border-slate-700">
-                  <p className="text-lg font-bold text-blue-400">{new Date(exam.exam_date).getDate()}</p>
-                  <p className="text-[10px] text-slate-500 uppercase font-bold">
-                    {new Date(exam.exam_date).toLocaleString('en', { month: 'short' })}
-                  </p>
+              <div key={exam.id} className="p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 hover:bg-slate-700/30 transition group">
+                <div className="flex items-center justify-between sm:justify-start gap-3">
+                  <div className="text-center min-w-[45px] sm:min-w-[50px] bg-slate-900 rounded-lg py-1.5 sm:py-2 border border-slate-700 shrink-0">
+                    <p className="text-base sm:text-lg font-bold text-blue-400">{new Date(exam.exam_date).getDate()}</p>
+                    <p className="text-[9px] sm:text-[10px] text-slate-500 uppercase font-bold">
+                      {new Date(exam.exam_date).toLocaleString('en', { month: 'short' })}
+                    </p>
+                  </div>
+                  <span className={`sm:hidden text-[10px] px-2 py-0.5 rounded-full font-bold uppercase border ${STATUS_COLORS[exam.status] || "bg-slate-700"}`}>
+                    {exam.status}
+                  </span>
                 </div>
-                <div className="flex-1">
-                  <h4 className="font-bold text-slate-200">{exam.title}</h4>
-                  <p className="text-xs text-slate-500">
+
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-bold text-slate-200 text-sm sm:text-base truncate">{exam.title}</h4>
+                  <p className="text-xs text-slate-500 truncate mt-0.5">
                     {exam.subject?.name} • {exam.class_room?.name} • {exam.start_time}
                   </p>
                 </div>
-                <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase border ${STATUS_COLORS[exam.status] || "bg-slate-700"}`}>
-                  {exam.status}
-                </span>
-                <Link to={`/exams/${exam.id}`} className="p-2 text-slate-500 hover:text-white transition">
-                  👁️
-                </Link>
+
+                <div className="hidden sm:flex items-center gap-3 shrink-0">
+                  <span className={`text-[10px] px-2.5 py-1 rounded-full font-bold uppercase border ${STATUS_COLORS[exam.status] || "bg-slate-700"}`}>
+                    {exam.status}
+                  </span>
+                  <Link to={`/exams/${exam.id}`} className="p-2 text-slate-500 hover:text-white transition">
+                    👁️
+                  </Link>
+                </div>
               </div>
             )) : (
-              <div className="p-12 text-center text-slate-500 italic">No examinations found for this criteria.</div>
+              <div className="p-8 sm:p-12 text-center text-slate-500 italic text-sm">No examinations found for this criteria.</div>
             )}
           </div>
         </div>
@@ -163,7 +172,7 @@ export default function ExamsPage({ loaderData }: Route.ComponentProps) {
         {/* Right: Analytics Sidebars */}
         <div className="space-y-6">
           {/* Grade Distribution */}
-          <div className="bg-slate-800 border border-slate-700 p-5 rounded-xl">
+          <div className="bg-slate-800 border border-slate-700 p-4 sm:p-5 rounded-xl">
             <h4 className="text-xs font-bold text-slate-400 mb-4 uppercase tracking-widest">Grade Distribution</h4>
             <div className="space-y-4">
               {gradeData.map((g) => (
@@ -182,14 +191,14 @@ export default function ExamsPage({ loaderData }: Route.ComponentProps) {
           </div>
 
           {/* Subject Performance */}
-          <div className="bg-slate-800 border border-slate-700 p-5 rounded-xl">
+          <div className="bg-slate-800 border border-slate-700 p-4 sm:p-5 rounded-xl">
             <h4 className="text-xs font-bold text-slate-400 mb-4 uppercase tracking-widest">Subject Performance</h4>
             <div className="space-y-5">
               {subjectData.map((s) => (
                 <div key={s.name}>
                   <div className="flex justify-between text-xs mb-1.5">
-                    <span className="text-slate-300 font-medium">{s.name}</span>
-                    <span className="text-slate-500 text-[10px]">avg {s.avg}% · pass {s.pass}%</span>
+                    <span className="text-slate-300 font-medium truncate pr-2">{s.name}</span>
+                    <span className="text-slate-500 text-[10px] shrink-0">avg {s.avg}% · pass {s.pass}%</span>
                   </div>
                   <div className="h-1.5 bg-slate-900 rounded-full overflow-hidden">
                     <div 

@@ -1,5 +1,8 @@
+// ============================================================
+// app/pages/classes/new.tsx
+// ============================================================
 import { useNavigation, Link, Form } from "react-router";
-import api, { type CreateClassPayload, type ClassRoom, type Subject, type Teacher } from "~/lib/api";
+import { api, type CreateClassPayload, type Subject, type Teacher } from "~/lib/api";
 
 interface LoaderData {
   teachers: Teacher[];
@@ -61,41 +64,41 @@ export default function NewClassPage({ loaderData, actionData }: any) {
   const message = actionData?.error;
 
   return (
-    <div className="max-w-3xl mx-auto py-8">
-      <div className="flex items-center justify-between mb-6">
+    <div className="max-w-3xl mx-auto py-6 px-4 sm:px-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-100">Add New Class</h1>
-          <p className="text-sm text-slate-400">Create a new academic group for your school.</p>
+          <h1 className="text-xl sm:text-2xl font-semibold text-slate-100">Add New Class</h1>
+          <p className="text-xs sm:text-sm text-slate-400 mt-0.5">Create a new academic group for your school.</p>
         </div>
-        <Link to="/classes" className="text-blue-400 hover:underline text-sm">Back to classes</Link>
+        <Link to="/classes" className="text-blue-400 hover:underline text-sm self-start sm:self-auto">Back to classes</Link>
       </div>
 
       {message && (
-        <div className="mb-4 rounded-lg bg-red-900/20 border border-red-500/30 p-4 text-sm text-red-200">
+        <div className="mb-4 rounded-lg bg-red-900/20 border border-red-500/30 p-4 text-sm text-red-200 break-words">
           {message}
         </div>
       )}
 
-      <Form method="post" className="space-y-6 bg-slate-900 border border-slate-800 rounded-2xl p-6">
+      <Form method="post" className="space-y-6 bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6">
         <div className="grid gap-4 md:grid-cols-2">
           <label className="block text-sm text-slate-300">
             Name
-            <input name="name" required className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-500" />
+            <input name="name" required className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-blue-500 transition" />
             {errors.name && <p className="mt-1 text-xs text-red-400">{errors.name[0]}</p>}
           </label>
           <label className="block text-sm text-slate-300">
             Grade
-            <input name="grade" type="number" required min="1" max="12" className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-500" />
+            <input name="grade" type="number" required min="1" max="12" className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-blue-500 transition" />
             {errors.grade && <p className="mt-1 text-xs text-red-400">{errors.grade[0]}</p>}
           </label>
           <label className="block text-sm text-slate-300">
             Section
-            <input name="section" required className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-500" />
+            <input name="section" required className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-blue-500 transition" />
             {errors.section && <p className="mt-1 text-xs text-red-400">{errors.section[0]}</p>}
           </label>
           <label className="block text-sm text-slate-300">
             Capacity
-            <input name="capacity" type="number" required min="1" className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-500" />
+            <input name="capacity" type="number" required min="1" className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-blue-500 transition" />
             {errors.capacity && <p className="mt-1 text-xs text-red-400">{errors.capacity[0]}</p>}
           </label>
         </div>
@@ -103,7 +106,7 @@ export default function NewClassPage({ loaderData, actionData }: any) {
         <div className="grid gap-4 md:grid-cols-2">
           <label className="block text-sm text-slate-300">
             Class Teacher
-            <select name="class_teacher_id" className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-500">
+            <select name="class_teacher_id" className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-blue-500 transition">
               <option value="">No teacher assigned</option>
               {teachers.map((teacher) => (
                 <option key={teacher.id} value={teacher.id}>{teacher.user?.name ?? `Teacher #${teacher.id}`}</option>
@@ -113,14 +116,14 @@ export default function NewClassPage({ loaderData, actionData }: any) {
           </label>
           <label className="block text-sm text-slate-300">
             Room
-            <input name="room" className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-500" />
+            <input name="room" className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-blue-500 transition" />
             {errors.room && <p className="mt-1 text-xs text-red-400">{errors.room[0]}</p>}
           </label>
         </div>
 
         <label className="block text-sm text-slate-300">
           Subjects
-          <select name="subjects" multiple className="mt-2 min-h-[140px] w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-500">
+          <select name="subjects" multiple className="mt-2 min-h-[140px] w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-blue-500 transition">
             {subjects.map((subject) => (
               <option key={subject.id} value={subject.id}>{subject.name}</option>
             ))}
@@ -128,7 +131,7 @@ export default function NewClassPage({ loaderData, actionData }: any) {
           {errors.subjects && <p className="mt-1 text-xs text-red-400">{errors.subjects[0]}</p>}
         </label>
 
-        <button type="submit" disabled={submitting} className="w-full rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-60">
+        <button type="submit" disabled={submitting} className="w-full rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-60 transition">
           {submitting ? "Saving…" : "Create Class"}
         </button>
       </Form>

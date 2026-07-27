@@ -10,9 +10,8 @@ import { filterNavByRole, type UserRole } from "~/lib/rbac";
 export async function clientLoader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
   try {
-    const response = await api.get("/auth/me");
-    // Unwrapping Laravel's { success: true, data: { ...user } }
-    return { user: response.data.data };
+    const response = await api.auth.me();
+    return { user: response.data };
   } catch (error: any) {
     // Only redirect if we aren't already going to the login page
     // and wipe the token to prevent the infinite redirect loop
@@ -97,28 +96,40 @@ const NAV: { group: string; items: NavItem[] }[] = [
 export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
   const { user } = loaderData as { user: any };
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
-    await api.post("/auth/logout").catch(() => {});
+    await api.auth.logout().catch(() => {});
     localStorage.removeItem("edunexus_token");
     window.location.href = "/login";
   };
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ fontFamily: "'Sora', sans-serif", background: "#0a0e1a", color: "#e8edf8" }}>
+      {mobileMenuOpen && (
+        <button
+          type="button"
+          aria-label="Close navigation menu"
+          className="fixed inset-0 z-[110] bg-slate-950/70 md:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
 
       {/* ── Sidebar ── */}
-      <aside style={{
-        width: collapsed ? "70px" : "260px",
-        background: "#0f1424",
-        borderRight: "1px solid #2a3350",
-        transition: "width .3s ease",
-        display: "flex",
-        flexDirection: "column",
-        flexShrink: 0,
-        position: "relative",
-        zIndex: 100,
-      }}>
+      <aside
+        className={`fixed inset-y-0 left-0 z-[120] md:static md:z-auto ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
+        style={{
+          width: mobileMenuOpen ? "min(84vw, 320px)" : collapsed ? "70px" : "260px",
+          maxWidth: "320px",
+          background: "#0f1424",
+          borderRight: "1px solid #2a3350",
+          transition: "width .3s ease, transform .2s ease",
+          display: "flex",
+          flexDirection: "column",
+          flexShrink: 0,
+          position: "relative",
+        }}
+      >
         {/* Toggle */}
         <button
           onClick={() => setCollapsed(c => !c)}
@@ -164,6 +175,7 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
                   key={item.to}
                   to={item.to}
                   end={item.end}
+                  onClick={() => setMobileMenuOpen(false)}
                   style={({ isActive }) => ({
                     display: "flex", alignItems: "center", gap: "12px",
                     padding: "10px 20px", cursor: "pointer",
@@ -214,16 +226,23 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
         {/* Topbar */}
-        <header style={{
-          height: "65px", background: "#0f1424",
-          borderBottom: "1px solid #2a3350",
-          display: "flex", alignItems: "center",
-          padding: "0 28px", gap: "14px", flexShrink: 0,
-        }}>
+        <header
+          className="flex h-[65px] items-center gap-3 border-b border-slate-800/80 bg-[#0f1424] px-4 py-0 md:px-7"
+          style={{ flexShrink: 0 }}
+        >
+          <button
+            type="button"
+            aria-label="Open navigation menu"
+            className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-700 bg-slate-900/80 text-lg text-slate-200 md:hidden"
+            onClick={() => setMobileMenuOpen(true)}
+          >
+            ☰
+          </button>
+
           <div style={{ flex: 1 }} />
 
           {/* Search */}
-          <div style={{ position: "relative", width: "280px" }}>
+          <div style={{ position: "relative", width: "100%", maxWidth: "280px", minWidth: 0 }}>
             <span style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", fontSize: "13px", color: "#6b7a99" }}>🔍</span>
             <input
               placeholder="Search students, classes..."
@@ -239,7 +258,7 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
           </div>
 
           {/* Actions */}
-          <span style={{ background: "linear-gradient(135deg,#10b981,#059669)", color: "#fff", fontSize: "11px", fontWeight: 600, padding: "4px 12px", borderRadius: "20px" }}>
+          <span className="hidden sm:inline-flex" style={{ background: "linear-gradient(135deg,#10b981,#059669)", color: "#fff", fontSize: "11px", fontWeight: 600, padding: "4px 12px", borderRadius: "20px" }}>
             2024–25
           </span>
           <div style={{ width: "38px", height: "38px", background: "#1a2035", border: "1px solid #2a3350", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: "16px", position: "relative" }}>
@@ -252,7 +271,7 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
         </header>
 
         {/* Content */}
-        <main style={{ flex: 1, overflowY: "auto", padding: "28px", background: "#0a0e1a" }}>
+        <main className="flex-1 overflow-y-auto bg-[#0a0e1a] px-4 py-4 md:px-7 md:py-6" style={{ minWidth: 0 }}>
           <Outlet context={{ user }} />
         </main>
       </div>

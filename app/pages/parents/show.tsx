@@ -3,14 +3,11 @@
 // ============================================================
 import { Link, Form } from "react-router";
 import type { Route } from "./+types/show";
-import api, { type ParentProfile } from "~/lib/api";
+import { api, type ParentProfile } from "~/lib/api";
 
 export async function clientLoader({ params }: Route.LoaderArgs) {
   const id = Number(params.id);
-  // This calls GET /api/v1/parents/{id}
   const response = await api.parents.get(id);
-  
-  // FIX: Drop the second '.data'. response.data is the parent profile object.
   return { parent: response.data };
 }
 
@@ -26,7 +23,6 @@ export async function clientAction({ request, params }: Route.ActionArgs) {
 }
 
 export default function ParentShowPage({ loaderData }: Route.ComponentProps) {
-  // Safe parsing of loader data
   const parent = (loaderData as { parent?: ParentProfile } | undefined)?.parent ?? null;
 
   if (!parent) {
@@ -38,7 +34,7 @@ export default function ParentShowPage({ loaderData }: Route.ComponentProps) {
   }
 
   return (
-    <div style={{ color: "#f8fafc", fontFamily: "'Sora', sans-serif", maxWidth: "1000px", margin: "0 auto", padding: "20px" }}>
+    <div style={{ color: "#f8fafc", fontFamily: "'Sora', sans-serif", maxWidth: "1000px", margin: "0 auto", padding: "12px", boxSizing: "border-box" }}>
       
       {/* Navigation */}
       <div style={{ marginBottom: "20px" }}>
@@ -48,9 +44,9 @@ export default function ParentShowPage({ loaderData }: Route.ComponentProps) {
       </div>
 
       {/* Header Profile Area */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px", borderBottom: "1px solid #1e293b", paddingBottom: "24px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px", borderBottom: "1px solid #1e293b", paddingBottom: "20px", flexWrap: "wrap", gap: "16px" }}>
         <div>
-          <h1 style={{ fontSize: "26px", margin: 0, fontWeight: 700 }}>
+          <h1 style={{ fontSize: "clamp(22px, 4vw, 26px)", margin: 0, fontWeight: 700, wordBreak: "break-word" }}>
             {parent.user?.name ?? "Unnamed Parent"}
           </h1>
           <span style={{ display: "inline-block", background: "rgba(16,185,129,0.15)", color: "#10b981", padding: "4px 8px", borderRadius: "6px", fontSize: "12px", marginTop: "8px" }}>
@@ -58,13 +54,13 @@ export default function ParentShowPage({ loaderData }: Route.ComponentProps) {
           </span>
         </div>
 
-        <div style={{ display: "flex", gap: "12px" }}>
-          <Link to={`/parents/${parent.id}/edit`} style={{ background: "#3b82f6", color: "#ffffff", padding: "10px 16px", borderRadius: "8px", textDecoration: "none", fontWeight: 600, fontSize: "14px" }}>
+        <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", width: "100%" }}>
+          <Link to={`/parents/${parent.id}/edit`} style={{ flex: 1, textAlign: "center", background: "#3b82f6", color: "#ffffff", padding: "10px 16px", borderRadius: "8px", textDecoration: "none", fontWeight: 600, fontSize: "14px" }}>
             Edit Profile
           </Link>
-          <Form method="post" onSubmit={(e) => !confirm("Delete this profile permanent?") && e.preventDefault()}>
+          <Form method="post" onSubmit={(e) => !confirm("Delete this profile permanent?") && e.preventDefault()} style={{ flex: 1 }}>
             <input type="hidden" name="intent" value="delete" />
-            <button type="submit" style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171", padding: "10px 16px", borderRadius: "8px", fontWeight: 600, cursor: "pointer" }}>
+            <button type="submit" style={{ width: "100%", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171", padding: "10px 16px", borderRadius: "8px", fontWeight: 600, cursor: "pointer", fontSize: "14px" }}>
               Delete Account
             </button>
           </Form>
@@ -72,12 +68,12 @@ export default function ParentShowPage({ loaderData }: Route.ComponentProps) {
       </div>
 
       {/* Data Layout Split */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "24px" }}>
         
         {/* Profile Card Info */}
-        <section style={{ padding: "24px", borderRadius: "12px", background: "#0f172a", border: "1px solid #1e293b" }}>
+        <section style={{ padding: "20px", borderRadius: "12px", background: "#0f172a", border: "1px solid #1e293b", boxSizing: "border-box" }}>
           <h2 style={{ margin: "0 0 20px 0", fontSize: "16px", borderBottom: "1px solid #1e293b", paddingBottom: "10px" }}>Account Details</h2>
-          <div style={{ display: "grid", gap: "16px", fontSize: "14px" }}>
+          <div style={{ display: "grid", gap: "16px", fontSize: "14px", wordBreak: "break-word" }}>
             <div><span style={{ color: "#64748b" }}>Email: </span>{parent.user?.email ?? "—"}</div>
             <div><span style={{ color: "#64748b" }}>Phone: </span>{parent.phone ?? "—"}</div>
             <div><span style={{ color: "#64748b" }}>Relationship: </span>{parent.relationship ?? "—"}</div>
@@ -93,7 +89,7 @@ export default function ParentShowPage({ loaderData }: Route.ComponentProps) {
         </section>
 
         {/* Linked Children Card */}
-        <section style={{ padding: "24px", borderRadius: "12px", background: "#0f172a", border: "1px solid #1e293b" }}>
+        <section style={{ padding: "20px", borderRadius: "12px", background: "#0f172a", border: "1px solid #1e293b", boxSizing: "border-box" }}>
           <h2 style={{ margin: "0 0 20px 0", fontSize: "16px", borderBottom: "1px solid #1e293b", paddingBottom: "10px" }}>
             Linked Students ({parent.children?.length ?? 0})
           </h2>
@@ -102,7 +98,7 @@ export default function ParentShowPage({ loaderData }: Route.ComponentProps) {
               {parent.children.map((child) => (
                 <div key={child.id} style={{ display: "flex", justifyContent: "space-between", padding: "14px", borderRadius: "8px", background: "#1e293b" }}>
                   <div>
-                    <div style={{ fontWeight: 600 }}>{child.full_name}</div>
+                    <div style={{ fontWeight: 600, fontSize: "14px" }}>{child.full_name}</div>
                     <div style={{ color: "#64748b", fontSize: "12px" }}>Adm No: {child.admission_no}</div>
                   </div>
                 </div>

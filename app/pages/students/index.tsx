@@ -10,7 +10,8 @@ import {
   useSubmit,
 } from "react-router";
 import type { Route } from "./+types/index";
-import api, {
+import {
+  api,
   type Student,
   type ClassRoom,
   type PaginationMeta,
@@ -19,9 +20,6 @@ import api, {
   type ValidationError,
 } from "~/lib/api";
 
-// ============================================================
-// Loader
-// ============================================================
 export async function clientLoader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const filters: StudentFilters = {
@@ -44,16 +42,12 @@ export async function clientLoader({ request }: Route.LoaderArgs) {
   return {
     students: studentsRes.data.data,
     meta:     studentsRes.data.meta,
-    // FIX: classes.list returns ApiResponse<ClassRoom[]>, so .data is the array
     classes:  classesRes.data as ClassRoom[],
     stats:    statsRes.data,
     filters,
   };
 }
 
-// ============================================================
-// Action  (delete · bulk-delete · bulk-status)
-// ============================================================
 export async function clientAction({ request }: Route.ActionArgs) {
   const form   = await request.formData();
   const intent = form.get("intent") as string;
@@ -85,9 +79,6 @@ export async function clientAction({ request }: Route.ActionArgs) {
   return { ok: false, message: "Unknown action." };
 }
 
-// ============================================================
-// Helpers
-// ============================================================
 function initials(name?: string) {
   if (!name) return "?";
   return name.split(" ").map((n) => n[0]).join("").substring(0, 2).toUpperCase();
@@ -116,10 +107,6 @@ const STATUS_PILL: Record<string, { bg: string; text: string }> = {
   alumni:   { bg: "rgba(99,102,241,0.12)", text: "#a5b4fc" },
 };
 
-// ============================================================
-// Sub-components
-// ============================================================
-
 function Toast({
   message, ok, onDismiss,
 }: { message: string; ok: boolean; onDismiss: () => void }) {
@@ -147,7 +134,6 @@ function Toast({
     >
       {ok ? "✅" : "❌"} {message}
       <span style={{ marginLeft: "6px", opacity: 0.5, fontSize: "11px" }}>✕</span>
-      <style>{`@keyframes slideInToast { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }`}</style>
     </div>
   );
 }
@@ -196,12 +182,12 @@ function Pagination({ meta, onPage }: { meta: PaginationMeta; onPage: (p: number
   };
 
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "16px", paddingTop: "14px", borderTop: "1px solid #1e2640" }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "16px", paddingTop: "14px", borderTop: "1px solid #1e2640", flexWrap: "wrap", gap: "10px" }}>
       <span style={{ fontSize: "12px", color: "#6b7a99" }}>
-        Showing <strong style={{ color: "#a0aec0" }}>{from}–{to}</strong> of{" "}
+        Showing <strong style={{ color: "#a0aec0" }}>{from ?? 0}–{to ?? 0}</strong> of{" "}
         <strong style={{ color: "#a0aec0" }}>{total.toLocaleString()}</strong> students
       </span>
-      <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+      <div style={{ display: "flex", gap: "4px", alignItems: "center", flexWrap: "wrap" }}>
         <button style={{ ...btnBase, opacity: cur === 1 ? 0.3 : 1 }} disabled={cur === 1} onClick={() => onPage(cur - 1)}>← Prev</button>
         {pages.map((p, i) =>
           p === "..." ? (
@@ -235,7 +221,7 @@ function RowIconLink({ to, title, icon, hoverColor }: { to: string; title: strin
   return (
     <Link
       to={to} title={title}
-      style={{ width: "30px", height: "30px", background: "#1e2640", border: "1px solid #2a3350", borderRadius: "7px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px", textDecoration: "none", transition: "all .15s" }}
+      style={{ width: "30px", height: "30px", background: "#1e2640", border: "1px solid #2a3350", borderRadius: "7px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px", textDecoration: "none", transition: "all .15s", flexShrink: 0 }}
       onMouseEnter={(e) => { e.currentTarget.style.borderColor = hoverColor; }}
       onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#2a3350"; }}
     >
@@ -244,9 +230,6 @@ function RowIconLink({ to, title, icon, hoverColor }: { to: string; title: strin
   );
 }
 
-// ============================================================
-// Main component
-// ============================================================
 export default function StudentsPage({ loaderData, actionData }: Route.ComponentProps) {
   const { students, meta, classes, filters, stats } = loaderData as {
     students: Student[];
@@ -263,7 +246,6 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
   const submit     = useSubmit();
   const isLoading  = navigation.state === "loading";
 
-  // ── Local state ────────────────────────────────────────────
   const [selected,        setSelected]       = useState<Set<number>>(new Set());
   const [showBulkMenu,    setShowBulkMenu]    = useState(false);
   const [searchDraft,     setSearchDraft]     = useState(filters.search ?? "");
@@ -273,10 +255,8 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
   const [importMsg,       setImportMsg]       = useState<{ ok: boolean; text: string } | null>(null);
   const [toastVisible,    setToastVisible]    = useState(true);
 
-  // Reset toast visibility when actionResult changes
   useEffect(() => { setToastVisible(true); }, [actionResult]);
 
-  // ── URL-param helpers ──────────────────────────────────────
   const setParam = useCallback((key: string, value: string | null) => {
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
@@ -309,7 +289,6 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
     if (e.key === "Enter") setParam("search", searchDraft || null);
   };
 
-  // ── Selection ──────────────────────────────────────────────
   const allSelected  = students.length > 0 && students.every((s) => selected.has(s.id));
   const someSelected = selected.size > 0;
 
@@ -326,7 +305,6 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
     });
   };
 
-  // ── Bulk action ────────────────────────────────────────────
   const bulkAction = (intent: string, extra?: Record<string, string>) => {
     const fd = new FormData();
     fd.set("intent", intent);
@@ -337,7 +315,6 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
     setShowBulkMenu(false);
   };
 
-  // ── Import ─────────────────────────────────────────────────
   const handleImport = async () => {
     if (!importFile) return;
     setImportLoading(true);
@@ -354,7 +331,6 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
     }
   };
 
-  // ── Export CSV ─────────────────────────────────────────────
   const handleExportCsv = async () => {
     try {
       const res = await api.students.list({ ...filters, per_page: 10000, page: 1 });
@@ -372,11 +348,10 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
     } catch { /* silent */ }
   };
 
-  // ── Style tokens ────────────────────────────────────────────
   const s = {
-    card: { background: "#1a2035", border: "1px solid #2a3350", borderRadius: "14px", padding: "20px" } as React.CSSProperties,
+    card: { background: "#1a2035", border: "1px solid #2a3350", borderRadius: "14px", padding: "20px", boxSizing: "border-box" } as React.CSSProperties,
     btn: (variant: "primary" | "ghost" | "danger") => ({
-      display: "inline-flex", alignItems: "center", gap: "6px",
+      display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "6px",
       padding: "8px 16px", borderRadius: "8px",
       fontSize: "13px", fontWeight: 600,
       cursor: "pointer", border: "none",
@@ -388,8 +363,8 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
         ? { background: "rgba(239,68,68,0.1)", color: "#f87171", border: "1px solid rgba(239,68,68,0.2)" }
         : { background: "#1e2640", color: "#a0aec0", border: "1px solid #2a3350" }),
     } as React.CSSProperties),
-    input: { background: "#0f1424", border: "1px solid #2a3350", borderRadius: "8px", padding: "8px 12px", fontSize: "13px", color: "#e8edf8", fontFamily: "'Sora', sans-serif", outline: "none" } as React.CSSProperties,
-    select: { background: "#0f1424", border: "1px solid #2a3350", borderRadius: "8px", padding: "8px 12px", fontSize: "13px", color: "#e8edf8", fontFamily: "'Sora', sans-serif", outline: "none", cursor: "pointer" } as React.CSSProperties,
+    input: { background: "#0f1424", border: "1px solid #2a3350", borderRadius: "8px", padding: "8px 12px", fontSize: "13px", color: "#e8edf8", fontFamily: "'Sora', sans-serif", outline: "none", boxSizing: "border-box" } as React.CSSProperties,
+    select: { background: "#0f1424", border: "1px solid #2a3350", borderRadius: "8px", padding: "8px 12px", fontSize: "13px", color: "#e8edf8", fontFamily: "'Sora', sans-serif", outline: "none", cursor: "pointer", boxSizing: "border-box" } as React.CSSProperties,
     th: { textAlign: "left" as const, padding: "10px 14px", fontSize: "11px", fontWeight: 600, color: "#6b7a99", letterSpacing: ".6px", textTransform: "uppercase" as const, borderBottom: "1px solid #1e2640", userSelect: "none" as const, whiteSpace: "nowrap" as const } as React.CSSProperties,
     td: { padding: "12px 14px", borderBottom: "1px solid #141929", color: "#a0aec0", fontSize: "13px", verticalAlign: "middle" as const } as React.CSSProperties,
   };
@@ -397,28 +372,27 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
   const hasFilters = !!(filters.search || filters.class_id || filters.status || filters.gender);
 
   return (
-    <div style={{ fontFamily: "'Sora', sans-serif", color: "#e8edf8" }}>
+    <div style={{ fontFamily: "'Sora', sans-serif", color: "#e8edf8", width: "100%", boxSizing: "border-box" }}>
 
-      {/* Toast */}
       {actionResult?.message && toastVisible && (
         <Toast message={actionResult.message} ok={actionResult.ok ?? false} onDismiss={() => setToastVisible(false)} />
       )}
 
-      {/* ── Page header ── */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "24px" }}>
-        <div>
+      {/* Page header */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }} className="responsive-header">
+        <div style={{ minWidth: 0 }}>
           <h1 style={{ fontSize: "20px", fontWeight: 700, marginBottom: "4px" }}>🎓 Student Management</h1>
           <p style={{ fontSize: "13px", color: "#6b7a99" }}>Manage student profiles, records and academic data</p>
         </div>
-        <div style={{ display: "flex", gap: "8px" }}>
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }} className="responsive-header-actions">
           <button style={s.btn("ghost")} onClick={() => setShowImportModal(true)}>📤 Import</button>
           <button style={s.btn("ghost")} onClick={handleExportCsv}>📥 Export CSV</button>
           <Link to="/students/new" style={{ ...s.btn("primary"), textDecoration: "none" }}>➕ Add Student</Link>
         </div>
       </div>
 
-      {/* ── Quick stats ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "14px", marginBottom: "20px" }}>
+      {/* Quick stats */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "14px", marginBottom: "20px" }}>
         {[
           { label: "Total Students", value: stats.total,          color: "#4f8ef7", bg: "rgba(79,142,247,0.08)",   icon: "🎓" },
           { label: "Active",         value: stats.active,         color: "#34d399", bg: "rgba(16,185,129,0.08)",  icon: "✅" },
@@ -427,40 +401,36 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
         ].map((stat) => (
           <div key={stat.label} style={{ ...s.card, display: "flex", alignItems: "center", gap: "14px", padding: "16px 20px" }}>
             <div style={{ width: "42px", height: "42px", borderRadius: "10px", background: stat.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px", flexShrink: 0 }}>{stat.icon}</div>
-            <div>
-              <div style={{ fontSize: "22px", fontWeight: 700, lineHeight: 1, color: stat.color }}>{stat.value.toLocaleString()}</div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: "20px", fontWeight: 700, lineHeight: 1, color: stat.color }}>{stat.value.toLocaleString()}</div>
               <div style={{ fontSize: "11px", color: "#6b7a99", marginTop: "3px" }}>{stat.label}</div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* ── Main table card ── */}
-      <div style={s.card}>
+      {/* Main table card */}
+      <div style={s.card} className="responsive-card">
 
-        {/* ── Toolbar ── */}
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", marginBottom: "16px" }}>
-
-          {/* Search */}
-          <div style={{ position: "relative", flex: "1", minWidth: "200px", maxWidth: "280px" }}>
+        {/* Toolbar */}
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", marginBottom: "16px" }} className="responsive-toolbar">
+          <div style={{ position: "relative", flex: "1", minWidth: "180px" }}>
             <span style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", fontSize: "13px", color: "#6b7a99" }}>🔍</span>
             <input
               value={searchDraft}
               onChange={(e) => setSearchDraft(e.target.value)}
               onKeyDown={handleSearchKey}
               onBlur={() => setParam("search", searchDraft || null)}
-              placeholder="Search name, roll no, admission no…"
-              style={{ ...s.input, width: "100%", paddingLeft: "32px", boxSizing: "border-box" }}
+              placeholder="Search name, roll no…"
+              style={{ ...s.input, width: "100%", paddingLeft: "32px" }}
             />
           </div>
 
-          {/* Class filter */}
           <select value={searchParams.get("class_id") ?? ""} onChange={(e) => setParam("class_id", e.target.value || null)} style={s.select}>
             <option value="">All Classes</option>
             {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
 
-          {/* Status filter */}
           <select value={searchParams.get("status") ?? ""} onChange={(e) => setParam("status", e.target.value || null)} style={s.select}>
             <option value="">All Status</option>
             <option value="active">Active</option>
@@ -468,7 +438,6 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
             <option value="alumni">Alumni</option>
           </select>
 
-          {/* Gender filter */}
           <select value={searchParams.get("gender") ?? ""} onChange={(e) => setParam("gender", e.target.value || null)} style={s.select}>
             <option value="">All Genders</option>
             <option value="male">Male</option>
@@ -476,21 +445,18 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
             <option value="other">Other</option>
           </select>
 
-          {/* Per-page */}
           <select value={searchParams.get("per_page") ?? "20"} onChange={(e) => setParam("per_page", e.target.value)} style={s.select}>
             {[10, 20, 50, 100].map((n) => <option key={n} value={n}>{n} / page</option>)}
           </select>
 
-          {/* Clear filters */}
           {hasFilters && (
             <button style={s.btn("ghost")} onClick={() => { setSearchDraft(""); setSearchParams(new URLSearchParams({ page: "1" })); }}>
               ✕ Clear
             </button>
           )}
 
-          {/* Bulk actions */}
           {someSelected && (
-            <div style={{ marginLeft: "auto", position: "relative" }}>
+            <div style={{ marginLeft: "auto", position: "relative" }} className="responsive-bulk">
               <button style={s.btn("ghost")} onClick={() => setShowBulkMenu((v) => !v)}>
                 ☑️ {selected.size} selected ▾
               </button>
@@ -525,7 +491,7 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
           )}
         </div>
 
-        {/* ── Active filter chips ── */}
+        {/* Active filter chips */}
         {hasFilters && (
           <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "14px" }}>
             {filters.search   && <FilterChip label={`Search: "${filters.search}"`} onRemove={() => { setSearchDraft(""); setParam("search", null); }} />}
@@ -535,9 +501,9 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
           </div>
         )}
 
-        {/* ── Table ── */}
-        <div style={{ overflowX: "auto", opacity: isLoading ? 0.5 : 1, transition: "opacity .2s" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+        {/* Table */}
+        <div style={{ overflowX: "auto", opacity: isLoading ? 0.5 : 1, transition: "opacity .2s", WebkitOverflowScrolling: "touch" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px", minWidth: "850px" }}>
             <thead>
               <tr>
                 <th style={{ ...s.th, width: "40px" }}>
@@ -592,12 +558,10 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
                       onMouseEnter={(e) => { if (!isChecked) e.currentTarget.style.background = "rgba(255,255,255,0.02)"; }}
                       onMouseLeave={(e) => { if (!isChecked) e.currentTarget.style.background = "transparent"; }}
                     >
-                      {/* Checkbox */}
                       <td style={s.td}>
                         <input type="checkbox" checked={isChecked} onChange={() => toggleOne(student.id)} style={{ width: "15px", height: "15px", cursor: "pointer", accentColor: "#4f8ef7" }} />
                       </td>
 
-                      {/* Student name + photo */}
                       <td style={s.td}>
                         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                           <div style={{ width: "34px", height: "34px", borderRadius: "50%", background: `${color}20`, border: `1px solid ${color}40`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 700, color, flexShrink: 0, overflow: "hidden" }}>
@@ -605,10 +569,10 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
                               <img src={`${import.meta.env.VITE_API_URL}/storage/${student.profile_photo}`} alt={student.full_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                             ) : initials(student.full_name)}
                           </div>
-                          <div>
+                          <div style={{ minWidth: 0 }}>
                             <Link
                               to={`/students/${student.id}`}
-                              style={{ color: "#e8edf8", fontWeight: 600, textDecoration: "none", fontSize: "13px", display: "block" }}
+                              style={{ color: "#e8edf8", fontWeight: 600, textDecoration: "none", fontSize: "13px", display: "block", wordBreak: "break-word" }}
                               onMouseEnter={(e) => { e.currentTarget.style.color = "#4f8ef7"; }}
                               onMouseLeave={(e) => { e.currentTarget.style.color = "#e8edf8"; }}
                             >
@@ -619,44 +583,36 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
                         </div>
                       </td>
 
-                      {/* Roll No */}
                       <td style={{ ...s.td, fontFamily: "'JetBrains Mono', monospace", color: "#4f8ef7", fontSize: "12px" }}>{student.roll_number}</td>
 
-                      {/* Class */}
                       <td style={s.td}>
                         {student.class_room ? (
-                          <span style={{ background: "rgba(79,142,247,0.08)", color: "#60a5fa", border: "1px solid rgba(79,142,247,0.15)", padding: "3px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: 600 }}>
+                          <span style={{ background: "rgba(79,142,247,0.08)", color: "#60a5fa", border: "1px solid rgba(79,142,247,0.15)", padding: "3px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: 600, whiteSpace: "nowrap" }}>
                             {student.class_room.name}
                           </span>
                         ) : "—"}
                       </td>
 
-                      {/* Gender */}
                       <td style={{ ...s.td, textTransform: "capitalize" }}>{student.gender}</td>
 
-                      {/* Attendance */}
                       <td style={s.td}><AttendanceBadge pct={student.attendance_percentage} /></td>
 
-                      {/* Fee status */}
                       <td style={s.td}>
-                        <span style={{ background: feePill.bg, color: feePill.text, padding: "3px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".4px" }}>
+                        <span style={{ background: feePill.bg, color: feePill.text, padding: "3px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".4px", whiteSpace: "nowrap" }}>
                           {feePill.label}
                         </span>
                       </td>
 
-                      {/* Status */}
                       <td style={s.td}>
-                        <span style={{ background: statusPill.bg, color: statusPill.text, padding: "3px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: 700, textTransform: "capitalize" }}>
+                        <span style={{ background: statusPill.bg, color: statusPill.text, padding: "3px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: 700, textTransform: "capitalize", whiteSpace: "nowrap" }}>
                           {student.status}
                         </span>
                       </td>
 
-                      {/* Joined */}
-                      <td style={{ ...s.td, fontSize: "12px", color: "#6b7a99" }}>
+                      <td style={{ ...s.td, fontSize: "12px", color: "#6b7a99", whiteSpace: "nowrap" }}>
                         {new Date(student.created_at).toLocaleDateString("en-KE", { day: "2-digit", month: "short", year: "numeric" })}
                       </td>
 
-                      {/* Row actions */}
                       <td style={s.td}>
                         <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
                           <RowIconLink to={`/students/${student.id}`}      title="View profile" icon="👁"  hoverColor="#4f8ef7" />
@@ -668,7 +624,7 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
                               type="submit"
                               title="Remove student"
                               onClick={(e) => { if (!confirm(`Remove ${student.full_name}? This cannot be undone.`)) e.preventDefault(); }}
-                              style={{ width: "30px", height: "30px", background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.15)", borderRadius: "7px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px", cursor: "pointer", fontFamily: "'Sora',sans-serif", transition: "all .15s" }}
+                              style={{ width: "30px", height: "30px", background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.15)", borderRadius: "7px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px", cursor: "pointer", fontFamily: "'Sora',sans-serif", transition: "all .15s", flexShrink: 0 }}
                               onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(239,68,68,0.15)"; }}
                               onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(239,68,68,0.06)"; }}
                             >
@@ -685,28 +641,25 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
           </table>
         </div>
 
-        {/* Pagination */}
         {meta?.last_page > 1 && <Pagination meta={meta} onPage={goToPage} />}
 
-        {/* Loading indicator */}
         {isLoading && (
           <div style={{ textAlign: "center", marginTop: "8px", fontSize: "12px", color: "#4f8ef7", fontWeight: 600 }}>Loading…</div>
         )}
       </div>
 
-      {/* ── Import Modal ── */}
+      {/* Import Modal */}
       {showImportModal && (
         <div
           onClick={(e) => { if (e.target === e.currentTarget) { setShowImportModal(false); setImportMsg(null); setImportFile(null); } }}
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(4px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(4px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px", boxSizing: "border-box" }}
         >
-          <div style={{ background: "#0f1424", border: "1px solid #2a3350", borderRadius: "16px", padding: "28px", width: "100%", maxWidth: "460px", boxShadow: "0 24px 64px rgba(0,0,0,0.7)" }}>
+          <div style={{ background: "#0f1424", border: "1px solid #2a3350", borderRadius: "16px", padding: "28px", width: "100%", maxWidth: "460px", boxShadow: "0 24px 64px rgba(0,0,0,0.7)", boxSizing: "border-box" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "22px" }}>
               <h2 style={{ fontSize: "17px", fontWeight: 700 }}>📤 Import Students</h2>
               <button onClick={() => { setShowImportModal(false); setImportMsg(null); setImportFile(null); }} style={{ background: "#1e2640", border: "1px solid #2a3350", borderRadius: "7px", width: "30px", height: "30px", color: "#a0aec0", cursor: "pointer", fontSize: "14px" }}>✕</button>
             </div>
 
-            {/* Drop zone */}
             <label style={{ display: "block", border: `2px dashed ${importFile ? "#4f8ef7" : "#2a3350"}`, borderRadius: "12px", padding: "36px 20px", textAlign: "center", cursor: "pointer", marginBottom: "16px", background: importFile ? "rgba(79,142,247,0.05)" : "transparent", transition: "all .2s" }}>
               <input type="file" accept=".xlsx,.csv,.xls" style={{ display: "none" }} onChange={(e) => setImportFile(e.target.files?.[0] ?? null)} />
               <div style={{ fontSize: "32px", marginBottom: "10px" }}>{importFile ? "📄" : "📁"}</div>
@@ -723,15 +676,13 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
               )}
             </label>
 
-            {/* Column guide */}
-            <div style={{ background: "#0a0e1a", borderRadius: "8px", padding: "12px 14px", marginBottom: "16px", fontSize: "11px", color: "#6b7a99", lineHeight: 1.7 }}>
+            <div style={{ background: "#0a0e1a", borderRadius: "8px", padding: "12px 14px", marginBottom: "16px", fontSize: "11px", color: "#6b7a99", lineHeight: 1.7, overflowX: "auto" }}>
               <div style={{ fontWeight: 700, color: "#a0aec0", marginBottom: "4px" }}>Required columns:</div>
-              <code style={{ color: "#60a5fa", fontFamily: "'JetBrains Mono', monospace" }}>
+              <code style={{ color: "#60a5fa", fontFamily: "'JetBrains Mono', monospace", wordBreak: "break-all" }}>
                 first_name, last_name, date_of_birth, gender, class, parent_name, parent_email
               </code>
             </div>
 
-            {/* Feedback */}
             {importMsg && (
               <div style={{ marginBottom: "14px", padding: "10px 14px", borderRadius: "8px", fontSize: "13px", fontWeight: 600, background: importMsg.ok ? "rgba(16,185,129,0.1)" : "rgba(239,68,68,0.1)", color: importMsg.ok ? "#34d399" : "#f87171", border: `1px solid ${importMsg.ok ? "rgba(16,185,129,0.25)" : "rgba(239,68,68,0.25)"}` }}>
                 {importMsg.ok ? "✅" : "❌"} {importMsg.text}
@@ -749,6 +700,20 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
           </div>
         </div>
       )}
+
+      <style>{`
+        @keyframes slideInToast { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
+        @media (max-width: 768px) {
+          .responsive-header { flex-direction: column; align-items: stretch !important; gap: 12px; }
+          .responsive-header-actions { width: 100%; display: flex; flex-wrap: wrap; gap: 8px; }
+          .responsive-header-actions > * { flex: 1; min-width: 120px; justify-content: center; }
+          .responsive-toolbar { flex-direction: column; align-items: stretch !important; }
+          .responsive-toolbar > * { width: 100% !important; max-width: none !important; }
+          .responsive-bulk { margin-left: 0 !important; width: 100%; }
+          .responsive-bulk > button { width: 100%; justify-content: center; }
+          .responsive-card { padding: 14px !important; }
+        }
+      `}</style>
     </div>
   );
 }

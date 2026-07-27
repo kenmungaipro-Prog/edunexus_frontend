@@ -3,10 +3,9 @@
 // Admin UI: View sms_logs and retry failed messages
 // ============================================================
 import { useEffect, useState } from 'react';
-import api, { type ApiResponse } from '~/lib/api';
+import { api, type ApiResponse } from "~/lib/api";
 
 export async function clientLoader() {
-  // initial load handled client-side for simplicity
   return {};
 }
 
@@ -21,16 +20,11 @@ export default function SmsLogsPage() {
     try {
       const res = await api.smsAdmin.logs({ page, per_page: perPage });
       
-      // DEFENSIVE EXTRACTION:
-      // The '?.' ensures that if res, res.data, or res.data.data is undefined (like in a 204 response),
-      // it won't crash. It will just cleanly fall back to the empty array `[]`.
-      
       const fetchedLogs = res?.data?.logs 
                        || res?.data?.data?.data 
                        || res?.data?.data 
                        || [];
 
-      // Final safety check to ensure React gets an array
       if (Array.isArray(fetchedLogs)) {
         setLogs(fetchedLogs);
       } else {
@@ -39,7 +33,7 @@ export default function SmsLogsPage() {
 
     } catch (err) {
       console.error("Failed to fetch SMS logs:", err);
-      setLogs([]); // Ensure the UI doesn't break if the API fails entirely
+      setLogs([]);
     } finally {
       setLoading(false);
     }
@@ -57,37 +51,43 @@ export default function SmsLogsPage() {
   };
 
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1>SMS Logs</h1>
+    <div style={{ color: "#f8fafc", fontFamily: "'Sora', sans-serif", padding: "12px", maxWidth: "1200px", margin: "0 auto", boxSizing: "border-box" }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: "16px", flexWrap: 'wrap', gap: 12 }}>
+        <h1 style={{ fontSize: "clamp(22px, 4vw, 26px)", margin: 0 }}>SMS Logs</h1>
       </div>
 
-      <div style={{ marginTop: 12 }}>
+      <div style={{ marginTop: 12, overflowX: 'auto', borderRadius: '12px', border: '1px solid #1e293b', background: '#0f172a', WebkitOverflowScrolling: 'touch' }}>
         {loading ? (
-          <div>Loading...</div>
+          <div style={{ padding: '24px', textAlign: 'center', color: '#94a3b8', fontSize: '14px' }}>Loading logs...</div>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '700px' }}>
             <thead>
-              <tr>
-                <th>ID</th>
-                <th>Phone</th>
-                <th>Message</th>
-                <th>Status</th>
-                <th>Created</th>
-                <th>Action</th>
+              <tr style={{ background: '#1e293b', textAlign: 'left', color: '#cbd5e1', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <th style={{ padding: '12px 16px' }}>ID</th>
+                <th style={{ padding: '12px 16px' }}>Phone</th>
+                <th style={{ padding: '12px 16px' }}>Message</th>
+                <th style={{ padding: '12px 16px' }}>Status</th>
+                <th style={{ padding: '12px 16px' }}>Created</th>
+                <th style={{ padding: '12px 16px' }}>Action</th>
               </tr>
             </thead>
             <tbody>
-              {logs.map((l: any) => (
-                <tr key={l.id} style={{ borderTop: '1px solid #222' }}>
-                  <td style={{ padding: 8 }}>{l.id}</td>
-                  <td style={{ padding: 8 }}>{l.phone}</td>
-                  <td style={{ padding: 8, maxWidth: 420 }}>{l.message}</td>
-                  <td style={{ padding: 8 }}>{l.status}</td>
-                  <td style={{ padding: 8 }}>{l.created_at}</td>
-                  <td style={{ padding: 8 }}>
+              {logs.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ padding: '36px', textAlign: 'center', color: '#64748b', fontSize: '14px' }}>
+                    No SMS logs found.
+                  </td>
+                </tr>
+              ) : logs.map((l: any) => (
+                <tr key={l.id} style={{ borderTop: '1px solid #1e293b', fontSize: '14px' }}>
+                  <td style={{ padding: '12px 16px', color: '#cbd5e1' }}>{l.id}</td>
+                  <td style={{ padding: '12px 16px', color: '#cbd5e1' }}>{l.phone}</td>
+                  <td style={{ padding: '12px 16px', maxWidth: 420, color: '#f8fafc', wordBreak: 'break-word' }}>{l.message}</td>
+                  <td style={{ padding: '12px 16px', textTransform: 'capitalize', color: l.status === 'sent' ? '#10b981' : '#ef4444' }}>{l.status}</td>
+                  <td style={{ padding: '12px 16px', color: '#94a3b8', fontSize: '12px' }}>{l.created_at}</td>
+                  <td style={{ padding: '12px 16px' }}>
                     {l.status !== 'sent' && (
-                      <button onClick={() => retry(l.id)} style={{ background: '#3b82f6', color: '#fff', padding: '6px 8px', borderRadius: 6 }}>Retry</button>
+                      <button onClick={() => retry(l.id)} style={{ background: '#3b82f6', color: '#fff', padding: '6px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '12px' }}>Retry</button>
                     )}
                   </td>
                 </tr>

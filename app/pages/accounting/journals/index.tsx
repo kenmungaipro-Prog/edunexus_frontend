@@ -17,8 +17,6 @@ export async function clientLoader() {
   };
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
 function formatDate(date: string | null | undefined) {
   if (!date) return "—";
   return new Date(date).toLocaleDateString("en-KE", {
@@ -43,8 +41,6 @@ const STATUS_CFG: Record<JournalEntryStatus, { bg: string; text: string; label: 
   reversed:  { bg: "bg-red-500/15",     text: "text-red-400",     label: "Reversed" },
   cancelled: { bg: "bg-amber-500/15",   text: "text-amber-400",   label: "Cancelled" },
 };
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function JournalEntriesPage({
   loaderData,
@@ -71,7 +67,6 @@ export default function JournalEntriesPage({
   const openView = (entry: JournalEntry) => { setSelectedEntry(entry); setShowModal(true); };
   const closeModal = () => { setShowModal(false); setSelectedEntry(null); };
 
-  // Summary counts
   const counts = (["draft", "posted", "reversed", "cancelled"] as JournalEntryStatus[]).reduce(
     (acc, s) => { acc[s] = entries.filter((e) => e.status === s).length; return acc; },
     {} as Record<JournalEntryStatus, number>
@@ -85,16 +80,16 @@ export default function JournalEntriesPage({
           <h1 className="text-2xl font-bold text-white tracking-tight">Journal Entries</h1>
           <p className="text-sm text-slate-400 mt-1">General ledger double-entry records</p>
         </div>
-        <div className="flex gap-2 shrink-0">
+        <div className="flex flex-col sm:flex-row gap-2 shrink-0 w-full sm:w-auto">
           <Link
             to="/accounting/accounts"
-            className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 transition-colors"
+            className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 transition-colors text-center"
           >
             Chart of Accounts
           </Link>
           <button
             onClick={openNew}
-            className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-600 transition-colors"
+            className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-600 transition-colors text-center"
           >
             + New Entry
           </button>
@@ -207,7 +202,7 @@ export default function JournalEntriesPage({
                       <td className="px-3 py-3 text-right">
                         <button
                           onClick={() => openView(entry)}
-                          className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                          className="text-xs text-blue-400 hover:text-blue-300 transition-colors py-1 px-2 rounded hover:bg-slate-700"
                         >
                           View
                         </button>
@@ -242,8 +237,6 @@ export default function JournalEntriesPage({
   );
 }
 
-// ─── Flatten tree accounts for select dropdowns ───────────────────────────────
-
 function flattenAccounts(
   accs: ChartOfAccount[],
   depth = 0
@@ -259,8 +252,6 @@ function flattenAccounts(
   }
   return result;
 }
-
-// ─── Journal Entry Modal ──────────────────────────────────────────────────────
 
 interface JournalEntryModalProps {
   entry: JournalEntry | null;
@@ -372,12 +363,12 @@ function JournalEntryModal({ entry, accounts, onClose, onSaved }: JournalEntryMo
     const cfg    = STATUS_CFG[entry.status];
 
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-        <div className="w-full max-w-2xl rounded-2xl border border-slate-700 bg-slate-800 shadow-2xl max-h-[90vh] flex flex-col">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm overflow-y-auto">
+        <div className="w-full max-w-2xl rounded-2xl border border-slate-700 bg-slate-800 shadow-2xl max-h-[90vh] flex flex-col my-auto overflow-hidden">
           {/* Header */}
           <div className="flex items-start justify-between border-b border-slate-700 px-6 py-4 shrink-0">
             <div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 <h2 className="text-base font-semibold text-white">Journal Entry</h2>
                 <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${cfg.bg} ${cfg.text}`}>
                   {cfg.label}
@@ -408,8 +399,8 @@ function JournalEntryModal({ entry, accounts, onClose, onSaved }: JournalEntryMo
             <p className="text-sm text-slate-300">{entry.description}</p>
 
             {/* Lines Table */}
-            <div className="rounded-lg border border-slate-700 overflow-hidden">
-              <table className="w-full text-sm">
+            <div className="rounded-lg border border-slate-700 overflow-x-auto">
+              <table className="w-full min-w-[500px] text-sm">
                 <thead>
                   <tr className="border-b border-slate-700 bg-slate-900/50 text-left text-xs uppercase text-slate-500">
                     <th className="px-4 py-2.5">Account</th>
@@ -457,10 +448,10 @@ function JournalEntryModal({ entry, accounts, onClose, onSaved }: JournalEntryMo
           </div>
 
           {/* Footer Actions */}
-          <div className="border-t border-slate-700 px-6 py-4 flex justify-end gap-2 shrink-0">
+          <div className="border-t border-slate-700 px-6 py-4 flex flex-col-reverse sm:flex-row justify-end gap-2 shrink-0">
             <button
               onClick={onClose}
-              className="rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 transition-colors"
+              className="w-full sm:w-auto rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 transition-colors text-center"
             >
               Close
             </button>
@@ -468,7 +459,7 @@ function JournalEntryModal({ entry, accounts, onClose, onSaved }: JournalEntryMo
               <button
                 onClick={handlePost}
                 disabled={posting}
-                className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-50 transition-colors"
+                className="w-full sm:w-auto rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-50 transition-colors text-center"
               >
                 {posting ? "Posting…" : "Post Entry"}
               </button>
@@ -477,7 +468,7 @@ function JournalEntryModal({ entry, accounts, onClose, onSaved }: JournalEntryMo
               <button
                 onClick={handleReverse}
                 disabled={posting}
-                className="rounded-lg bg-red-500/20 border border-red-500/30 px-4 py-2 text-sm font-semibold text-red-400 hover:bg-red-500/30 disabled:opacity-50 transition-colors"
+                className="w-full sm:w-auto rounded-lg bg-red-500/20 border border-red-500/30 px-4 py-2 text-sm font-semibold text-red-400 hover:bg-red-500/30 disabled:opacity-50 transition-colors text-center"
               >
                 {posting ? "Reversing…" : "Reverse Entry"}
               </button>
@@ -490,8 +481,8 @@ function JournalEntryModal({ entry, accounts, onClose, onSaved }: JournalEntryMo
 
   // ── Create mode ──
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-2xl rounded-2xl border border-slate-700 bg-slate-800 shadow-2xl max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm overflow-y-auto">
+      <div className="w-full max-w-2xl rounded-2xl border border-slate-700 bg-slate-800 shadow-2xl max-h-[90vh] flex flex-col my-auto overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-700 px-6 py-4 shrink-0">
           <h2 className="text-base font-semibold text-white">New Journal Entry</h2>
@@ -513,7 +504,7 @@ function JournalEntryModal({ entry, accounts, onClose, onSaved }: JournalEntryMo
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-slate-400 uppercase tracking-wide">
                   Entry Date
@@ -569,8 +560,8 @@ function JournalEntryModal({ entry, accounts, onClose, onSaved }: JournalEntryMo
                 </button>
               </div>
 
-              <div className="rounded-lg border border-slate-700 overflow-hidden">
-                <table className="w-full text-sm">
+              <div className="rounded-lg border border-slate-700 overflow-x-auto">
+                <table className="w-full min-w-[500px] text-sm">
                   <thead>
                     <tr className="border-b border-slate-700 bg-slate-900/50 text-left text-xs uppercase text-slate-500">
                       <th className="px-3 py-2">Account</th>
@@ -658,18 +649,18 @@ function JournalEntryModal({ entry, accounts, onClose, onSaved }: JournalEntryMo
           </div>
 
           {/* Footer */}
-          <div className="border-t border-slate-700 px-6 py-4 flex justify-end gap-2 shrink-0">
+          <div className="border-t border-slate-700 px-6 py-4 flex flex-col-reverse sm:flex-row justify-end gap-2 shrink-0">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 transition-colors"
+              className="w-full sm:w-auto rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 transition-colors text-center"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving || !isBalanced}
-              className="rounded-lg bg-blue-500 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-600 disabled:opacity-50 transition-colors"
+              className="w-full sm:w-auto rounded-lg bg-blue-500 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-600 disabled:opacity-50 transition-colors text-center"
               title={!isBalanced ? "Entry must be balanced before saving" : undefined}
             >
               {saving ? "Saving…" : "Save as Draft"}

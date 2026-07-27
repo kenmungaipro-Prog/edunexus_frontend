@@ -30,8 +30,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (token) {
-      api.get<{ data: User }>("/auth/me")
-        .then(res => setUser(res.data.data))
+      api.auth.me()
+        .then(res => setUser(res.data))
         .catch(() => { setToken(null); localStorage.removeItem("edunexus_token"); })
         .finally(() => setIsLoading(false));
     } else {
@@ -40,15 +40,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [token]);
 
   const login = async (email: string, password: string) => {
-    const res = await api.post<{ data: { user: User; token: string } }>("/auth/login", { email, password });
-    const { user: u, token: t } = res.data.data;
+    const res = await api.auth.login({ email, password });
+    const { user: u, token: t } = res.data;
     localStorage.setItem("edunexus_token", t);
     setToken(t);
     setUser(u);
   };
 
   const logout = async () => {
-    await api.post("/auth/logout").catch(() => {});
+    await api.auth.logout().catch(() => {});
     localStorage.removeItem("edunexus_token");
     setToken(null);
     setUser(null);

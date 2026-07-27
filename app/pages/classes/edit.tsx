@@ -1,3 +1,6 @@
+// ============================================================
+// app/pages/classes/[id]/edit.tsx
+// ============================================================
 import React, { useEffect, useRef } from "react";
 import {
   useNavigation,
@@ -10,14 +13,13 @@ import {
   useRouteError,
   isRouteErrorResponse,
 } from "react-router";
-import api, {
+import {
+  api,
   type ClassRoom,
   type CreateClassPayload,
   type Subject,
   type Teacher,
 } from "~/lib/api";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface LoaderData {
   classData: ClassRoom;
@@ -30,8 +32,6 @@ interface ActionErrorShape {
   errors?: Record<string, string[]>;
 }
 
-// ─── Loader ───────────────────────────────────────────────────────────────────
-
 export async function clientLoader({
   params,
 }: {
@@ -42,7 +42,6 @@ export async function clientLoader({
     throw new Response("Invalid class id", { status: 400 });
   }
 
-  // Fire all three requests in parallel to minimise waterfall latency.
   const [classRes, teachersRes, subjectsRes] = await Promise.all([
     api.classes.get(id),
     api.teachers.list({ per_page: 200 }),
@@ -61,11 +60,7 @@ export async function clientLoader({
   return { classData, teachers, subjects } satisfies LoaderData;
 }
 
-// Tell React Router to always re-run this loader when the page is revisited,
-// even if the URL hasn't changed (important after a failed update).
 clientLoader.hydrate = true;
-
-// ─── Action ───────────────────────────────────────────────────────────────────
 
 export async function clientAction({
   request,
@@ -86,7 +81,6 @@ export async function clientAction({
     return typeof v === "string" ? v.trim() : undefined;
   };
 
-  // Validate required fields before hitting the network.
   const clientErrors: Record<string, string[]> = {};
 
   const name = getString("name");
@@ -114,7 +108,6 @@ export async function clientAction({
     } satisfies ActionErrorShape;
   }
 
-  // Build the partial payload (only include keys the user may have changed).
   const payload: Partial<CreateClassPayload> = {
     name: name!,
     grade: gradeNum as any,
@@ -138,7 +131,6 @@ export async function clientAction({
     .filter((v): v is string => typeof v === "string" && v.trim() !== "")
     .map(Number)
     .filter((n) => !Number.isNaN(n));
-  // Always send subjects so an empty selection clears them.
   payload.subjects = subjects as any;
 
   try {
@@ -147,7 +139,6 @@ export async function clientAction({
     return redirect(`/classes/${updated.id}`);
   } catch (err: unknown) {
     const e = err as any;
-    // Normalise error shapes from axios / fetch / custom API clients.
     const message: string =
       e?.response?.data?.message ??
       e?.message ??
@@ -157,8 +148,6 @@ export async function clientAction({
     return { error: message, errors } satisfies ActionErrorShape;
   }
 }
-
-// ─── Error Boundary ───────────────────────────────────────────────────────────
 
 export function ErrorBoundary() {
   const error = useRouteError();
@@ -181,7 +170,7 @@ export function ErrorBoundary() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto py-16 text-center">
+    <div className="max-w-3xl mx-auto py-16 px-4 text-center">
       <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-red-900/20 mb-4">
         <svg
           className="w-7 h-7 text-red-400"
@@ -200,18 +189,18 @@ export function ErrorBoundary() {
       </div>
       <h1 className="text-xl font-semibold text-slate-100 mb-2">{heading}</h1>
       <p className="text-sm text-slate-400 mb-6">{body}</p>
-      <div className="flex gap-3 justify-center">
+      <div className="flex flex-col sm:flex-row gap-3 justify-center">
         {isRouteErrorResponse(error) && error.status >= 500 && (
           <button
             onClick={() => revalidator.revalidate()}
-            className="rounded-xl bg-slate-800 px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 transition-colors"
+            className="rounded-xl bg-slate-800 px-4 py-2.5 text-sm text-slate-200 hover:bg-slate-700 transition-colors"
           >
             Try again
           </button>
         )}
         <Link
           to="/classes"
-          className="rounded-xl bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-500 transition-colors"
+          className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm text-white hover:bg-blue-500 transition-colors"
         >
           Back to classes
         </Link>
@@ -219,8 +208,6 @@ export function ErrorBoundary() {
     </div>
   );
 }
-
-// ─── Skeleton ─────────────────────────────────────────────────────────────────
 
 function Skeleton({ className = "" }: { className?: string }) {
   return (
@@ -233,16 +220,16 @@ function Skeleton({ className = "" }: { className?: string }) {
 
 function FormSkeleton() {
   return (
-    <div className="max-w-3xl mx-auto py-8" aria-label="Loading class data">
-      <div className="flex items-center justify-between mb-6">
+    <div className="max-w-3xl mx-auto py-6 px-4 sm:px-6" aria-label="Loading class data">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div className="space-y-2">
           <Skeleton className="h-7 w-32" />
           <Skeleton className="h-4 w-56" />
         </div>
-        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-4 w-24 self-start sm:self-auto" />
       </div>
 
-      <div className="space-y-6 bg-slate-900 border border-slate-800 rounded-2xl p-6">
+      <div className="space-y-6 bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6">
         <div className="grid gap-4 md:grid-cols-2">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="space-y-2">
@@ -269,8 +256,6 @@ function FormSkeleton() {
   );
 }
 
-// ─── Field helpers ────────────────────────────────────────────────────────────
-
 function FieldError({
   id,
   messages,
@@ -287,14 +272,9 @@ function FieldError({
 }
 
 const inputClass =
-  "mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
+  "mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
 
 const labelClass = "block text-sm text-slate-300";
-
-// ─── Subjects multi-select with checkboxes ────────────────────────────────────
-//
-// A native <select multiple> is notoriously hard to use on touch devices.
-// This replaces it with a styled list of checkboxes that degrades gracefully.
 
 function SubjectsCheckboxList({
   subjects,
@@ -328,16 +308,16 @@ function SubjectsCheckboxList({
           <ul className="space-y-1" role="list">
             {subjects.map((subject) => (
               <li key={subject.id}>
-                <label className="flex items-center gap-2.5 cursor-pointer group px-1 py-1 rounded-lg hover:bg-slate-800/60 transition-colors">
+                <label className="flex items-center gap-2.5 cursor-pointer group px-1 py-1.5 rounded-lg hover:bg-slate-800/60 transition-colors">
                   <input
                     type="checkbox"
                     name="subjects"
                     value={String(subject.id)}
                     defaultChecked={selectedIds.has(String(subject.id))}
                     disabled={disabled}
-                    className="h-4 w-4 rounded border-slate-600 bg-slate-800 accent-blue-500 cursor-pointer"
+                    className="h-4 w-4 rounded border-slate-600 bg-slate-800 accent-blue-500 cursor-pointer flex-shrink-0"
                   />
-                  <span className="text-sm text-slate-300 group-hover:text-slate-100 transition-colors">
+                  <span className="text-sm text-slate-300 group-hover:text-slate-100 transition-colors break-words">
                     {subject.name}
                   </span>
                 </label>
@@ -351,15 +331,12 @@ function SubjectsCheckboxList({
   );
 }
 
-// ─── Main page ────────────────────────────────────────────────────────────────
-
 export default function EditClassPage() {
   const loaderData = useLoaderData() as LoaderData | undefined;
   const actionData = useActionData() as ActionErrorShape | undefined;
   const navigation = useNavigation();
   const submitting = navigation.state === "submitting";
 
-  // Scroll to top of form on server/action error so the user sees the banner.
   const errorBannerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (actionData?.error) {
@@ -380,12 +357,12 @@ export default function EditClassPage() {
   );
 
   return (
-    <div className="max-w-3xl mx-auto py-8">
+    <div className="max-w-3xl mx-auto py-6 px-4 sm:px-6">
       {/* ── Header ── */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-100">Edit Class</h1>
-          <p className="text-sm text-slate-400">
+          <h1 className="text-xl sm:text-2xl font-semibold text-slate-100">Edit Class</h1>
+          <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
             Update academic group details for{" "}
             <span className="text-slate-300 font-medium">{classData.name}</span>
             .
@@ -393,10 +370,10 @@ export default function EditClassPage() {
         </div>
         <Link
           to={`/classes/${classData.id}`}
-          className="inline-flex items-center gap-1.5 text-blue-400 hover:text-blue-300 hover:underline text-sm transition-colors"
+          className="inline-flex items-center gap-1.5 text-blue-400 hover:text-blue-300 hover:underline text-sm transition-colors self-start sm:self-auto"
         >
           <svg
-            className="w-3.5 h-3.5"
+            className="w-3.5 h-3.5 flex-shrink-0"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -435,7 +412,7 @@ export default function EditClassPage() {
               d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"
             />
           </svg>
-          <span>{errorMessage}</span>
+          <span className="break-words">{errorMessage}</span>
         </div>
       )}
 
@@ -443,7 +420,7 @@ export default function EditClassPage() {
       <Form
         method="post"
         replace
-        className="space-y-6 bg-slate-900 border border-slate-800 rounded-2xl p-6"
+        className="space-y-6 bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6"
       >
         {/* Row 1: Name + Grade */}
         <div className="grid gap-4 md:grid-cols-2">
@@ -575,7 +552,13 @@ export default function EditClassPage() {
         />
 
         {/* Footer */}
-        <div className="flex items-center gap-3 pt-2">
+        <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-3 pt-2">
+          <Link
+            to={`/classes/${classData.id}`}
+            className="rounded-2xl border border-slate-700 px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 transition-colors text-center"
+          >
+            Cancel
+          </Link>
           <button
             type="submit"
             disabled={submitting}
@@ -609,13 +592,6 @@ export default function EditClassPage() {
               "Update Class"
             )}
           </button>
-
-          <Link
-            to={`/classes/${classData.id}`}
-            className="rounded-2xl border border-slate-700 px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 transition-colors whitespace-nowrap"
-          >
-            Cancel
-          </Link>
         </div>
 
         <p className="text-xs text-slate-500 text-center -mt-2">

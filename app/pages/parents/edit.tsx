@@ -3,13 +3,10 @@
 // ============================================================
 import { Link, Form, useNavigation, redirect } from "react-router";
 import type { Route } from "./+types/edit";
-import api, { type ParentProfile, type UpdateParentPayload } from "~/lib/api";
+import { api, type ParentProfile, type UpdateParentPayload } from "~/lib/api";
 
 export async function clientLoader({ params }: Route.LoaderArgs) {
-  // This calls GET /api/v1/parents/{id}
   const response = await api.parents.get(Number(params.id));
-  
-  // FIX: Drop the second '.data'. response.data maps exactly to the parent object.
   return { parent: response.data };
 }
 
@@ -49,7 +46,8 @@ export default function ParentEditPage({ loaderData, actionData }: Route.Compone
     color: "#f8fafc",
     fontSize: "14px",
     boxSizing: "border-box" as const,
-    marginBottom: "16px"
+    marginBottom: "16px",
+    outline: "none"
   };
 
   const labelStyle = {
@@ -61,25 +59,25 @@ export default function ParentEditPage({ loaderData, actionData }: Route.Compone
   };
 
   return (
-    <div style={{ color: "#f8fafc", fontFamily: "'Sora', sans-serif", maxWidth: "700px", margin: "0 auto", padding: "20px" }}>
+    <div style={{ color: "#f8fafc", fontFamily: "'Sora', sans-serif", maxWidth: "700px", margin: "0 auto", padding: "12px", boxSizing: "border-box" }}>
       
       <div style={{ marginBottom: "20px" }}>
-        <Link to={`/parents/${parent.id}`} style={{ color: "#3b82f6", textDecoration: "none", fontSize: "14px" }}>
+        <Link to={`/parents/${parent.id}`} style={{ color: "#3b82f6", textDecoration: "none", fontSize: "14px", fontWeight: 600 }}>
           ← Cancel Changes
         </Link>
       </div>
 
       <div style={{ marginBottom: "24px" }}>
-        <h1 style={{ fontSize: "24px", margin: 0 }}>Edit Info: {parent.user?.name}</h1>
+        <h1 style={{ fontSize: "clamp(20px, 4vw, 24px)", margin: 0, wordBreak: "break-word" }}>Edit Info: {parent.user?.name}</h1>
       </div>
 
       {actionResult?.error && (
-        <div style={{ background: "rgba(239,68,68,0.1)", color: "#f87171", padding: "12px", borderRadius: "8px", marginBottom: "16px" }}>
+        <div style={{ background: "rgba(239,68,68,0.1)", color: "#f87171", padding: "12px", borderRadius: "8px", marginBottom: "16px", fontSize: "14px" }}>
           {actionResult.error}
         </div>
       )}
 
-      <Form method="post" style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: "12px", padding: "24px" }}>
+      <Form method="post" style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: "12px", padding: "16px", boxSizing: "border-box" }}>
         
         <div>
           <label style={labelStyle}>Relationship</label>
@@ -106,8 +104,8 @@ export default function ParentEditPage({ loaderData, actionData }: Route.Compone
           <textarea name="notes" defaultValue={parent.notes ?? ""} rows={3} style={inputStyle} />
         </div>
 
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", borderTop: "1px solid #1e293b", paddingTop: "16px" }}>
-          <button type="submit" disabled={submitting} style={{ padding: "10px 20px", borderRadius: "8px", background: "#3b82f6", color: "#fff", border: "none", fontWeight: 600, cursor: "pointer" }}>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", borderTop: "1px solid #1e293b", paddingTop: "16px", flexWrap: "wrap" }}>
+          <button type="submit" disabled={submitting} style={{ width: "100%", padding: "12px 20px", borderRadius: "8px", background: "#3b82f6", color: "#fff", border: "none", fontWeight: 600, cursor: "pointer", fontSize: "14px" }}>
             {submitting ? "Saving Parameters..." : "Save Profile"}
           </button>
         </div>

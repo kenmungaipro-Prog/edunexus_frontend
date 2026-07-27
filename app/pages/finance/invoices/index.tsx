@@ -1,5 +1,9 @@
+// ============================================================
+// app/pages/finance/invoices/index.tsx
+// ============================================================
+
 import { Link, useNavigation, useSearchParams } from "react-router";
-import api, { type Invoice, type InvoiceStatus, type PaginationMeta } from "~/lib/api";
+import { api, type Invoice, type InvoiceStatus, type PaginationMeta } from "~/lib/api";
 
 export async function clientLoader({ request }: { request: Request }) {
   const url = new URL(request.url);
@@ -36,14 +40,14 @@ export default function FinanceInvoicesPage({ loaderData }: { loaderData: { invo
   }
 
   return (
-    <div className={`space-y-5 ${navigation.state === "loading" ? "opacity-60" : ""}`}>
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <div className={`space-y-5 p-2 sm:p-0 ${navigation.state === "loading" ? "opacity-60" : ""}`}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Invoice Register</h1>
-          <p className="text-sm text-slate-400 mt-1">Issued student bills and balances</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-white">Invoice Register</h1>
+          <p className="text-xs sm:text-sm text-slate-400 mt-1">Issued student bills and balances</p>
         </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <select value={searchParams.get("status") ?? ""} onChange={(e) => setParam("status", e.target.value)} className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200">
+        <div className="flex flex-col sm:flex-row gap-2.5 sm:items-center">
+          <select value={searchParams.get("status") ?? ""} onChange={(e) => setParam("status", e.target.value)} className="w-full sm:w-auto rounded-lg border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-slate-200">
             <option value="">All statuses</option>
             <option value="issued">Issued</option>
             <option value="partially_paid">Partially paid</option>
@@ -51,26 +55,26 @@ export default function FinanceInvoicesPage({ loaderData }: { loaderData: { invo
             <option value="overdue">Overdue</option>
             <option value="cancelled">Cancelled</option>
           </select>
-          <Link to="/fees/generate" className="inline-flex items-center justify-center rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-400 transition">
+          <Link to="/fees/generate" className="w-full sm:w-auto inline-flex items-center justify-center rounded-lg bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-400 transition">
             🧾 Create Invoice
           </Link>
         </div>
       </div>
 
-      <div className="rounded-xl border border-slate-700 bg-slate-800 p-5">
+      <div className="rounded-xl border border-slate-700 bg-slate-800 p-4 sm:p-5">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[900px] text-sm">
             <thead>
               <tr className="border-b border-slate-700 text-left text-xs uppercase tracking-wide text-slate-500">
-                <th className="py-2 pr-3">Invoice</th>
-                <th className="py-2 pr-3">Student</th>
-                <th className="py-2 pr-3">Class</th>
-                <th className="py-2 pr-3">Total</th>
-                <th className="py-2 pr-3">Paid</th>
-                <th className="py-2 pr-3">Balance</th>
-                <th className="py-2 pr-3">Due</th>
-                <th className="py-2 pr-3">Status</th>
-                <th className="py-2 pr-3">Action</th>
+                <th className="py-2.5 pr-3">Invoice</th>
+                <th className="py-2.5 pr-3">Student</th>
+                <th className="py-2.5 pr-3">Class</th>
+                <th className="py-2.5 pr-3">Total</th>
+                <th className="py-2.5 pr-3">Paid</th>
+                <th className="py-2.5 pr-3">Balance</th>
+                <th className="py-2.5 pr-3">Due</th>
+                <th className="py-2.5 pr-3">Status</th>
+                <th className="py-2.5 pr-3">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-700/60">
@@ -99,11 +103,11 @@ export default function FinanceInvoicesPage({ loaderData }: { loaderData: { invo
         </div>
 
         {meta?.last_page > 1 && (
-          <div className="mt-4 flex items-center justify-between border-t border-slate-700 pt-4 text-xs text-slate-400">
+          <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-700 pt-4 text-xs text-slate-400">
             <span>Showing {meta.from}-{meta.to} of {meta.total}</span>
-            <div className="flex gap-2">
-              <button disabled={meta.current_page === 1} onClick={() => setParam("page", String(meta.current_page - 1))} className="rounded bg-slate-700 px-3 py-1 disabled:opacity-40">Previous</button>
-              <button disabled={meta.current_page === meta.last_page} onClick={() => setParam("page", String(meta.current_page + 1))} className="rounded bg-blue-500 px-3 py-1 text-white disabled:opacity-40">Next</button>
+            <div className="flex gap-2 w-full sm:w-auto justify-end">
+              <button disabled={meta.current_page === 1} onClick={() => setParam("page", String(meta.current_page - 1))} className="rounded bg-slate-700 px-3 py-1.5 disabled:opacity-40">Previous</button>
+              <button disabled={meta.current_page === meta.last_page} onClick={() => setParam("page", String(meta.current_page + 1))} className="rounded bg-blue-500 px-3 py-1.5 text-white disabled:opacity-40">Next</button>
             </div>
           </div>
         )}

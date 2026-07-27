@@ -5,16 +5,13 @@ import { Form } from "react-router";
 import { api } from "~/lib/api";
 
 export async function clientLoader() {
-  const response = await api.get("/settings/school");
-  
-  // response.data is the Laravel JSON body: { success: true, data: { ... } }
-  // response.data.data is the actual School object model
-  return { school: response.data.data };
+  const response = await api.settings.school();
+  return { school: response.data };
 }
 
 export async function clientAction({ request }: { request: Request }) {
   const form = await request.formData();
-  await api.put("/settings/school", Object.fromEntries(form.entries()));
+  await api.settings.updateSchool(Object.fromEntries(form.entries()));
   return { success: true };
 }
 
@@ -25,13 +22,13 @@ export default function SettingsPage({ loaderData, actionData }: {
   const { school } = loaderData;
 
   return (
-    <div>
-      <h1 className="text-xl font-bold mb-6">⚙️ Settings</h1>
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4">
+      <h1 className="text-xl sm:text-2xl font-bold mb-6">⚙️ Settings</h1>
       {actionData?.success && (
         <div className="bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-sm rounded-lg p-3 mb-4">Settings saved successfully.</div>
       )}
-      <div className="grid grid-cols-2 gap-6">
-        <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 sm:p-6">
           <h2 className="text-sm font-semibold mb-4">🏫 School Information</h2>
           <Form method="post" className="space-y-4">
             {[
@@ -48,13 +45,13 @@ export default function SettingsPage({ loaderData, actionData }: {
                   className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-200 outline-none focus:border-blue-500" />
               </div>
             ))}
-            <button type="submit" className="w-full py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg text-sm font-semibold hover:opacity-90 transition mt-2">
+            <button type="submit" className="w-full py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg text-sm font-semibold hover:opacity-90 transition mt-2 cursor-pointer">
               💾 Save Changes
             </button>
           </Form>
         </div>
         <div className="space-y-4">
-          <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
+          <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 sm:p-6">
             <h2 className="text-sm font-semibold mb-4">🎨 Preferences</h2>
             <div className="space-y-3">
               {[
@@ -63,28 +60,28 @@ export default function SettingsPage({ loaderData, actionData }: {
                 { label: "SMS Alerts", sub: "For fee dues and low attendance", enabled: false },
                 { label: "Two-Factor Auth", sub: "Extra login security", enabled: false },
               ].map(pref => (
-                <div key={pref.label} className="flex items-center justify-between p-3 bg-slate-900/50 rounded-lg border border-slate-700">
+                <div key={pref.label} className="flex items-center justify-between p-3 bg-slate-900/50 rounded-lg border border-slate-700 gap-3">
                   <div>
                     <p className="text-sm font-medium">{pref.label}</p>
                     <p className="text-xs text-slate-500">{pref.sub}</p>
                   </div>
-                  <div className={`w-10 h-5 rounded-full relative cursor-pointer transition-colors ${pref.enabled ? "bg-blue-500" : "bg-slate-600"}`}>
+                  <div className={`w-10 h-5 rounded-full relative cursor-pointer transition-colors shrink-0 ${pref.enabled ? "bg-blue-500" : "bg-slate-600"}`}>
                     <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${pref.enabled ? "translate-x-5" : "translate-x-0.5"}`} />
                   </div>
                 </div>
               ))}
             </div>
           </div>
-          <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
+          <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 sm:p-6">
             <h2 className="text-sm font-semibold mb-4">🔐 Security</h2>
             <div className="space-y-2">
-              <button className="w-full text-left p-3 bg-slate-900/50 rounded-lg border border-slate-700 text-sm hover:border-blue-500 transition">
+              <button type="button" className="w-full text-left p-3 bg-slate-900/50 rounded-lg border border-slate-700 text-sm hover:border-blue-500 transition cursor-pointer">
                 🔑 Change Password
               </button>
-              <button className="w-full text-left p-3 bg-slate-900/50 rounded-lg border border-slate-700 text-sm hover:border-blue-500 transition">
+              <button type="button" className="w-full text-left p-3 bg-slate-900/50 rounded-lg border border-slate-700 text-sm hover:border-blue-500 transition cursor-pointer">
                 📋 View Login History
               </button>
-              <button className="w-full text-left p-3 bg-red-500/5 rounded-lg border border-red-500/20 text-sm text-red-400 hover:border-red-500/40 transition">
+              <button type="button" className="w-full text-left p-3 bg-red-500/5 rounded-lg border border-red-500/20 text-sm text-red-400 hover:border-red-500/40 transition cursor-pointer">
                 🚪 Logout All Devices
               </button>
             </div>

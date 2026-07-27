@@ -1,6 +1,10 @@
+// ============================================================
+// app/pages/events/$id.tsx
+// ============================================================
+
 import { Link, Form, redirect } from "react-router";
 import type { Route } from "./+types/\$id";
-import api from "~/lib/api";
+import { api } from "~/lib/api";
 
 export async function clientLoader({ params }: Route.LoaderArgs) {
   try {
@@ -54,42 +58,42 @@ export default function EventDetailPage({ loaderData, actionData }: Route.Compon
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <Link to="/events" className="text-blue-400 hover:text-blue-300 text-sm font-medium">
+      <div className="flex items-center justify-between mb-6 sm:mb-8">
+        <Link to="/events" className="text-blue-400 hover:text-blue-300 text-xs sm:text-sm font-medium">
           ← Back to Events
         </Link>
       </div>
 
       {error && (
-        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">
+        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
           {error}
         </div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Main Content */}
-        <div className="md:col-span-2">
-          <div className="bg-slate-800 border border-slate-700 rounded-xl p-8 mb-6">
+        <div className="md:col-span-2 space-y-6">
+          <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 sm:p-8">
             {/* Event Type Badge */}
-            <div className="flex items-center gap-3 mb-4">
-              <div className={`p-3 rounded-lg ${config.bg} text-2xl`}>{config.icon}</div>
-              <span className={`text-xs uppercase tracking-widest font-bold px-3 py-1 rounded-full ${config.bg} ${config.color}`}>
+            <div className="flex flex-wrap items-center gap-3 mb-4">
+              <div className={`p-2.5 sm:p-3 rounded-lg ${config.bg} text-xl sm:text-2xl`}>{config.icon}</div>
+              <span className={`text-[10px] sm:text-xs uppercase tracking-widest font-bold px-3 py-1 rounded-full ${config.bg} ${config.color}`}>
                 {event.type}
               </span>
             </div>
 
             {/* Event Title */}
-            <h1 className="text-3xl font-bold text-white mb-6">{event.title}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-6 break-words">{event.title}</h1>
 
             {/* Event Details Grid */}
-            <div className="space-y-6 mb-8">
+            <div className="space-y-6">
               {/* Dates */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
                   <label className="text-xs text-slate-500 uppercase tracking-wider font-medium flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -99,13 +103,13 @@ export default function EventDetailPage({ loaderData, actionData }: Route.Compon
                     </svg>
                     Start Date
                   </label>
-                  <p className="text-white text-lg mt-2 font-semibold">{formatDate(event.event_date)}</p>
+                  <p className="text-white text-base sm:text-lg mt-2 font-semibold">{formatDate(event.event_date)}</p>
                 </div>
 
                 {event.end_date && event.end_date !== event.event_date && (
                   <div>
                     <label className="text-xs text-slate-500 uppercase tracking-wider font-medium flex items-center gap-2">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -115,7 +119,7 @@ export default function EventDetailPage({ loaderData, actionData }: Route.Compon
                       </svg>
                       End Date
                     </label>
-                    <p className="text-white text-lg mt-2 font-semibold">{formatDate(event.end_date)}</p>
+                    <p className="text-white text-base sm:text-lg mt-2 font-semibold">{formatDate(event.end_date)}</p>
                   </div>
                 )}
               </div>
@@ -124,7 +128,7 @@ export default function EventDetailPage({ loaderData, actionData }: Route.Compon
               {event.venue && (
                 <div className="border-t border-slate-700 pt-6">
                   <label className="text-xs text-slate-500 uppercase tracking-wider font-medium flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -134,7 +138,7 @@ export default function EventDetailPage({ loaderData, actionData }: Route.Compon
                     </svg>
                     Venue
                   </label>
-                  <p className="text-white text-lg mt-2 font-semibold">{event.venue}</p>
+                  <p className="text-white text-base sm:text-lg mt-2 font-semibold break-words">{event.venue}</p>
                 </div>
               )}
 
@@ -142,23 +146,23 @@ export default function EventDetailPage({ loaderData, actionData }: Route.Compon
               {event.description && (
                 <div className="border-t border-slate-700 pt-6">
                   <label className="text-xs text-slate-500 uppercase tracking-wider font-medium">Description</label>
-                  <p className="text-slate-300 text-lg mt-3 leading-relaxed">{event.description}</p>
+                  <p className="text-slate-300 text-base sm:text-lg mt-3 leading-relaxed break-words">{event.description}</p>
                 </div>
               )}
             </div>
           </div>
 
           {/* Event Status Card */}
-          <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
-            <h3 className="text-lg font-bold text-white mb-4">Event Status</h3>
+          <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 sm:p-6">
+            <h3 className="text-base sm:text-lg font-bold text-white mb-4">Event Status</h3>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-400 text-sm">Event Status</p>
-                <p className="text-white text-lg font-bold mt-1">
+                <p className="text-slate-400 text-xs sm:text-sm">Event Status</p>
+                <p className="text-white text-base sm:text-lg font-bold mt-1">
                   {new Date(event.event_date) > new Date() ? "Upcoming" : "Completed"}
                 </p>
               </div>
-              <div className={`text-4xl ${new Date(event.event_date) > new Date() ? "text-blue-400" : "text-slate-400"}`}>
+              <div className={`text-3xl sm:text-4xl ${new Date(event.event_date) > new Date() ? "text-blue-400" : "text-slate-400"}`}>
                 {new Date(event.event_date) > new Date() ? "📅" : "✓"}
               </div>
             </div>
@@ -167,24 +171,24 @@ export default function EventDetailPage({ loaderData, actionData }: Route.Compon
 
         {/* Sidebar Actions */}
         <div>
-          <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
-            <h3 className="text-lg font-bold text-white mb-4">Actions</h3>
+          <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 sm:p-6">
+            <h3 className="text-base sm:text-lg font-bold text-white mb-4">Actions</h3>
 
             <div className="space-y-3">
-              <button className="w-full px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-sm font-medium transition">
+              <button className="w-full px-4 py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-sm font-medium transition">
                 Edit Event
               </button>
-              <button className="w-full px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-sm font-medium transition">
+              <button className="w-full px-4 py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-sm font-medium transition">
                 View Attendees
               </button>
-              <button className="w-full px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-sm font-medium transition">
+              <button className="w-full px-4 py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-sm font-medium transition">
                 Send Notification
               </button>
 
               <Form method="delete" onSubmit={handleDelete} className="w-full">
                 <button
                   type="submit"
-                  className="w-full px-4 py-2 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-lg text-sm font-medium transition border border-red-500/20 hover:border-red-500"
+                  className="w-full px-4 py-2.5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-lg text-sm font-medium transition border border-red-500/20 hover:border-red-500"
                 >
                   Delete Event
                 </button>

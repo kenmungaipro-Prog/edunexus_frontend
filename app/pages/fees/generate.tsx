@@ -4,12 +4,11 @@
 // ============================================================
 import { Form, Link, useActionData, useNavigation } from "react-router";
 import { useState } from "react";
-import api from "~/lib/api";
+import { api } from "~/lib/api";
 
 export async function clientLoader() {
-  // Fetch available fee structures and active students
   const [structuresRes, studentsRes] = await Promise.all([
-    api.finance.feeStructures(), // Adjust this to match your api client method
+    api.finance.feeStructures(),
     api.students.list({ per_page: 500, status: 'active' })
   ]);
   
@@ -54,19 +53,19 @@ export default function GenerateInvoicesPage({ loaderData, actionData }: any) {
 
   if (actionData?.success) {
     return (
-      <div className="max-w-md mx-auto text-center py-12">
+      <div className="max-w-md mx-auto text-center py-12 px-4">
         <div className="text-5xl mb-4">🧾</div>
         <h2 className="text-xl font-bold text-white mb-2">Generation Complete!</h2>
-        <p className="text-slate-400 mb-6">
+        <p className="text-slate-400 mb-6 text-sm">
           {actionData.isBulk 
             ? `Successfully generated ${actionData.data.created} invoices for the class.` 
             : `Successfully generated Invoice #${actionData.data.invoice_number} for the student.`}
         </p>
-        <div className="flex gap-3 justify-center">
-          <Link to="/fees" className="px-4 py-2 rounded-lg text-sm bg-slate-700 text-slate-300 hover:bg-slate-600 transition">
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <Link to="/fees" className="w-full sm:w-auto px-4 py-2.5 rounded-lg text-sm bg-slate-700 text-slate-300 hover:bg-slate-600 transition text-center">
             ← Back to Dashboard
           </Link>
-          <Link to="/fees/collect" className="px-4 py-2 rounded-lg text-sm bg-blue-600 text-white hover:bg-blue-500 transition">
+          <Link to="/fees/collect" className="w-full sm:w-auto px-4 py-2.5 rounded-lg text-sm bg-blue-600 text-white hover:bg-blue-500 transition text-center">
             Collect Payments →
           </Link>
         </div>
@@ -75,7 +74,7 @@ export default function GenerateInvoicesPage({ loaderData, actionData }: any) {
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto px-4 sm:px-0 py-4">
       <div className="mb-6">
         <h1 className="text-xl md:text-2xl font-bold text-white">🧾 Generate Invoices</h1>
         <p className="text-slate-400 text-sm mt-1">Issue fee structures to single students or bulk-bill entire classes.</p>
@@ -83,13 +82,12 @@ export default function GenerateInvoicesPage({ loaderData, actionData }: any) {
 
       <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow-lg">
         {actionData?.error && (
-          <div className="m-6 mb-0 bg-red-500/10 border border-red-500/25 text-red-400 text-sm rounded-lg p-4">
+          <div className="m-4 sm:m-6 mb-0 bg-red-500/10 border border-red-500/25 text-red-400 text-sm rounded-lg p-4">
             <strong>Error:</strong> {actionData.error}
           </div>
         )}
 
-        <Form method="post" className="p-6 space-y-6">
-          {/* Section 1: Fee Structure Selection */}
+        <Form method="post" className="p-4 sm:p-6 space-y-6">
           <div className="space-y-4 pb-6 border-b border-slate-700">
             <div>
               <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Select Fee Structure</label>
@@ -118,12 +116,11 @@ export default function GenerateInvoicesPage({ loaderData, actionData }: any) {
             </div>
           </div>
 
-          {/* Section 2: Target Selection */}
           <div className="space-y-4 pb-6 border-b border-slate-700">
             <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Billing Target</label>
             
-            <div className="flex gap-4 mb-4">
-              <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4">
+              <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer p-2 bg-slate-900/40 rounded-lg border border-slate-700/50 sm:border-none sm:p-0">
                 <input 
                   type="radio" 
                   name="target_type" 
@@ -134,7 +131,7 @@ export default function GenerateInvoicesPage({ loaderData, actionData }: any) {
                 />
                 Entire Class (Bulk)
               </label>
-              <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
+              <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer p-2 bg-slate-900/40 rounded-lg border border-slate-700/50 sm:border-none sm:p-0">
                 <input 
                   type="radio" 
                   name="target_type" 
@@ -170,9 +167,8 @@ export default function GenerateInvoicesPage({ loaderData, actionData }: any) {
             )}
           </div>
 
-          {/* Submit Actions */}
-          <div className="flex gap-3 pt-4">
-            <Link to="/fees" className="px-6 py-3 bg-slate-700 text-slate-300 rounded-lg text-sm font-medium hover:bg-slate-600 transition">
+          <div className="flex flex-col sm:flex-row gap-3 pt-4">
+            <Link to="/fees" className="w-full sm:w-auto px-6 py-3 bg-slate-700 text-slate-300 rounded-lg text-sm font-medium hover:bg-slate-600 transition text-center">
               Cancel
             </Link>
             <button 

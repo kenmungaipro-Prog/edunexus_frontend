@@ -12,15 +12,15 @@ interface StopInput { name: string; pickup_time: string; drop_time: string; }
 export async function clientLoader({ params }: any) {
   try {
     const [routeRes, vehiclesRes, driversRes] = await Promise.all([
-      api.get<ApiResponse<TransportRoute>>(`/transport/routes/${params.id}`),
-      api.get<ApiResponse<Vehicle[]>>("/transport/vehicles"),
-      api.get<ApiResponse<Driver[]>>("/transport/drivers"),
+      api.transport.get(Number(params.id)),
+      api.transport.vehicles(),
+      api.transport.drivers(),
     ]);
     
     return {
-      route: routeRes.data.data,
-      vehicles: vehiclesRes.data.data,
-      drivers: driversRes.data.data,
+      route: routeRes.data,
+      vehicles: vehiclesRes.data,
+      drivers: driversRes.data,
     };
   } catch (error) {
     console.error("Failed to load route data for editing:", error);
@@ -50,8 +50,7 @@ export async function clientAction({ request, params }: any) {
   };
 
   try {
-    // Laravel controller uses PUT/PATCH for updates
-    await api.put(`/transport/routes/${params.id}`, payload);
+    await api.transport.update(Number(params.id), payload);
     return redirect(`/transport/routes/${params.id}`);
   } catch (error: any) {
     const responseData = error.response?.data;
@@ -66,7 +65,6 @@ export default function EditTransportRoutePage() {
   const { route, vehicles, drivers } = useLoaderData<typeof clientLoader>();
   const actionData = useActionData<typeof clientAction>();
 
-  // Initialize state with existing stops or a default fallback
   const [stops, setStops] = useState<StopInput[]>(
     route.stops?.length > 0 ? route.stops : [{ name: "", pickup_time: "", drop_time: "" }]
   );
@@ -77,13 +75,13 @@ export default function EditTransportRoutePage() {
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-white">✏️ Edit Route: {route.name}</h1>
-          <p className="text-slate-400 text-sm mt-0.5">Modify vehicle assignments, adjust pricing, or update stops.</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-white">✏️ Edit Route: {route.name}</h1>
+          <p className="text-slate-400 text-xs sm:text-sm mt-0.5">Modify vehicle assignments, adjust pricing, or update stops.</p>
         </div>
-        <Link to={`/transport/routes/${route.id}`} className="text-slate-400 hover:text-white text-sm transition">
+        <Link to={`/transport/routes/${route.id}`} className="text-slate-400 hover:text-white text-sm transition self-start sm:self-auto">
           ← Back to Route Details
         </Link>
       </div>
@@ -95,14 +93,14 @@ export default function EditTransportRoutePage() {
       )}
 
       <Form method="put" className="space-y-6">
-        <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-slate-300 mb-2">Route Designation Name</label>
             <input
               name="name"
               required
               defaultValue={route.name}
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 outline-none transition"
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none transition"
             />
           </div>
 
@@ -112,7 +110,7 @@ export default function EditTransportRoutePage() {
               name="vehicle_id"
               required
               defaultValue={route.vehicle_id}
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 outline-none transition"
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none transition"
             >
               {vehicles.map((v) => (
                 <option key={v.id} value={v.id}>{v.registration_number} ({v.make})</option>
@@ -126,7 +124,7 @@ export default function EditTransportRoutePage() {
               name="driver_id"
               required
               defaultValue={route.driver_id}
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 outline-none transition"
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none transition"
             >
               {drivers.map((d) => (
                 <option key={d.id} value={d.id}>{d.name}</option>
@@ -143,18 +141,18 @@ export default function EditTransportRoutePage() {
               step="0.01"
               required
               defaultValue={route.monthly_fee}
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 outline-none transition"
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none transition"
             />
           </div>
         </div>
 
-        <div className="bg-slate-800 border border-slate-700 rounded-xl p-6">
-          <div className="flex items-center justify-between mb-4">
+        <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
             <h2 className="text-base font-semibold text-white">📍 Manage Stops</h2>
             <button
               type="button"
               onClick={addStopRow}
-              className="px-3 py-1.5 bg-blue-600/10 hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg text-xs font-semibold transition"
+              className="px-3 py-2 bg-blue-600/10 hover:bg-blue-600 text-blue-400 hover:text-white rounded-lg text-xs font-semibold transition self-start sm:self-auto"
             >
               ➕ Add Stop
             </button>
@@ -162,43 +160,45 @@ export default function EditTransportRoutePage() {
 
           <div className="space-y-3">
             {stops.map((stop, idx) => (
-              <div key={idx} className="flex gap-4 items-end bg-slate-900/40 p-3 rounded-lg border border-slate-700/50">
-                <div className="flex-1">
+              <div key={idx} className="flex flex-col sm:flex-row sm:items-end gap-3 bg-slate-900/40 p-3 sm:p-4 rounded-lg border border-slate-700/50">
+                <div className="w-full sm:flex-1">
                   <label className="block text-[11px] font-medium text-slate-400 uppercase mb-1">Stop Name</label>
                   <input
                     name="stop_name[]"
                     required
                     defaultValue={stop.name}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white focus:ring-1 focus:ring-blue-500 outline-none"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-1 focus:ring-blue-500 outline-none"
                   />
                 </div>
-                <div className="w-32">
-                  <label className="block text-[11px] font-medium text-slate-400 uppercase mb-1">Pickup Time</label>
-                  <input
-                    type="time"
-                    name="stop_pickup[]"
-                    required
-                    defaultValue={stop.pickup_time}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white focus:ring-1 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-                <div className="w-32">
-                  <label className="block text-[11px] font-medium text-slate-400 uppercase mb-1">Drop Time</label>
-                  <input
-                    type="time"
-                    name="stop_drop[]"
-                    required
-                    defaultValue={stop.drop_time}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white focus:ring-1 focus:ring-blue-500 outline-none"
-                  />
+                <div className="grid grid-cols-2 sm:flex sm:gap-3 w-full sm:w-auto gap-3">
+                  <div className="w-full sm:w-32">
+                    <label className="block text-[11px] font-medium text-slate-400 uppercase mb-1">Pickup Time</label>
+                    <input
+                      type="time"
+                      name="stop_pickup[]"
+                      required
+                      defaultValue={stop.pickup_time}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-1 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+                  <div className="w-full sm:w-32">
+                    <label className="block text-[11px] font-medium text-slate-400 uppercase mb-1">Drop Time</label>
+                    <input
+                      type="time"
+                      name="stop_drop[]"
+                      required
+                      defaultValue={stop.drop_time}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-1 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => removeStopRow(idx)}
                   disabled={stops.length === 1}
-                  className="p-2 bg-slate-800 text-slate-400 hover:text-red-400 disabled:opacity-30 rounded-lg border border-slate-700 transition mb-0.5"
+                  className="w-full sm:w-auto p-2.5 bg-slate-800 text-slate-400 hover:text-red-400 disabled:opacity-30 rounded-lg border border-slate-700 transition flex items-center justify-center"
                 >
-                  🗑️
+                  🗑️ <span className="sm:hidden ml-2 text-xs">Remove Stop</span>
                 </button>
               </div>
             ))}
@@ -206,7 +206,7 @@ export default function EditTransportRoutePage() {
         </div>
 
         <div className="flex gap-4">
-          <button type="submit" className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition">
+          <button type="submit" className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition text-sm">
             Save Changes
           </button>
         </div>

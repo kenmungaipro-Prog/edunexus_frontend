@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Form, useSubmit, useActionData, useNavigation } from "react-router";
 import type { Route as TTRoute } from "./+types/index";
-import apiService, { type TimetableSlot, type ClassRoom, type Subject, type Teacher } from "~/lib/api";
+import { apiService, type TimetableSlot, type ClassRoom, type Subject, type Teacher } from "~/lib/api";
 
 // --- Constants & Styling ---
 
@@ -90,6 +90,7 @@ export default function TimetablePage({ loaderData }: TTRoute.ComponentProps) {
   const navigation = useNavigation();
   
   const [selectedClass, setSelectedClass] = useState<string>(classes[0]?.id?.toString() || "");
+  const [selectedDay, setSelectedDay] = useState<number>(1); // For mobile view day tabs
   const [timetable, setTimetable] = useState<Record<number, TimetableSlot[]>>({});
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeCell, setActiveCell] = useState<{ day: number, period: number } | null>(null);
@@ -112,32 +113,32 @@ export default function TimetablePage({ loaderData }: TTRoute.ComponentProps) {
   const isProcessing = navigation.state !== "idle";
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">📅 Class Timetable</h1>
-          <p className="text-slate-400 text-sm">Real-time schedule management for all grades</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-white">📅 Class Timetable</h1>
+          <p className="text-slate-400 text-xs sm:text-sm">Real-time schedule management for all grades</p>
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <select 
             value={selectedClass} 
             onChange={(e) => setSelectedClass(e.target.value)}
-            className="bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-2 outline-none focus:ring-2 focus:ring-blue-500/50 transition"
+            className="bg-slate-800 border border-slate-700 text-white rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500/50 transition w-full sm:w-auto"
           >
             {classes.map((c: ClassRoom) => (
               <option key={c.id} value={c.id}>{c.name} {c.section && `(${c.section})`}</option>
             ))}
           </select>
 
-          <Form method="post">
+          <Form method="post" className="w-full sm:w-auto">
             <input type="hidden" name="intent" value="generate" />
             <input type="hidden" name="class_id" value={selectedClass} />
             <button 
               type="submit"
               disabled={isProcessing || !selectedClass}
-              className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-lg font-semibold transition disabled:opacity-50 flex items-center gap-2"
+              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-lg font-semibold transition disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {isProcessing ? "Generating..." : "⚡ Auto-Generate"}
             </button>
@@ -147,13 +148,71 @@ export default function TimetablePage({ loaderData }: TTRoute.ComponentProps) {
 
       {/* Notifications */}
       {actionData?.message && (
-        <div className={`mb-6 p-4 rounded-lg border ${actionData.success ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-rose-500/10 border-rose-500/20 text-rose-400'}`}>
+        <div className={`mb-6 p-4 rounded-lg border text-sm ${actionData.success ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-rose-500/10 border-rose-500/20 text-rose-400'}`}>
           {actionData.success ? '✅' : '⚠️'} {actionData.message}
         </div>
       )}
 
-      {/* Timetable Grid */}
-      <div className={`bg-slate-900 border border-slate-800 rounded-xl overflow-x-auto shadow-2xl transition-opacity duration-300 ${isLoading ? 'opacity-50' : 'opacity-100'}`}>
+      {/* --- MOBILE VIEW: Day Tabs & Vertical Period List --- */}
+      <div className="block md:hidden">
+        {/* Day Selector Tabs */}
+        <div className="flex overflow-x-auto pb-3 mb-4 gap-2 scrollbar-none">
+          {DAYS.map(day => (
+            <button
+              key={day.id}
+              onClick={() => setSelectedDay(day.id)}
+              className={`px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
+                selectedDay === day.id
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-900/30"
+                  : "bg-slate-800 text-slate-400 hover:bg-slate-700"
+              }`}
+            >
+              {day.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Periods List for Selected Day */}
+        <div className={`space-y-3 transition-opacity duration-300 ${isLoading ? 'opacity-50' : 'opacity-100'}`}>
+          {PERIODS.map(p => {
+            const slot = getSlot(selectedDay, p);
+            return (
+              <div key={p} className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center justify-between gap-3 shadow-md">
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <span className="text-slate-400 font-mono text-xs bg-slate-800 px-2.5 py-1.5 rounded-lg shrink-0">
+                    P{p}
+                  </span>
+                  {slot ? (
+                    <div className="truncate">
+                      <span className="font-bold text-sm block text-white truncate">{slot.subject?.name}</span>
+                      <span className="text-xs text-slate-400 block truncate">{slot.teacher?.user?.name}</span>
+                      {slot.room && (
+                        <span className="inline-block mt-1 text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-300 truncate">
+                          📍 {slot.room}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-slate-500 italic">No slot assigned</span>
+                  )}
+                </div>
+
+                {!slot && (
+                  <button 
+                    onClick={() => { setActiveCell({ day: selectedDay, period: p }); setIsModalOpen(true); }}
+                    className="shrink-0 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 text-xs px-3 py-1.5 rounded-lg font-medium transition"
+                  >
+                    + Add Slot
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* --- DESKTOP VIEW: Full Grid Table --- */}
+      <div className={`hidden md:block bg-slate-900 border border-slate-800 rounded-xl overflow-x-auto shadow-2xl transition-opacity duration-300 ${isLoading ? 'opacity-50' : 'opacity-100'}`}>
         <table className="w-full border-collapse min-w-[1000px]">
           <thead>
             <tr className="bg-slate-800/40">
@@ -208,31 +267,31 @@ export default function TimetablePage({ loaderData }: TTRoute.ComponentProps) {
       {isModalOpen && activeCell && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
           <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
-            <div className="p-6 border-b border-slate-800 bg-slate-800/20">
-              <h2 className="text-xl font-bold text-white">Assign Schedule Slot</h2>
+            <div className="p-5 sm:p-6 border-b border-slate-800 bg-slate-800/20">
+              <h2 className="text-lg sm:text-xl font-bold text-white">Assign Schedule Slot</h2>
               <p className="text-slate-400 text-xs mt-1">
                 {DAYS.find(d => d.id === activeCell.day)?.label} — Period {activeCell.period}
               </p>
             </div>
             
-            <Form method="post" onSubmit={() => setIsModalOpen(false)} className="p-6">
+            <Form method="post" onSubmit={() => setIsModalOpen(false)} className="p-5 sm:p-6">
               <input type="hidden" name="intent" value="manual_save" />
               <input type="hidden" name="class_id" value={selectedClass} />
               <input type="hidden" name="day_of_week" value={activeCell.day} />
               <input type="hidden" name="period_number" value={activeCell.period} />
 
-              <div className="space-y-5">
+              <div className="space-y-4 sm:space-y-5">
                 <div className="grid grid-cols-1 gap-4">
                   <div>
                     <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Subject</label>
-                    <select name="subject_id" required className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none">
+                    <select name="subject_id" required className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:border-blue-500 outline-none">
                       {subjects.map((s: Subject) => <option key={s.id} value={s.id}>{s.name}</option>)}
                     </select>
                   </div>
 
                   <div>
                     <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Teacher</label>
-                    <select name="teacher_id" required className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none">
+                    <select name="teacher_id" required className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:border-blue-500 outline-none">
                       {teachers.map((t: Teacher) => <option key={t.id} value={t.id}>{t.user?.name || t.name}</option>)}
                     </select>
                   </div>
@@ -241,23 +300,23 @@ export default function TimetablePage({ loaderData }: TTRoute.ComponentProps) {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Start</label>
-                    <input type="time" name="start_time" defaultValue="08:00" required className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-white" />
+                    <input type="time" name="start_time" defaultValue="08:00" required className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white" />
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">End</label>
-                    <input type="time" name="end_time" defaultValue="09:00" required className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-white" />
+                    <input type="time" name="end_time" defaultValue="09:00" required className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white" />
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Location/Room</label>
-                  <input type="text" name="room" placeholder="e.g. Science Lab 1" className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-white placeholder:text-slate-600 focus:border-blue-500 outline-none" />
+                  <input type="text" name="room" placeholder="e.g. Science Lab 1" className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white placeholder:text-slate-600 focus:border-blue-500 outline-none" />
                 </div>
               </div>
 
-              <div className="mt-8 flex gap-3">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 px-4 py-2.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 transition font-medium">Cancel</button>
-                <button type="submit" className="flex-1 px-4 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-500 transition font-bold shadow-lg shadow-blue-900/20">Save Slot</button>
+              <div className="mt-6 sm:mt-8 flex gap-3">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 px-4 py-2.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 transition font-medium text-sm">Cancel</button>
+                <button type="submit" className="flex-1 px-4 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-500 transition font-bold text-sm shadow-lg shadow-blue-900/20">Save Slot</button>
               </div>
             </Form>
           </div>
