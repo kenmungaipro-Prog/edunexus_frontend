@@ -91,9 +91,12 @@ export default function EventsPage({ loaderData }: EventsRoute.ComponentProps) {
 
                 {/* Title & Description */}
                 <div className="flex-grow">
-                  <h3 className="text-lg sm:text-xl font-bold text-white mb-2 leading-tight group-hover:text-indigo-300 transition-colors break-words">
+                  <Link
+                    to={`/events/${event.id}`}
+                    className="inline-block text-lg sm:text-xl font-bold text-white mb-2 leading-tight group-hover:text-indigo-300 transition-colors break-words hover:text-indigo-300"
+                  >
                     {event.title}
-                  </h3>
+                  </Link>
                   <p className="text-slate-400 text-xs sm:text-sm line-clamp-3 mb-4 leading-relaxed break-words">
                     {event.description || "No additional details provided for this event."}
                   </p>

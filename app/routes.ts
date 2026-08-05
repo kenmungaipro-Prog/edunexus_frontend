@@ -64,6 +64,7 @@ export default [
     route("fees/generate", "pages/fees/generate.tsx"),
     route("fees/collect", "pages/fees/collect.tsx"),
     route("fees/receipt/:receiptId", "pages/fees/receipt.tsx"),
+    route("fees/defaulters", "pages/fees/defaulters.tsx"),
     route("fees/:id", "pages/fees/show.tsx"),
     
 
@@ -84,10 +85,13 @@ export default [
     route("accounting/accounts", "pages/accounting/accounts/index.tsx"),
     route("accounting/journals", "pages/accounting/journals/index.tsx"),
     route("accounting/reports", "pages/accounting/reports/index.tsx"),
+    route("accounting/reports/income-statement", "pages/accounting/reports/income-statement.tsx"),
+    route("accounting/reports/balance-sheet", "pages/accounting/reports/balance-sheet.tsx"),
 
     // ── Library ───────────────────────────────────────────────
     route("library", "pages/library/index.tsx"),
     route("library/new", "pages/library/new.tsx"),
+    route("library/books/:id/edit", "pages/library/books/edit-$id.tsx"),
     route("library/books/:id", "pages/library/books/$id.tsx"),
     route("library/books/:id/circulation", "pages/library/books/circulation.tsx"),
     route("library/books/:id/history", "pages/library/books/history.tsx"),
@@ -95,12 +99,16 @@ export default [
     // ── Transport ─────────────────────────────────────────────
     // Replaced the simple routes with our comprehensive transport suite
     route("transport", "pages/transport/index.tsx"),
+    route("transport/tracker", "pages/transport/parent-tracker.tsx"),
     route("transport/live", "pages/transport/live-map.tsx"),
+    route("transport/analytics", "pages/transport/analytics.tsx"),
+    route("transport/playback", "pages/transport/playback.tsx"),
+    route("transport/notifications", "pages/transport/notifications.tsx"),
     route("transport/new", "pages/transport/new.tsx"),
     
     // Fleet & Driver Management
-    route("transport/vehicles/new", "pages/transport/vehicles/new.tsx"),
-    route("transport/drivers/new", "pages/transport/drivers/new.tsx"),
+    route("transport/vehicles/new", "pages/transport/vehicles/new2.tsx"),
+    route("transport/drivers/new", "pages/transport/drivers/new3.tsx"),
     
     // Route Management (Static actions first, dynamic ID matching last)
     route("transport/routes/:id/assign", "pages/transport/routes/assign.tsx"),
@@ -110,6 +118,7 @@ export default [
     // ── Events ────────────────────────────────────────────────
     route("events", "pages/events/index.tsx"),
     route("events/new", "pages/events/new.tsx"),
+    route("events/:id/edit", "pages/events/edit-$id.tsx"),
     route("events/:id", "pages/events/$id.tsx"),
 
     // ── Messages ──────────────────────────────────────────────

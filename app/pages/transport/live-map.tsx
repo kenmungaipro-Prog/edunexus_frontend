@@ -4,6 +4,8 @@
 import React, { useEffect, useState } from "react";
 import { useLoaderData, Link } from "react-router";
 import { api, type ApiResponse } from "~/lib/api";
+import TransportSubNav from "./TransportSubNav";
+import { useAuth } from "~/contexts/auth";
 import Echo from "laravel-echo";
 import Pusher from "pusher-js";
 
@@ -18,6 +20,14 @@ interface LiveVehicle {
   updated_at: string;
 }
 
+interface VehicleTelemetry {
+  vehicle_id: number;
+  lat: number | null;
+  lng: number | null;
+  speed: number | null;
+  recorded_at: string | null;
+}
+
 export async function clientLoader() {
   try {
     const res = await api.transport.live();
@@ -30,9 +40,11 @@ export async function clientLoader() {
 
 export default function FleetLiveMapPage() {
   const { initialVehicles } = useLoaderData<typeof clientLoader>();
-  
+  const { user } = useAuth();
+
   const [vehicles, setVehicles] = useState<LiveVehicle[]>(initialVehicles);
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
+  const [telemetryHistory, setTelemetryHistory] = useState<VehicleTelemetry[]>([]);
 
   useEffect(() => {
     const reverbAppKey = import.meta.env.VITE_REVERB_APP_KEY;
@@ -66,7 +78,9 @@ export default function FleetLiveMapPage() {
       enabledTransports: ['ws', 'wss'],
     });
 
-    echo.channel("fleet-delivery")
+    const schoolChannel = user?.school_id ? `fleet-delivery.${user.school_id}` : 'fleet-delivery';
+
+    echo.channel(schoolChannel)
       .listen(".vehicle.location.updated", (event: { vehicle: LiveVehicle }) => {
         setVehicles((prevVehicles) => {
           const exists = prevVehicles.find(
@@ -84,15 +98,41 @@ export default function FleetLiveMapPage() {
       });
 
     return () => {
-      echo.leaveChannel("fleet-delivery");
+      const schoolChannel = user?.school_id ? `fleet-delivery.${user.school_id}` : 'fleet-delivery';
+      echo.leaveChannel(schoolChannel);
     };
   }, []);
+
+  useEffect(() => {
+    if (selectedVehicleId === null) {
+      setTelemetryHistory([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    api.transport.vehicleTelemetryHistory(selectedVehicleId)
+      .then((response) => {
+        if (!cancelled) {
+          setTelemetryHistory(response.data);
+        }
+      })
+      .catch((error) => {
+        console.warn('Failed to load vehicle telemetry history:', error);
+        if (!cancelled) {
+          setTelemetryHistory([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedVehicleId]);
 
   const activeFocusVehicle = vehicles.find(v => v.vehicle_id === selectedVehicleId);
 
   return (
     <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 flex flex-col h-auto lg:h-[calc(100vh-110px)]">
-      {/* Header section layout elements */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 flex-shrink-0 text-left">
         <div>
           <div className="flex items-center gap-3">
@@ -113,10 +153,9 @@ export default function FleetLiveMapPage() {
           Live Stream Polling Active (10s)
         </div>
       </div>
+      <TransportSubNav />
 
-      {/* Main Grid Interactive Module Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0">
-        {/* Left Side Roster Selection Deck */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col h-[300px] lg:h-auto min-h-0 overflow-hidden text-left">
           <h2 className="text-xs sm:text-sm font-bold text-slate-400 uppercase tracking-wider mb-3 flex-shrink-0">
             Active Vehicles ({vehicles.length})
@@ -136,8 +175,7 @@ export default function FleetLiveMapPage() {
                       isSelected
                         ? "bg-blue-600/10 border-blue-500 text-white shadow-md"
                         : "bg-slate-800/40 border-slate-800 text-slate-300 hover:bg-slate-800 hover:border-slate-700"
-                    }`}
-                  >
+                    }`}>
                     <div className="flex justify-between items-start gap-2">
                       <div>
                         <div className="font-mono font-bold text-white text-sm">{vehicle.number}</div>
@@ -176,7 +214,6 @@ export default function FleetLiveMapPage() {
           </div>
         </div>
 
-        {/* Center/Right Map Simulation Projection Frame */}
         <div className="lg:col-span-2 bg-slate-950 border border-slate-800 rounded-xl relative overflow-hidden flex flex-col justify-between p-4 sm:p-6 min-h-[400px] lg:min-h-0">
           <div className="absolute inset-0 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px] opacity-40"></div>
           
@@ -191,7 +228,6 @@ export default function FleetLiveMapPage() {
             </div>
           </div>
 
-          {/* Coordinate Anchor Pinpoint Viewpoint Frame */}
           <div className="my-auto py-8 sm:py-12 flex flex-col items-center justify-center relative z-10">
             {activeFocusVehicle ? (
               <div className="bg-slate-900/90 border border-slate-700/60 p-5 sm:p-6 rounded-2xl shadow-2xl text-center space-y-3 border-t-2 border-t-blue-500 max-w-xs animate-fadeIn w-full">
@@ -221,29 +257,53 @@ export default function FleetLiveMapPage() {
             )}
           </div>
 
-          {/* Expanded Telemetry Stat Dashboard Banner */}
           {activeFocusVehicle && (
-            <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 grid grid-cols-2 md:grid-cols-4 gap-4 flex-shrink-0 text-left relative z-10 animate-slideUp">
-              <div>
-                <div className="text-[10px] sm:text-xs text-slate-500 uppercase tracking-wider font-semibold">Active Tracker Node</div>
-                <div className="text-sm sm:text-base font-mono font-bold text-blue-400 mt-0.5">{activeFocusVehicle.number}</div>
+            <>
+              <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 grid grid-cols-2 xl:grid-cols-6 gap-4 flex-shrink-0 text-left relative z-10 animate-slideUp">
+                <div>
+                  <div className="text-[10px] sm:text-xs text-slate-500 uppercase tracking-wider font-semibold">Active Tracker Node</div>
+                  <div className="text-sm sm:text-base font-mono font-bold text-blue-400 mt-0.5">{activeFocusVehicle.number}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] sm:text-xs text-slate-500 uppercase tracking-wider font-semibold">Pathway Route</div>
+                  <div className="text-sm sm:text-base font-bold text-slate-200 mt-0.5 truncate">{activeFocusVehicle.route || "Idle Status"}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] sm:text-xs text-slate-500 uppercase tracking-wider font-semibold">Speed Metrics</div>
+                  <div className="text-sm sm:text-base font-bold text-emerald-400 mt-0.5 font-mono">{(activeFocusVehicle.speed ?? 0) > 0 ? `${activeFocusVehicle.speed} KM/H` : "Stationary"}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] sm:text-xs text-slate-500 uppercase tracking-wider font-semibold">Driver Assigned</div>
+                  <div className="text-sm sm:text-base font-bold text-slate-200 mt-0.5 truncate">{activeFocusVehicle.driver || "Unallocated"}</div>
+                </div>
+                <div className="xl:col-span-2">
+                  <div className="text-[10px] sm:text-xs text-slate-500 uppercase tracking-wider font-semibold">Telemetry History</div>
+                  <div className="text-sm sm:text-base text-slate-200 mt-0.5">Last {telemetryHistory.length} points</div>
+                </div>
               </div>
-              <div>
-                <div className="text-[10px] sm:text-xs text-slate-500 uppercase tracking-wider font-semibold">Pathway Route</div>
-                <div className="text-sm sm:text-base font-bold text-slate-200 mt-0.5 truncate">{activeFocusVehicle.route || "Idle Status"}</div>
-              </div>
-              <div>
-                <div className="text-[10px] sm:text-xs text-slate-500 uppercase tracking-wider font-semibold">Speed Metrics</div>
-                <div className="text-sm sm:text-base font-bold text-emerald-400 mt-0.5 font-mono">{(activeFocusVehicle.speed ?? 0) > 0 ? `${activeFocusVehicle.speed} KM/H` : "Stationary"}</div>
-              </div>
-              <div>
-                <div className="text-[10px] sm:text-xs text-slate-500 uppercase tracking-wider font-semibold">Driver Assigned</div>
-                <div className="text-sm sm:text-base font-bold text-slate-200 mt-0.5 truncate">{activeFocusVehicle.driver || "Unallocated"}</div>
-              </div>
-            </div>
+              {telemetryHistory.length > 0 && (
+                <div className="mt-4 bg-slate-900/90 border border-slate-700 rounded-2xl p-4 space-y-3 text-sm text-slate-300">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="font-semibold text-slate-200">Recent Telemetry Stream</div>
+                    <div className="text-[10px] uppercase tracking-[0.18em] text-slate-500">Latest {Math.min(5, telemetryHistory.length)}</div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">
+                    {telemetryHistory.slice(0, 5).map((entry, index) => (
+                      <div key={index} className="rounded-2xl border border-slate-700 p-3 bg-slate-950/70">
+                        <div className="text-[10px] text-slate-500 uppercase tracking-wider">Point #{telemetryHistory.length - index}</div>
+                        <div className="mt-2 font-semibold text-slate-100">{entry.speed ?? 0} km/h</div>
+                        <div className="text-[11px] text-slate-500 mt-1">{entry.lat?.toFixed(4) ?? 'N/A'}, {entry.lng?.toFixed(4) ?? 'N/A'}</div>
+                        <div className="text-[11px] text-slate-500 mt-1">{entry.recorded_at ? new Date(entry.recorded_at).toLocaleTimeString() : 'No time'}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
     </div>
   );
 }
+

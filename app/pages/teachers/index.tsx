@@ -163,7 +163,7 @@ export default function TeachersPage({ loaderData, actionData }: Route.Component
   const inactiveCount = teachers.filter(t => t.status === "inactive").length;
 
   return (
-    <div className="text-slate-200 min-h-screen px-3 sm:px-6 pb-12">
+    <div className="text-slate-200 min-h-screen px-3 sm:px-6 pb-12 max-w-7xl mx-auto box-border">
       <style>{`
         @keyframes slideUp { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
@@ -232,72 +232,100 @@ export default function TeachersPage({ loaderData, actionData }: Route.Component
       </div>
 
       {/* ── Main Card ──────────────────────────────────── */}
-      <div className="bg-slate-900/50 border border-slate-700/60 rounded-2xl overflow-hidden">
+      <div className="bg-slate-900/50 border border-slate-700/60 rounded-2xl overflow-hidden w-full box-border">
 
-        {/* Toolbar */}
-        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 p-4 sm:p-5 border-b border-slate-700/60">
-          <div className="relative w-full sm:flex-1 min-w-[200px] sm:max-w-xs">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input
-              value={searchDraft}
-              onChange={e => setSearchDraft(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && setParam("search", searchDraft || null)}
-              onBlur={() => setParam("search", searchDraft || null)}
-              className="w-full bg-slate-800/60 border border-slate-700 rounded-xl pl-9 pr-3 py-2 text-sm text-slate-200 placeholder-slate-600 outline-none focus:border-blue-500/70 focus:bg-slate-800 transition-all"
-              placeholder="Search by name, email…"
-            />
-          </div>
+        {/* Toolbar: Single row on medium+ screens with responsive grid */}
+        <div className="p-4 sm:p-5 border-b border-slate-700/60 w-full box-border">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 w-full items-center">
+            
+            {/* Search Input */}
+            <div className="relative w-full sm:col-span-2 min-w-0">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                value={searchDraft}
+                onChange={e => setSearchDraft(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && setParam("search", searchDraft || null)}
+                onBlur={() => setParam("search", searchDraft || null)}
+                className="w-full bg-slate-800/60 border border-slate-700 rounded-xl pl-9 pr-3 py-2 text-sm text-slate-200 placeholder-slate-600 outline-none focus:border-blue-500/70 focus:bg-slate-800 transition-all box-border"
+                placeholder="Search by name, email…"
+              />
+            </div>
 
-          <select
-            value={filters.department ?? ""}
-            onChange={e => setParam("department", e.target.value || null)}
-            className="w-full sm:w-auto bg-slate-800/60 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-300 outline-none focus:border-blue-500/70 transition-all cursor-pointer"
-          >
-            <option value="">All Departments</option>
-            {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
-          </select>
+            {/* Department Filter */}
+            <div className="min-w-0">
+              <select
+                value={filters.department ?? ""}
+                onChange={e => setParam("department", e.target.value || null)}
+                className="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-300 outline-none focus:border-blue-500/70 transition-all cursor-pointer truncate box-border"
+              >
+                <option value="">All Departments</option>
+                {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </div>
 
-          <select
-            value={filters.status ?? ""}
-            onChange={e => setParam("status", e.target.value || null)}
-            className="w-full sm:w-auto bg-slate-800/60 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-300 outline-none focus:border-blue-500/70 transition-all cursor-pointer"
-          >
-            <option value="">All Statuses</option>
-            <option value="active">Active</option>
-            <option value="on_leave">On Leave</option>
-            <option value="inactive">Inactive</option>
-          </select>
+            {/* Status Filter */}
+            <div className="min-w-0">
+              <select
+                value={filters.status ?? ""}
+                onChange={e => setParam("status", e.target.value || null)}
+                className="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-300 outline-none focus:border-blue-500/70 transition-all cursor-pointer truncate box-border"
+              >
+                <option value="">All Statuses</option>
+                <option value="active">Active</option>
+                <option value="on_leave">On Leave</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
 
-          {(filters.search || filters.department || filters.status) && (
-            <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
-              {filters.search && (
-                <span className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-500/10 border border-blue-500/20 rounded-lg text-xs text-blue-400">
-                  "{filters.search}"
-                  <button onClick={() => { setSearchDraft(""); setParam("search", null); }} className="hover:text-white transition">✕</button>
-                </span>
-              )}
-              {filters.department && (
-                <span className="flex items-center gap-1.5 px-2.5 py-1 bg-violet-500/10 border border-violet-500/20 rounded-lg text-xs text-violet-400">
-                  {filters.department}
-                  <button onClick={() => setParam("department", null)} className="hover:text-white transition">✕</button>
-                </span>
+            {/* Clear Filter / Action Container */}
+            <div className="flex items-center gap-2 min-w-0">
+              {(filters.search || filters.department || filters.status) && (
+                <button
+                  onClick={() => {
+                    setSearchDraft("");
+                    setSearchParams(new URLSearchParams({ page: "1" }));
+                  }}
+                  className="w-full px-3 py-2 text-xs font-semibold text-slate-400 bg-slate-800/80 hover:text-slate-200 border border-slate-700 rounded-xl transition-all truncate"
+                >
+                  ✕ Clear Filters
+                </button>
               )}
             </div>
-          )}
+          </div>
 
-          {selected.size > 0 && (
-            <div className="w-full sm:ml-auto sm:w-auto flex items-center gap-2 animate-[fadeIn_0.2s_ease-out]">
-              <span className="text-xs font-medium text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2.5 py-1 rounded-lg">
-                {selected.size} selected
-              </span>
-              <button
-                onClick={handleBulkDeactivate}
-                className="px-3 py-1.5 bg-red-500/10 text-red-400 border border-red-500/20 text-xs font-medium rounded-lg hover:bg-red-500/20 transition"
-              >
-                Deactivate Selected
-              </button>
+          {/* Active Chips & Bulk Actions */}
+          {((filters.search || filters.department || filters.status) || selected.size > 0) && (
+            <div className="flex flex-wrap items-center justify-between gap-2 mt-3 pt-3 border-t border-slate-800/60">
+              <div className="flex items-center gap-2 flex-wrap max-w-full">
+                {filters.search && (
+                  <span className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-500/10 border border-blue-500/20 rounded-lg text-xs text-blue-400 max-w-full truncate">
+                    <span className="truncate">"{filters.search}"</span>
+                    <button onClick={() => { setSearchDraft(""); setParam("search", null); }} className="hover:text-white transition shrink-0">✕</button>
+                  </span>
+                )}
+                {filters.department && (
+                  <span className="flex items-center gap-1.5 px-2.5 py-1 bg-violet-500/10 border border-violet-500/20 rounded-lg text-xs text-violet-400 max-w-full truncate">
+                    <span className="truncate">{filters.department}</span>
+                    <button onClick={() => setParam("department", null)} className="hover:text-white transition shrink-0">✕</button>
+                  </span>
+                )}
+              </div>
+
+              {selected.size > 0 && (
+                <div className="flex items-center gap-2 animate-[fadeIn_0.2s_ease-out] ml-auto">
+                  <span className="text-xs font-medium text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2.5 py-1 rounded-lg whitespace-nowrap">
+                    {selected.size} selected
+                  </span>
+                  <button
+                    onClick={handleBulkDeactivate}
+                    className="px-3 py-1.5 bg-red-500/10 text-red-400 border border-red-500/20 text-xs font-medium rounded-lg hover:bg-red-500/20 transition whitespace-nowrap"
+                  >
+                    Deactivate Selected
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

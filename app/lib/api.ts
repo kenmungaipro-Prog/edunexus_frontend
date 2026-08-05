@@ -618,6 +618,93 @@ export interface LiveVehicle {
   updated_at: string | null;
 }
 
+export interface VehicleTelemetry {
+  vehicle_id: number;
+  lat: number | null;
+  lng: number | null;
+  speed: number | null;
+  recorded_at: string | null;
+}
+
+export interface TransportAnalyticsOverview {
+  route_id: number;
+  route_name: string;
+  vehicle: string | null;
+  driver_name: string | null;
+  date: string;
+  metrics: {
+    telemetry_points: number;
+    average_speed: number;
+    max_speed: number;
+    distance_km: number;
+    idle_minutes: number;
+  };
+  efficiency_score: number;
+  stop_count: number;
+  completed_stops: number;
+  completion_pct: number;
+  geofence_events: number;
+}
+
+export interface TransportDriverRankingEntry {
+  driver_id: number;
+  driver_name: string | null;
+  routes: Array<{
+    route_name: string;
+    vehicle: string | null;
+    telemetry_points: number;
+    average_speed: number;
+    distance_km: number;
+    idle_minutes: number;
+    efficiency_score: number;
+  }>;
+  route_count: number;
+  average_efficiency: number;
+  total_distance_km: number;
+}
+
+export interface TransportHeatMapPoint {
+  lat: number;
+  lng: number;
+  speed: number | null;
+  recorded_at: string | null;
+}
+
+export interface TransportHeatMapResponse {
+  route_id: number;
+  route_name: string;
+  vehicle: string | null;
+  points: TransportHeatMapPoint[];
+}
+
+export interface TransportPrediction {
+  route_id: number;
+  route_name: string;
+  vehicle: string | null;
+  driver_name: string | null;
+  predicted_delay_minutes: number;
+  status: string;
+  confidence: number;
+  basis: {
+    average_speed: number;
+    idle_minutes: number;
+    stop_delay: number;
+  };
+}
+
+export interface TransportGeofenceEvent {
+  id: number;
+  school_id: number;
+  transport_route_id: number;
+  transport_geofence_id: number;
+  vehicle_id: number;
+  event_type: string;
+  lat: number;
+  lng: number;
+  triggered_at: string;
+  payload?: Record<string, unknown>;
+}
+
 export type EventType = "event" | "exam" | "holiday" | "meeting" | "competition";
 
 export interface SchoolEvent {
@@ -1528,6 +1615,48 @@ export interface TrialBalanceData {
   to_date: string;
 }
 
+export interface IncomeStatementAccount {
+  id: number;
+  account_code: string;
+  account_name: string;
+  account_type: AccountType;
+  normal_balance: NormalBalance;
+  amount: number;
+}
+
+export interface IncomeStatementData {
+  revenues: IncomeStatementAccount[];
+  expenses: IncomeStatementAccount[];
+  total_revenue: number;
+  total_expense: number;
+  net_income: number;
+  from_date: string;
+  to_date: string;
+}
+
+export interface BalanceSheetAccount {
+  id: number;
+  account_code: string;
+  account_name: string;
+  account_type: AccountType;
+  normal_balance: NormalBalance;
+  amount: number;
+}
+
+export interface BalanceSheetData {
+  assets: BalanceSheetAccount[];
+  liabilities: BalanceSheetAccount[];
+  equity: BalanceSheetAccount[];
+  total_assets: number;
+  total_liabilities: number;
+  total_equity: number;
+  net_income: number;
+  equity_with_income: number;
+  is_balanced: boolean;
+  from_date: string;
+  to_date: string;
+}
+
 // ============================================================
 // Â§ 18b â€” Accounting API
 // ============================================================
@@ -1588,6 +1717,10 @@ export const accounting = {
 
   trialBalance: (params?: { from_date?: string; to_date?: string }) =>
     get<ApiResponse<TrialBalanceData>>("/accounting/reports/trial-balance", params as Record<string, unknown>),
+  incomeStatement: (params?: { from_date?: string; to_date?: string }) =>
+    get<ApiResponse<IncomeStatementData>>("/accounting/reports/income-statement", params as Record<string, unknown>),
+  balanceSheet: (params?: { from_date?: string; to_date?: string }) =>
+    get<ApiResponse<BalanceSheetData>>("/accounting/reports/balance-sheet", params as Record<string, unknown>),
 };
 
 // ============================================================
@@ -1662,8 +1795,28 @@ export const transport = {
   live: () =>
     get<ApiResponse<LiveVehicle[]>>("/transport/live"),
 
+  vehicleTelemetryHistory: (vehicleId: number) =>
+    get<ApiResponse<VehicleTelemetry[]>>(`/transport/vehicles/${vehicleId}/telemetry/history`),
+
+  analytics: {
+    overview: (params?: { date?: string }) =>
+      get<ApiResponse<TransportAnalyticsOverview>>("/transport/analytics/overview", params),
+    driverRanking: (params?: { date?: string }) =>
+      get<ApiResponse<TransportDriverRankingEntry[]>>("/transport/analytics/driver-ranking", params),
+    heatMap: (params?: { date?: string }) =>
+      get<ApiResponse<TransportHeatMapResponse>>("/transport/analytics/heatmap", params),
+    prediction: (params?: { date?: string }) =>
+      get<ApiResponse<TransportPrediction>>("/transport/analytics/prediction", params),
+  },
+
+  geofenceEvents: () =>
+    get<ApiResponse<TransportGeofenceEvent[]>>("/transport/geofence-events/my"),
+
   assignStudent: (routeId: number, payload: AssignTransportPayload) =>
     post<ApiResponse<{ message: string }>>(`/transport/routes/${routeId}/assign`, payload),
+
+  emergencyAlert: (payload: { driver: string; vehicle: string; timestamp: string; gps?: { lat: number; lng: number; speed?: number; heading?: number } }) =>
+    post<ApiResponse<{ message: string }>>('/transport/emergency', payload),
 };
 
 // ============================================================

@@ -133,9 +133,9 @@ export default function BookDetailPage({ loaderData, actionData }: Route.Compone
                   Issue Book
                 </button>
               )}
-              <button className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition text-sm text-center">
+              <Link to={`/library/books/${book.id}/edit`} className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition text-sm text-center">
                 Edit Book
-              </button>
+              </Link>
             </div>
           </div>
         </div>

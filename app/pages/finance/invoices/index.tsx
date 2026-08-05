@@ -80,14 +80,14 @@ export default function FinanceInvoicesPage({ loaderData }: { loaderData: { invo
             <tbody className="divide-y divide-slate-700/60">
               {invoices.length > 0 ? invoices.map((invoice) => (
                 <tr key={invoice.id} className="text-slate-300">
-                  <td className="py-3 pr-3 font-mono text-xs"><Link to={`/finance/invoices/${invoice.id}`} className="text-blue-400 hover:underline">{invoice.invoice_number}</Link></td>
-                  <td className="py-3 pr-3">{invoice.student?.full_name ?? "-"}</td>
-                  <td className="py-3 pr-3 text-slate-400">{invoice.student?.class_room?.name ?? "-"}</td>
+                  <td className="py-3 pr-3 font-mono text-xs max-w-[130px] truncate"><Link to={`/finance/invoices/${invoice.id}`} className="text-blue-400 hover:underline truncate block">{invoice.invoice_number}</Link></td>
+                  <td className="py-3 pr-3 max-w-[180px] truncate whitespace-nowrap overflow-hidden">{invoice.student?.full_name ?? "-"}</td>
+                  <td className="py-3 pr-3 text-slate-400 max-w-[130px] truncate whitespace-nowrap overflow-hidden">{invoice.student?.class_room?.name ?? "-"}</td>
                   <td className="py-3 pr-3 font-semibold text-white">{money(invoice.total)}</td>
                   <td className="py-3 pr-3">{money(invoice.amount_paid)}</td>
                   <td className="py-3 pr-3">{money(invoice.balance)}</td>
-                  <td className="py-3 pr-3 text-slate-400">{invoice.due_date ?? "-"}</td>
-                  <td className="py-3 pr-3"><span className={`rounded-full border px-2 py-1 text-xs font-semibold ${statusClass(invoice.status)}`}>{invoice.status.replace("_", " ")}</span></td>
+                  <td className="py-3 pr-3 text-slate-400 max-w-[120px] truncate whitespace-nowrap overflow-hidden">{invoice.due_date ?? "-"}</td>
+                  <td className="py-3 pr-3 max-w-[120px] truncate"><span className={`rounded-full border px-2 py-1 text-xs font-semibold ${statusClass(invoice.status)}`}>{invoice.status.replace("_", " ")}</span></td>
                   <td className="py-3 pr-3">
                     <div className="flex gap-2">
                       <Link to={`/finance/invoices/${invoice.id}`} className="rounded-lg bg-blue-600/20 px-2 py-1 text-xs text-blue-400 hover:bg-blue-600/30">View</Link>

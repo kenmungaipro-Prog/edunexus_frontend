@@ -52,6 +52,21 @@ export default function TransportPage({ loaderData }: TransRoute.ComponentProps)
           >
             🔄 Refresh
           </button>
+          <Link to="/transport/tracker" className="px-3 sm:px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-xs sm:text-sm font-medium hover:bg-slate-700 transition">
+            👪 Parent Tracker
+          </Link>
+          <Link to="/transport/live" className="px-3 sm:px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-xs sm:text-sm font-medium hover:bg-slate-700 transition">
+            📡 Live Map
+          </Link>
+          <Link to="/transport/analytics" className="px-3 sm:px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-xs sm:text-sm font-medium hover:bg-slate-700 transition">
+            📊 Analytics
+          </Link>
+          <Link to="/transport/playback" className="px-3 sm:px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-xs sm:text-sm font-medium hover:bg-slate-700 transition">
+            ▶️ Playback
+          </Link>
+          <Link to="/transport/notifications" className="px-3 sm:px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-xs sm:text-sm font-medium hover:bg-slate-700 transition">
+            🔔 Notifications
+          </Link>
           <Link to="/transport/vehicles/new" className="px-3 sm:px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-xs sm:text-sm font-medium hover:bg-slate-700 transition">
             🚛 Add Vehicle
           </Link>

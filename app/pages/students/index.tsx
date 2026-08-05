@@ -1,6 +1,3 @@
-// ============================================================
-// app/pages/students/index.tsx
-// ============================================================
 import { useState, useCallback, useEffect } from "react";
 import {
   Link,
@@ -19,6 +16,8 @@ import {
   type StudentStats,
   type ValidationError,
 } from "~/lib/api";
+
+// --- Loaders & Actions ---
 
 export async function clientLoader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
@@ -79,6 +78,8 @@ export async function clientAction({ request }: Route.ActionArgs) {
   return { ok: false, message: "Unknown action." };
 }
 
+// --- Helpers & Visual Mappings ---
+
 function initials(name?: string) {
   if (!name) return "?";
   return name.split(" ").map((n) => n[0]).join("").substring(0, 2).toUpperCase();
@@ -91,25 +92,26 @@ const AVATAR_COLORS: Record<string, string> = {
   P:"#f97316",Q:"#4f8ef7",R:"#10b981",S:"#f59e0b",T:"#8b5cf6",
   U:"#ef4444",V:"#6366f1",W:"#14b8a6",X:"#f97316",Y:"#4f8ef7",Z:"#10b981",
 };
+
 function avatarColor(name: string) {
   return AVATAR_COLORS[name[0]?.toUpperCase()] ?? "#4f8ef7";
 }
 
-const FEE_PILL: Record<string, { bg: string; text: string; label: string }> = {
-  paid:    { bg: "rgba(16,185,129,0.12)",  text: "#34d399", label: "Paid"    },
-  pending: { bg: "rgba(245,158,11,0.12)",  text: "#fbbf24", label: "Pending" },
-  overdue: { bg: "rgba(239,68,68,0.12)",   text: "#f87171", label: "Overdue" },
+const FEE_PILL: Record<string, { cls: string; label: string }> = {
+  paid:    { cls: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20", label: "Paid" },
+  pending: { cls: "bg-amber-500/10 text-amber-400 border-amber-500/20",    label: "Pending" },
+  overdue: { cls: "bg-rose-500/10 text-rose-400 border-rose-500/20",       label: "Overdue" },
 };
 
-const STATUS_PILL: Record<string, { bg: string; text: string }> = {
-  active:   { bg: "rgba(16,185,129,0.12)", text: "#34d399" },
-  inactive: { bg: "rgba(239,68,68,0.12)",  text: "#f87171" },
-  alumni:   { bg: "rgba(99,102,241,0.12)", text: "#a5b4fc" },
+const STATUS_PILL: Record<string, string> = {
+  active:   "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+  inactive: "bg-rose-500/10 text-rose-400 border-rose-500/20",
+  alumni:   "bg-indigo-500/10 text-indigo-300 border-indigo-500/20",
 };
 
-function Toast({
-  message, ok, onDismiss,
-}: { message: string; ok: boolean; onDismiss: () => void }) {
+// --- Subcomponents ---
+
+function Toast({ message, ok, onDismiss }: { message: string; ok: boolean; onDismiss: () => void }) {
   useEffect(() => {
     const t = setTimeout(onDismiss, 4000);
     return () => clearTimeout(t);
@@ -117,45 +119,60 @@ function Toast({
 
   return (
     <div
-      style={{
-        position: "fixed", bottom: "24px", right: "24px", zIndex: 9999,
-        padding: "12px 20px", borderRadius: "10px",
-        fontSize: "13px", fontWeight: 600,
-        background: ok ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)",
-        border: `1px solid ${ok ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.3)"}`,
-        color: ok ? "#34d399" : "#f87171",
-        backdropFilter: "blur(8px)",
-        boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-        display: "flex", alignItems: "center", gap: "8px",
-        cursor: "pointer",
-        animation: "slideInToast .25s ease",
-      }}
       onClick={onDismiss}
+      className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl border px-5 py-3 text-xs font-semibold backdrop-blur-md shadow-2xl cursor-pointer transition-all animate-bounce-in ${
+        ok
+          ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"
+          : "bg-rose-500/15 border-rose-500/30 text-rose-400"
+      }`}
     >
-      {ok ? "✅" : "❌"} {message}
-      <span style={{ marginLeft: "6px", opacity: 0.5, fontSize: "11px" }}>✕</span>
+      <span>{ok ? "✅" : "❌"}</span>
+      <span>{message}</span>
+      <span className="ml-2 text-[10px] opacity-60">✕</span>
     </div>
   );
 }
 
 function AttendanceBadge({ pct }: { pct: number }) {
-  const color = pct >= 90 ? "#34d399" : pct >= 75 ? "#fbbf24" : "#f87171";
-  const bg    = pct >= 90 ? "rgba(16,185,129,0.08)" : pct >= 75 ? "rgba(245,158,11,0.08)" : "rgba(239,68,68,0.08)";
+  const color = pct >= 90 ? "bg-emerald-400" : pct >= 75 ? "bg-amber-400" : "bg-rose-400";
+  const textColor = pct >= 90 ? "text-emerald-400 bg-emerald-500/10" : pct >= 75 ? "text-amber-400 bg-amber-500/10" : "text-rose-400 bg-rose-500/10";
+
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-      <div style={{ width: "52px", height: "5px", background: "rgba(255,255,255,0.08)", borderRadius: "3px", overflow: "hidden" }}>
-        <div style={{ height: "100%", width: `${Math.min(pct, 100)}%`, background: color, borderRadius: "3px", transition: "width .6s cubic-bezier(.4,0,.2,1)" }} />
+    <div className="flex items-center gap-2">
+      <div className="h-1.5 w-12 rounded-full bg-slate-800 overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-500 ${color}`}
+          style={{ width: `${Math.min(pct, 100)}%` }}
+        />
       </div>
-      <span style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color, background: bg, padding: "2px 6px", borderRadius: "6px", minWidth: "40px", textAlign: "center" }}>
+      <span className={`px-1.5 py-0.5 rounded text-[11px] font-mono font-semibold min-w-[38px] text-center ${textColor}`}>
         {pct}%
       </span>
     </div>
   );
 }
 
-function SortIcon({ field, current, dir }: { field: string; current: string; dir: string }) {
-  if (field !== current) return <span style={{ color: "#3a4570", marginLeft: "4px" }}>⇅</span>;
-  return <span style={{ color: "#4f8ef7", marginLeft: "4px" }}>{dir === "asc" ? "↑" : "↓"}</span>;
+function StatCard({ label, value, color, bg, icon }: { label: string; value: number; color: string; bg: string; icon: string }) {
+  return (
+    <div className="bg-[#1a2035] border border-[#2a3350] rounded-xl p-4 flex items-center gap-3.5 shadow-sm">
+      <div className={`w-11 h-11 rounded-lg ${bg} flex items-center justify-center text-xl shrink-0`}>
+        {icon}
+      </div>
+      <div className="min-w-0">
+        <div className={`text-xl font-bold tracking-tight ${color}`}>{value.toLocaleString()}</div>
+        <div className="text-xs text-slate-400 mt-0.5 font-medium">{label}</div>
+      </div>
+    </div>
+  );
+}
+
+function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }) {
+  return (
+    <span className="bg-blue-500/10 text-blue-400 border border-blue-500/20 text-xs font-medium px-2.5 py-1 rounded-full inline-flex items-center gap-1.5 max-w-full truncate">
+      <span className="truncate">{label}</span>
+      <button onClick={onRemove} className="hover:text-blue-200 transition-colors shrink-0">✕</button>
+    </span>
+  );
 }
 
 function Pagination({ meta, onPage }: { meta: PaginationMeta; onPage: (p: number) => void }) {
@@ -172,63 +189,50 @@ function Pagination({ meta, onPage }: { meta: PaginationMeta; onPage: (p: number
     pages.push(last);
   }
 
-  const btnBase: React.CSSProperties = {
-    minWidth: "34px", height: "34px", padding: "0 10px",
-    borderRadius: "8px", border: "1px solid #2a3350",
-    background: "transparent", color: "#a0aec0",
-    fontSize: "13px", fontFamily: "'Sora', sans-serif",
-    cursor: "pointer", transition: "all .15s",
-    display: "flex", alignItems: "center", justifyContent: "center",
-  };
-
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "16px", paddingTop: "14px", borderTop: "1px solid #1e2640", flexWrap: "wrap", gap: "10px" }}>
-      <span style={{ fontSize: "12px", color: "#6b7a99" }}>
-        Showing <strong style={{ color: "#a0aec0" }}>{from ?? 0}–{to ?? 0}</strong> of{" "}
-        <strong style={{ color: "#a0aec0" }}>{total.toLocaleString()}</strong> students
-      </span>
-      <div style={{ display: "flex", gap: "4px", alignItems: "center", flexWrap: "wrap" }}>
-        <button style={{ ...btnBase, opacity: cur === 1 ? 0.3 : 1 }} disabled={cur === 1} onClick={() => onPage(cur - 1)}>← Prev</button>
+    <div className="flex flex-col sm:flex-row items-center justify-between mt-4 pt-4 border-t border-[#1e2640] gap-3 text-xs text-slate-400">
+      <div>
+        Showing <strong className="text-slate-200">{from ?? 0}–{to ?? 0}</strong> of{" "}
+        <strong className="text-slate-200">{total.toLocaleString()}</strong> students
+      </div>
+      <div className="flex items-center gap-1 flex-wrap">
+        <button
+          disabled={cur === 1}
+          onClick={() => onPage(cur - 1)}
+          className="px-3 h-8 rounded-lg border border-[#2a3350] bg-transparent text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[#1e2640] transition-all"
+        >
+          ← Prev
+        </button>
         {pages.map((p, i) =>
           p === "..." ? (
-            <span key={`dots-${i}`} style={{ color: "#3a4570", padding: "0 4px" }}>…</span>
+            <span key={`dots-${i}`} className="px-1 text-slate-600">…</span>
           ) : (
             <button
               key={p}
               onClick={() => onPage(p as number)}
-              style={{ ...btnBase, background: p === cur ? "linear-gradient(135deg,#4f8ef7,#6366f1)" : "transparent", borderColor: p === cur ? "transparent" : "#2a3350", color: p === cur ? "#fff" : "#a0aec0", fontWeight: p === cur ? 700 : 400 }}
+              className={`min-w-[32px] h-8 rounded-lg border text-xs font-medium transition-all ${
+                p === cur
+                  ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-transparent shadow-sm font-semibold"
+                  : "border-[#2a3350] bg-transparent text-slate-300 hover:bg-[#1e2640]"
+              }`}
             >
               {p}
             </button>
           )
         )}
-        <button style={{ ...btnBase, opacity: cur === last ? 0.3 : 1 }} disabled={cur === last} onClick={() => onPage(cur + 1)}>Next →</button>
+        <button
+          disabled={cur === last}
+          onClick={() => onPage(cur + 1)}
+          className="px-3 h-8 rounded-lg border border-[#2a3350] bg-transparent text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[#1e2640] transition-all"
+        >
+          Next →
+        </button>
       </div>
     </div>
   );
 }
 
-function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }) {
-  return (
-    <span style={{ background: "rgba(79,142,247,0.1)", color: "#60a5fa", border: "1px solid rgba(79,142,247,0.25)", fontSize: "11px", fontWeight: 600, padding: "3px 10px", borderRadius: "20px", display: "inline-flex", alignItems: "center", gap: "6px" }}>
-      {label}
-      <button onClick={onRemove} style={{ background: "none", border: "none", color: "#60a5fa", cursor: "pointer", padding: 0, fontSize: "11px", lineHeight: 1 }}>✕</button>
-    </span>
-  );
-}
-
-function RowIconLink({ to, title, icon, hoverColor }: { to: string; title: string; icon: string; hoverColor: string }) {
-  return (
-    <Link
-      to={to} title={title}
-      style={{ width: "30px", height: "30px", background: "#1e2640", border: "1px solid #2a3350", borderRadius: "7px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px", textDecoration: "none", transition: "all .15s", flexShrink: 0 }}
-      onMouseEnter={(e) => { e.currentTarget.style.borderColor = hoverColor; }}
-      onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#2a3350"; }}
-    >
-      {icon}
-    </Link>
-  );
-}
+// --- Main Page Component ---
 
 export default function StudentsPage({ loaderData, actionData }: Route.ComponentProps) {
   const { students, meta, classes, filters, stats } = loaderData as {
@@ -246,14 +250,14 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
   const submit     = useSubmit();
   const isLoading  = navigation.state === "loading";
 
-  const [selected,        setSelected]       = useState<Set<number>>(new Set());
-  const [showBulkMenu,    setShowBulkMenu]    = useState(false);
-  const [searchDraft,     setSearchDraft]     = useState(filters.search ?? "");
+  const [selected, setSelected]             = useState<Set<number>>(new Set());
+  const [showBulkMenu, setShowBulkMenu]     = useState(false);
+  const [searchDraft, setSearchDraft]       = useState(filters.search ?? "");
   const [showImportModal, setShowImportModal] = useState(false);
-  const [importFile,      setImportFile]      = useState<File | null>(null);
-  const [importLoading,   setImportLoading]   = useState(false);
-  const [importMsg,       setImportMsg]       = useState<{ ok: boolean; text: string } | null>(null);
-  const [toastVisible,    setToastVisible]    = useState(true);
+  const [importFile, setImportFile]         = useState<File | null>(null);
+  const [importLoading, setImportLoading]   = useState(false);
+  const [importMsg, setImportMsg]           = useState<{ ok: boolean; text: string } | null>(null);
+  const [toastVisible, setToastVisible]     = useState(true);
 
   useEffect(() => { setToastVisible(true); }, [actionResult]);
 
@@ -283,10 +287,6 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
       next.set("page", "1");
       return next;
     });
-  };
-
-  const handleSearchKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") setParam("search", searchDraft || null);
   };
 
   const allSelected  = students.length > 0 && students.every((s) => selected.has(s.id));
@@ -348,166 +348,194 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
     } catch { /* silent */ }
   };
 
-  const s = {
-    card: { background: "#1a2035", border: "1px solid #2a3350", borderRadius: "14px", padding: "20px", boxSizing: "border-box" } as React.CSSProperties,
-    btn: (variant: "primary" | "ghost" | "danger") => ({
-      display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "6px",
-      padding: "8px 16px", borderRadius: "8px",
-      fontSize: "13px", fontWeight: 600,
-      cursor: "pointer", border: "none",
-      fontFamily: "'Sora', sans-serif",
-      transition: "all .15s", whiteSpace: "nowrap",
-      ...(variant === "primary"
-        ? { background: "linear-gradient(135deg,#4f8ef7,#6366f1)", color: "#fff" }
-        : variant === "danger"
-        ? { background: "rgba(239,68,68,0.1)", color: "#f87171", border: "1px solid rgba(239,68,68,0.2)" }
-        : { background: "#1e2640", color: "#a0aec0", border: "1px solid #2a3350" }),
-    } as React.CSSProperties),
-    input: { background: "#0f1424", border: "1px solid #2a3350", borderRadius: "8px", padding: "8px 12px", fontSize: "13px", color: "#e8edf8", fontFamily: "'Sora', sans-serif", outline: "none", boxSizing: "border-box" } as React.CSSProperties,
-    select: { background: "#0f1424", border: "1px solid #2a3350", borderRadius: "8px", padding: "8px 12px", fontSize: "13px", color: "#e8edf8", fontFamily: "'Sora', sans-serif", outline: "none", cursor: "pointer", boxSizing: "border-box" } as React.CSSProperties,
-    th: { textAlign: "left" as const, padding: "10px 14px", fontSize: "11px", fontWeight: 600, color: "#6b7a99", letterSpacing: ".6px", textTransform: "uppercase" as const, borderBottom: "1px solid #1e2640", userSelect: "none" as const, whiteSpace: "nowrap" as const } as React.CSSProperties,
-    td: { padding: "12px 14px", borderBottom: "1px solid #141929", color: "#a0aec0", fontSize: "13px", verticalAlign: "middle" as const } as React.CSSProperties,
-  };
-
   const hasFilters = !!(filters.search || filters.class_id || filters.status || filters.gender);
 
   return (
-    <div style={{ fontFamily: "'Sora', sans-serif", color: "#e8edf8", width: "100%", boxSizing: "border-box" }}>
-
+    <div className="w-full text-slate-100 font-sans p-4 sm:p-6 max-w-7xl mx-auto box-border">
       {actionResult?.message && toastVisible && (
         <Toast message={actionResult.message} ok={actionResult.ok ?? false} onDismiss={() => setToastVisible(false)} />
       )}
 
-      {/* Page header */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }} className="responsive-header">
-        <div style={{ minWidth: 0 }}>
-          <h1 style={{ fontSize: "20px", fontWeight: 700, marginBottom: "4px" }}>🎓 Student Management</h1>
-          <p style={{ fontSize: "13px", color: "#6b7a99" }}>Manage student profiles, records and academic data</p>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+            🎓 Student Management
+          </h1>
+          <p className="text-xs text-slate-400 mt-1">Manage student profiles, academic status, and records</p>
         </div>
-        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }} className="responsive-header-actions">
-          <button style={s.btn("ghost")} onClick={() => setShowImportModal(true)}>📤 Import</button>
-          <button style={s.btn("ghost")} onClick={handleExportCsv}>📥 Export CSV</button>
-          <Link to="/students/new" style={{ ...s.btn("primary"), textDecoration: "none" }}>➕ Add Student</Link>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="px-3.5 py-2 rounded-lg text-xs font-semibold bg-[#1e2640] border border-[#2a3350] text-slate-300 hover:bg-[#252f4e] transition-all"
+          >
+            📤 Import
+          </button>
+          <button
+            onClick={handleExportCsv}
+            className="px-3.5 py-2 rounded-lg text-xs font-semibold bg-[#1e2640] border border-[#2a3350] text-slate-300 hover:bg-[#252f4e] transition-all"
+          >
+            📥 Export CSV
+          </button>
+          <Link
+            to="/students/new"
+            className="px-3.5 py-2 rounded-lg text-xs font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm hover:opacity-95 transition-all"
+          >
+            ➕ Add Student
+          </Link>
         </div>
       </div>
 
       {/* Quick stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "14px", marginBottom: "20px" }}>
-        {[
-          { label: "Total Students", value: stats.total,          color: "#4f8ef7", bg: "rgba(79,142,247,0.08)",   icon: "🎓" },
-          { label: "Active",         value: stats.active,         color: "#34d399", bg: "rgba(16,185,129,0.08)",  icon: "✅" },
-          { label: "Fee Overdue",    value: stats.fee_overdue,    color: "#f87171", bg: "rgba(239,68,68,0.08)",   icon: "⚠️" },
-          { label: "Low Attendance", value: stats.low_attendance, color: "#fbbf24", bg: "rgba(245,158,11,0.08)",  icon: "📉" },
-        ].map((stat) => (
-          <div key={stat.label} style={{ ...s.card, display: "flex", alignItems: "center", gap: "14px", padding: "16px 20px" }}>
-            <div style={{ width: "42px", height: "42px", borderRadius: "10px", background: stat.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px", flexShrink: 0 }}>{stat.icon}</div>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: "20px", fontWeight: 700, lineHeight: 1, color: stat.color }}>{stat.value.toLocaleString()}</div>
-              <div style={{ fontSize: "11px", color: "#6b7a99", marginTop: "3px" }}>{stat.label}</div>
-            </div>
-          </div>
-        ))}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <StatCard label="Total Students" value={stats.total} color="text-blue-400" bg="bg-blue-500/10" icon="🎓" />
+        <StatCard label="Active" value={stats.active} color="text-emerald-400" bg="bg-emerald-500/10" icon="✅" />
+        <StatCard label="Fee Overdue" value={stats.fee_overdue} color="text-rose-400" bg="bg-rose-500/10" icon="⚠️" />
+        <StatCard label="Low Attendance" value={stats.low_attendance} color="text-amber-400" bg="bg-amber-500/10" icon="📉" />
       </div>
 
-      {/* Main table card */}
-      <div style={s.card} className="responsive-card">
-
-        {/* Toolbar */}
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", marginBottom: "16px" }} className="responsive-toolbar">
-          <div style={{ position: "relative", flex: "1", minWidth: "180px" }}>
-            <span style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", fontSize: "13px", color: "#6b7a99" }}>🔍</span>
+      {/* Main card */}
+      <div className="bg-[#1a2035] border border-[#2a3350] rounded-2xl p-4 sm:p-5 shadow-xl w-full box-border overflow-hidden">
+        
+        {/* Toolbar: Responsive Grid ensuring items fit strictly within container boundaries */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2.5 mb-4 w-full">
+          
+          {/* Search Box */}
+          <div className="relative sm:col-span-2 lg:col-span-2 min-w-0">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">🔍</span>
             <input
               value={searchDraft}
               onChange={(e) => setSearchDraft(e.target.value)}
-              onKeyDown={handleSearchKey}
+              onKeyDown={(e) => e.key === "Enter" && setParam("search", searchDraft || null)}
               onBlur={() => setParam("search", searchDraft || null)}
               placeholder="Search name, roll no…"
-              style={{ ...s.input, width: "100%", paddingLeft: "32px" }}
+              className="w-full bg-[#0f1424] border border-[#2a3350] rounded-lg pl-9 pr-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-all box-border"
             />
           </div>
 
-          <select value={searchParams.get("class_id") ?? ""} onChange={(e) => setParam("class_id", e.target.value || null)} style={s.select}>
-            <option value="">All Classes</option>
-            {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+          {/* Class Filter */}
+          <div className="min-w-0">
+            <select
+              value={searchParams.get("class_id") ?? ""}
+              onChange={(e) => setParam("class_id", e.target.value || null)}
+              className="w-full bg-[#0f1424] border border-[#2a3350] rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500 transition-all cursor-pointer box-border truncate"
+            >
+              <option value="">All Classes</option>
+              {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </div>
 
-          <select value={searchParams.get("status") ?? ""} onChange={(e) => setParam("status", e.target.value || null)} style={s.select}>
-            <option value="">All Status</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="alumni">Alumni</option>
-          </select>
+          {/* Status Filter */}
+          <div className="min-w-0">
+            <select
+              value={searchParams.get("status") ?? ""}
+              onChange={(e) => setParam("status", e.target.value || null)}
+              className="w-full bg-[#0f1424] border border-[#2a3350] rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500 transition-all cursor-pointer box-border truncate"
+            >
+              <option value="">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="alumni">Alumni</option>
+            </select>
+          </div>
 
-          <select value={searchParams.get("gender") ?? ""} onChange={(e) => setParam("gender", e.target.value || null)} style={s.select}>
-            <option value="">All Genders</option>
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-            <option value="other">Other</option>
-          </select>
+          {/* Gender Filter */}
+          <div className="min-w-0">
+            <select
+              value={searchParams.get("gender") ?? ""}
+              onChange={(e) => setParam("gender", e.target.value || null)}
+              className="w-full bg-[#0f1424] border border-[#2a3350] rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500 transition-all cursor-pointer box-border truncate"
+            >
+              <option value="">All Genders</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
 
-          <select value={searchParams.get("per_page") ?? "20"} onChange={(e) => setParam("per_page", e.target.value)} style={s.select}>
-            {[10, 20, 50, 100].map((n) => <option key={n} value={n}>{n} / page</option>)}
-          </select>
+          {/* Pagination limit / Clear button container */}
+          <div className="flex items-center gap-2 min-w-0">
+            <select
+              value={searchParams.get("per_page") ?? "20"}
+              onChange={(e) => setParam("per_page", e.target.value)}
+              className="w-full bg-[#0f1424] border border-[#2a3350] rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500 transition-all cursor-pointer box-border truncate"
+            >
+              {[10, 20, 50, 100].map((n) => <option key={n} value={n}>{n} / page</option>)}
+            </select>
 
-          {hasFilters && (
-            <button style={s.btn("ghost")} onClick={() => { setSearchDraft(""); setSearchParams(new URLSearchParams({ page: "1" })); }}>
-              ✕ Clear
-            </button>
-          )}
+            {hasFilters && (
+              <button
+                onClick={() => { setSearchDraft(""); setSearchParams(new URLSearchParams({ page: "1" })); }}
+                className="px-3 py-2 text-xs font-semibold text-slate-400 bg-[#1e2640] hover:text-slate-200 rounded-lg transition-all shrink-0"
+              >
+                ✕ Clear
+              </button>
+            )}
+          </div>
 
+          {/* Bulk Action Trigger */}
           {someSelected && (
-            <div style={{ marginLeft: "auto", position: "relative" }} className="responsive-bulk">
-              <button style={s.btn("ghost")} onClick={() => setShowBulkMenu((v) => !v)}>
-                ☑️ {selected.size} selected ▾
+            <div className="relative col-span-full sm:col-span-1">
+              <button
+                onClick={() => setShowBulkMenu((v) => !v)}
+                className="w-full px-3 py-2 text-xs font-semibold text-blue-400 bg-blue-500/10 border border-blue-500/20 rounded-lg hover:bg-blue-500/20 transition-all flex items-center justify-between gap-1"
+              >
+                <span>☑️ {selected.size} selected</span>
+                <span>▾</span>
               </button>
               {showBulkMenu && (
-                <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, background: "#1a2035", border: "1px solid #2a3350", borderRadius: "10px", zIndex: 50, minWidth: "180px", boxShadow: "0 8px 32px rgba(0,0,0,0.5)", overflow: "hidden" }}>
-                  {[
-                    { label: "Set Active",   fn: () => bulkAction("bulk-status", { status: "active"   }) },
-                    { label: "Set Inactive", fn: () => bulkAction("bulk-status", { status: "inactive" }) },
-                    { label: "Set Alumni",   fn: () => bulkAction("bulk-status", { status: "alumni"   }) },
-                  ].map((item) => (
+                <div className="absolute right-0 sm:right-auto left-0 top-full mt-1.5 w-48 bg-[#1a2035] border border-[#2a3350] rounded-xl shadow-2xl z-50 overflow-hidden divide-y divide-[#1e2640]">
+                  <div className="py-1">
+                    {[
+                      { label: "Set Active",   fn: () => bulkAction("bulk-status", { status: "active" }) },
+                      { label: "Set Inactive", fn: () => bulkAction("bulk-status", { status: "inactive" }) },
+                      { label: "Set Alumni",   fn: () => bulkAction("bulk-status", { status: "alumni" }) },
+                    ].map((item) => (
+                      <button
+                        key={item.label}
+                        onClick={item.fn}
+                        className="w-full text-left px-4 py-2 text-xs text-slate-300 hover:bg-[#1e2640] transition-colors"
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="py-1">
                     <button
-                      key={item.label} onClick={item.fn}
-                      style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 16px", background: "transparent", border: "none", color: "#a0aec0", fontSize: "13px", fontFamily: "'Sora',sans-serif", cursor: "pointer" }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = "#1e2640"; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                      onClick={() => { if (confirm(`Remove ${selected.size} student(s)?`)) bulkAction("bulk-delete"); }}
+                      className="w-full text-left px-4 py-2 text-xs text-rose-400 hover:bg-rose-500/10 transition-colors"
                     >
-                      {item.label}
+                      🗑 Delete Selected
                     </button>
-                  ))}
-                  <div style={{ borderTop: "1px solid #1e2640" }} />
-                  <button
-                    onClick={() => { if (confirm(`Remove ${selected.size} student(s)? This cannot be undone.`)) bulkAction("bulk-delete"); }}
-                    style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 16px", background: "transparent", border: "none", color: "#f87171", fontSize: "13px", fontFamily: "'Sora',sans-serif", cursor: "pointer" }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(239,68,68,0.06)"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-                  >
-                    🗑 Delete Selected
-                  </button>
+                  </div>
                 </div>
               )}
             </div>
           )}
         </div>
 
-        {/* Active filter chips */}
+        {/* Active Filter Chips */}
         {hasFilters && (
-          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "14px" }}>
-            {filters.search   && <FilterChip label={`Search: "${filters.search}"`} onRemove={() => { setSearchDraft(""); setParam("search", null); }} />}
-            {filters.status   && <FilterChip label={`Status: ${filters.status}`}   onRemove={() => setParam("status", null)} />}
-            {filters.gender   && <FilterChip label={`Gender: ${filters.gender}`}   onRemove={() => setParam("gender", null)} />}
+          <div className="flex flex-wrap gap-1.5 mb-4 max-w-full">
+            {filters.search && <FilterChip label={`Search: "${filters.search}"`} onRemove={() => { setSearchDraft(""); setParam("search", null); }} />}
+            {filters.status && <FilterChip label={`Status: ${filters.status}`} onRemove={() => setParam("status", null)} />}
+            {filters.gender && <FilterChip label={`Gender: ${filters.gender}`} onRemove={() => setParam("gender", null)} />}
             {filters.class_id && <FilterChip label={`Class: ${classes.find((c) => c.id === filters.class_id)?.name ?? filters.class_id}`} onRemove={() => setParam("class_id", null)} />}
           </div>
         )}
 
-        {/* Table */}
-        <div style={{ overflowX: "auto", opacity: isLoading ? 0.5 : 1, transition: "opacity .2s", WebkitOverflowScrolling: "touch" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px", minWidth: "850px" }}>
+        {/* Data Table */}
+        <div className={`overflow-x-auto transition-opacity duration-200 ${isLoading ? "opacity-50" : "opacity-100"}`}>
+          <table className="w-full border-collapse text-xs text-slate-300 min-w-[850px]">
             <thead>
-              <tr>
-                <th style={{ ...s.th, width: "40px" }}>
-                  <input type="checkbox" checked={allSelected} onChange={toggleAll} style={{ width: "15px", height: "15px", cursor: "pointer", accentColor: "#4f8ef7" }} />
+              <tr className="border-b border-[#1e2640] text-slate-400 uppercase text-[11px] font-semibold tracking-wider text-left">
+                <th className="p-3 w-10">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={toggleAll}
+                    className="rounded accent-blue-500 cursor-pointer"
+                  />
                 </th>
                 {[
                   { key: "first_name",  label: "Student"    },
@@ -522,22 +550,26 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
                 ].map((col) => (
                   <th
                     key={col.key}
-                    style={{ ...s.th, cursor: col.sortable !== false ? "pointer" : "default" }}
                     onClick={() => col.sortable !== false && toggleSort(col.key)}
+                    className={`p-3 ${col.sortable !== false ? "cursor-pointer select-none hover:text-slate-200" : ""}`}
                   >
-                    {col.label}
-                    {col.sortable !== false && (
-                      <SortIcon field={col.key} current={filters.sort_by ?? "first_name"} dir={filters.sort_dir ?? "asc"} />
-                    )}
+                    <div className="flex items-center gap-1">
+                      {col.label}
+                      {col.sortable !== false && (
+                        <span className="text-slate-500">
+                          {filters.sort_by === col.key ? (filters.sort_dir === "asc" ? "↑" : "↓") : "⇅"}
+                        </span>
+                      )}
+                    </div>
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-[#141929]">
               {students.length === 0 ? (
                 <tr>
-                  <td colSpan={9} style={{ textAlign: "center", padding: "56px 24px", color: "#4b5a7a" }}>
-                    <div style={{ fontSize: "32px", marginBottom: "10px", opacity: 0.5 }}>🎓</div>
+                  <td colSpan={9} className="text-center py-12 text-slate-500">
+                    <div className="text-3xl mb-2 opacity-50">🎓</div>
                     {hasFilters ? "No students match the current filters." : "No students found. Add your first student to get started."}
                   </td>
                 </tr>
@@ -545,88 +577,105 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
                 students.map((student) => {
                   const isChecked  = selected.has(student.id);
                   const color      = avatarColor(student.full_name);
-                  const feePill    = FEE_PILL[student.fee_status]   ?? FEE_PILL.pending;
-                  const statusPill = STATUS_PILL[student.status]    ?? STATUS_PILL.active;
+                  const feePill    = FEE_PILL[student.fee_status] ?? FEE_PILL.pending;
+                  const statusPill = STATUS_PILL[student.status]  ?? STATUS_PILL.active;
 
                   return (
                     <tr
                       key={student.id}
-                      style={{
-                        background: isChecked ? "rgba(79,142,247,0.04)" : "transparent",
-                        transition: "background .15s",
-                      }}
-                      onMouseEnter={(e) => { if (!isChecked) e.currentTarget.style.background = "rgba(255,255,255,0.02)"; }}
-                      onMouseLeave={(e) => { if (!isChecked) e.currentTarget.style.background = "transparent"; }}
+                      className={`hover:bg-white/[0.02] transition-colors ${isChecked ? "bg-blue-500/[0.04]" : ""}`}
                     >
-                      <td style={s.td}>
-                        <input type="checkbox" checked={isChecked} onChange={() => toggleOne(student.id)} style={{ width: "15px", height: "15px", cursor: "pointer", accentColor: "#4f8ef7" }} />
+                      <td className="p-3">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleOne(student.id)}
+                          className="rounded accent-blue-500 cursor-pointer"
+                        />
                       </td>
 
-                      <td style={s.td}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                          <div style={{ width: "34px", height: "34px", borderRadius: "50%", background: `${color}20`, border: `1px solid ${color}40`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 700, color, flexShrink: 0, overflow: "hidden" }}>
+                      <td className="p-3">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 border overflow-hidden"
+                            style={{ backgroundColor: `${color}20`, borderColor: `${color}40`, color }}
+                          >
                             {student.profile_photo ? (
-                              <img src={`${import.meta.env.VITE_API_URL}/storage/${student.profile_photo}`} alt={student.full_name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                              <img
+                                src={`${import.meta.env.VITE_API_URL}/storage/${student.profile_photo}`}
+                                alt={student.full_name}
+                                className="w-full h-full object-cover"
+                              />
                             ) : initials(student.full_name)}
                           </div>
-                          <div style={{ minWidth: 0 }}>
+                          <div className="min-w-0">
                             <Link
                               to={`/students/${student.id}`}
-                              style={{ color: "#e8edf8", fontWeight: 600, textDecoration: "none", fontSize: "13px", display: "block", wordBreak: "break-word" }}
-                              onMouseEnter={(e) => { e.currentTarget.style.color = "#4f8ef7"; }}
-                              onMouseLeave={(e) => { e.currentTarget.style.color = "#e8edf8"; }}
+                              className="font-medium text-slate-100 hover:text-blue-400 transition-colors block truncate"
                             >
                               {student.full_name}
                             </Link>
-                            <span style={{ fontSize: "11px", color: "#6b7a99" }}>{student.admission_no}</span>
+                            <span className="text-[11px] text-slate-500 block">{student.admission_no}</span>
                           </div>
                         </div>
                       </td>
 
-                      <td style={{ ...s.td, fontFamily: "'JetBrains Mono', monospace", color: "#4f8ef7", fontSize: "12px" }}>{student.roll_number}</td>
+                      <td className="p-3 font-mono text-blue-400">{student.roll_number}</td>
 
-                      <td style={s.td}>
+                      <td className="p-3">
                         {student.class_room ? (
-                          <span style={{ background: "rgba(79,142,247,0.08)", color: "#60a5fa", border: "1px solid rgba(79,142,247,0.15)", padding: "3px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: 600, whiteSpace: "nowrap" }}>
+                          <span className="bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded text-[11px] font-semibold whitespace-nowrap">
                             {student.class_room.name}
                           </span>
                         ) : "—"}
                       </td>
 
-                      <td style={{ ...s.td, textTransform: "capitalize" }}>{student.gender}</td>
+                      <td className="p-3 capitalize">{student.gender}</td>
 
-                      <td style={s.td}><AttendanceBadge pct={student.attendance_percentage} /></td>
+                      <td className="p-3">
+                        <AttendanceBadge pct={student.attendance_percentage} />
+                      </td>
 
-                      <td style={s.td}>
-                        <span style={{ background: feePill.bg, color: feePill.text, padding: "3px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".4px", whiteSpace: "nowrap" }}>
+                      <td className="p-3">
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border whitespace-nowrap ${feePill.cls}`}>
                           {feePill.label}
                         </span>
                       </td>
 
-                      <td style={s.td}>
-                        <span style={{ background: statusPill.bg, color: statusPill.text, padding: "3px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: 700, textTransform: "capitalize", whiteSpace: "nowrap" }}>
+                      <td className="p-3">
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold capitalize border whitespace-nowrap ${statusPill}`}>
                           {student.status}
                         </span>
                       </td>
 
-                      <td style={{ ...s.td, fontSize: "12px", color: "#6b7a99", whiteSpace: "nowrap" }}>
+                      <td className="p-3 text-slate-500 whitespace-nowrap">
                         {new Date(student.created_at).toLocaleDateString("en-KE", { day: "2-digit", month: "short", year: "numeric" })}
                       </td>
 
-                      <td style={s.td}>
-                        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                          <RowIconLink to={`/students/${student.id}`}      title="View profile" icon="👁"  hoverColor="#4f8ef7" />
-                          <RowIconLink to={`/students/${student.id}/edit`} title="Edit student" icon="✏️" hoverColor="#f59e0b" />
-                          <Form method="post" style={{ display: "contents" }}>
+                      <td className="p-3">
+                        <div className="flex items-center gap-1.5">
+                          <Link
+                            to={`/students/${student.id}`}
+                            title="View profile"
+                            className="w-7 h-7 rounded-md bg-[#1e2640] border border-[#2a3350] flex items-center justify-center hover:border-blue-500 transition-all text-xs"
+                          >
+                            👁
+                          </Link>
+                          <Link
+                            to={`/students/${student.id}/edit`}
+                            title="Edit student"
+                            className="w-7 h-7 rounded-md bg-[#1e2640] border border-[#2a3350] flex items-center justify-center hover:border-amber-500 transition-all text-xs"
+                          >
+                            ✏️
+                          </Link>
+                          <Form method="post" className="inline">
                             <input type="hidden" name="intent" value="delete" />
-                            <input type="hidden" name="id"     value={student.id} />
+                            <input type="hidden" name="id" value={student.id} />
                             <button
                               type="submit"
                               title="Remove student"
-                              onClick={(e) => { if (!confirm(`Remove ${student.full_name}? This cannot be undone.`)) e.preventDefault(); }}
-                              style={{ width: "30px", height: "30px", background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.15)", borderRadius: "7px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px", cursor: "pointer", fontFamily: "'Sora',sans-serif", transition: "all .15s", flexShrink: 0 }}
-                              onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(239,68,68,0.15)"; }}
-                              onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(239,68,68,0.06)"; }}
+                              onClick={(e) => { if (!confirm(`Remove ${student.full_name}?`)) e.preventDefault(); }}
+                              className="w-7 h-7 rounded-md bg-rose-500/10 border border-rose-500/20 flex items-center justify-center hover:bg-rose-500/20 transition-all text-xs"
                             >
                               🗑
                             </button>
@@ -642,78 +691,76 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
         </div>
 
         {meta?.last_page > 1 && <Pagination meta={meta} onPage={goToPage} />}
-
-        {isLoading && (
-          <div style={{ textAlign: "center", marginTop: "8px", fontSize: "12px", color: "#4f8ef7", fontWeight: 600 }}>Loading…</div>
-        )}
       </div>
 
       {/* Import Modal */}
       {showImportModal && (
         <div
           onClick={(e) => { if (e.target === e.currentTarget) { setShowImportModal(false); setImportMsg(null); setImportFile(null); } }}
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(4px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px", boxSizing: "border-box" }}
+          className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4"
         >
-          <div style={{ background: "#0f1424", border: "1px solid #2a3350", borderRadius: "16px", padding: "28px", width: "100%", maxWidth: "460px", boxShadow: "0 24px 64px rgba(0,0,0,0.7)", boxSizing: "border-box" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "22px" }}>
-              <h2 style={{ fontSize: "17px", fontWeight: 700 }}>📤 Import Students</h2>
-              <button onClick={() => { setShowImportModal(false); setImportMsg(null); setImportFile(null); }} style={{ background: "#1e2640", border: "1px solid #2a3350", borderRadius: "7px", width: "30px", height: "30px", color: "#a0aec0", cursor: "pointer", fontSize: "14px" }}>✕</button>
+          <div className="bg-[#0f1424] border border-[#2a3350] rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-base font-bold text-white">📤 Import Students</h2>
+              <button
+                onClick={() => { setShowImportModal(false); setImportMsg(null); setImportFile(null); }}
+                className="w-7 h-7 rounded-lg bg-[#1e2640] border border-[#2a3350] text-slate-400 hover:text-white transition-all text-xs"
+              >
+                ✕
+              </button>
             </div>
 
-            <label style={{ display: "block", border: `2px dashed ${importFile ? "#4f8ef7" : "#2a3350"}`, borderRadius: "12px", padding: "36px 20px", textAlign: "center", cursor: "pointer", marginBottom: "16px", background: importFile ? "rgba(79,142,247,0.05)" : "transparent", transition: "all .2s" }}>
-              <input type="file" accept=".xlsx,.csv,.xls" style={{ display: "none" }} onChange={(e) => setImportFile(e.target.files?.[0] ?? null)} />
-              <div style={{ fontSize: "32px", marginBottom: "10px" }}>{importFile ? "📄" : "📁"}</div>
+            <label className={`block border-2 border-dashed rounded-xl p-8 text-center cursor-pointer mb-4 transition-all ${
+              importFile ? "border-blue-500 bg-blue-500/5" : "border-[#2a3350] hover:border-slate-600"
+            }`}>
+              <input type="file" accept=".xlsx,.csv,.xls" className="hidden" onChange={(e) => setImportFile(e.target.files?.[0] ?? null)} />
+              <div className="text-3xl mb-2">{importFile ? "📄" : "📁"}</div>
               {importFile ? (
                 <>
-                  <div style={{ fontWeight: 600, fontSize: "13px", color: "#4f8ef7" }}>{importFile.name}</div>
-                  <div style={{ fontSize: "11px", color: "#6b7a99", marginTop: "4px" }}>{(importFile.size / 1024).toFixed(1)} KB · Click to change</div>
+                  <div className="font-semibold text-xs text-blue-400">{importFile.name}</div>
+                  <div className="text-[11px] text-slate-500 mt-1">{(importFile.size / 1024).toFixed(1)} KB · Click to change</div>
                 </>
               ) : (
                 <>
-                  <div style={{ fontWeight: 600, fontSize: "13px" }}>Drop CSV / Excel file here</div>
-                  <div style={{ fontSize: "11px", color: "#6b7a99", marginTop: "4px" }}>Supports .xlsx, .csv · Max 5 MB</div>
+                  <div className="font-semibold text-xs text-slate-300">Drop CSV / Excel file here</div>
+                  <div className="text-[11px] text-slate-500 mt-1">Supports .xlsx, .csv · Max 5 MB</div>
                 </>
               )}
             </label>
 
-            <div style={{ background: "#0a0e1a", borderRadius: "8px", padding: "12px 14px", marginBottom: "16px", fontSize: "11px", color: "#6b7a99", lineHeight: 1.7, overflowX: "auto" }}>
-              <div style={{ fontWeight: 700, color: "#a0aec0", marginBottom: "4px" }}>Required columns:</div>
-              <code style={{ color: "#60a5fa", fontFamily: "'JetBrains Mono', monospace", wordBreak: "break-all" }}>
+            <div className="bg-[#0a0e1a] rounded-lg p-3 mb-4 text-[11px] text-slate-500 leading-relaxed overflow-x-auto">
+              <div className="font-bold text-slate-400 mb-1">Required columns:</div>
+              <code className="text-blue-400 font-mono break-all">
                 first_name, last_name, date_of_birth, gender, class, parent_name, parent_email
               </code>
             </div>
 
             {importMsg && (
-              <div style={{ marginBottom: "14px", padding: "10px 14px", borderRadius: "8px", fontSize: "13px", fontWeight: 600, background: importMsg.ok ? "rgba(16,185,129,0.1)" : "rgba(239,68,68,0.1)", color: importMsg.ok ? "#34d399" : "#f87171", border: `1px solid ${importMsg.ok ? "rgba(16,185,129,0.25)" : "rgba(239,68,68,0.25)"}` }}>
+              <div className={`mb-4 p-3 rounded-lg text-xs font-semibold border ${
+                importMsg.ok ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-rose-500/10 border-rose-500/20 text-rose-400"
+              }`}>
                 {importMsg.ok ? "✅" : "❌"} {importMsg.text}
               </div>
             )}
 
-            <div style={{ display: "flex", gap: "8px" }}>
-              <button onClick={() => { setShowImportModal(false); setImportMsg(null); setImportFile(null); }} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", flex: 1, padding: "8px 16px", borderRadius: "8px", fontSize: "13px", fontWeight: 600, cursor: "pointer", background: "#1e2640", color: "#a0aec0", border: "1px solid #2a3350", fontFamily: "'Sora', sans-serif" }}>
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setShowImportModal(false); setImportMsg(null); setImportFile(null); }}
+                className="flex-1 py-2 rounded-lg text-xs font-semibold bg-[#1e2640] border border-[#2a3350] text-slate-300 hover:bg-[#252f4e] transition-all"
+              >
                 Cancel
               </button>
-              <button onClick={handleImport} disabled={!importFile || importLoading} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", flex: 1, padding: "8px 16px", borderRadius: "8px", fontSize: "13px", fontWeight: 600, background: "linear-gradient(135deg,#4f8ef7,#6366f1)", color: "#fff", border: "none", fontFamily: "'Sora', sans-serif", cursor: !importFile || importLoading ? "not-allowed" : "pointer", opacity: !importFile || importLoading ? 0.5 : 1, transition: "all .15s" }}>
+              <button
+                onClick={handleImport}
+                disabled={!importFile || importLoading}
+                className="flex-1 py-2 rounded-lg text-xs font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm hover:opacity-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 {importLoading ? "Importing…" : "📤 Import"}
               </button>
             </div>
           </div>
         </div>
       )}
-
-      <style>{`
-        @keyframes slideInToast { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
-        @media (max-width: 768px) {
-          .responsive-header { flex-direction: column; align-items: stretch !important; gap: 12px; }
-          .responsive-header-actions { width: 100%; display: flex; flex-wrap: wrap; gap: 8px; }
-          .responsive-header-actions > * { flex: 1; min-width: 120px; justify-content: center; }
-          .responsive-toolbar { flex-direction: column; align-items: stretch !important; }
-          .responsive-toolbar > * { width: 100% !important; max-width: none !important; }
-          .responsive-bulk { margin-left: 0 !important; width: 100%; }
-          .responsive-bulk > button { width: 100%; justify-content: center; }
-          .responsive-card { padding: 14px !important; }
-        }
-      `}</style>
     </div>
   );
 }

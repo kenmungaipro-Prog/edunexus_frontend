@@ -94,6 +94,18 @@ export default function AccountingReportsPage({
           >
             Journal Entries
           </button>
+            <button
+              onClick={() => navigate("/accounting/reports/income-statement")}
+              className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm text-slate-200 hover:bg-slate-700 transition-colors text-center"
+            >
+              Income Statement
+            </button>
+            <button
+              onClick={() => navigate("/accounting/reports/balance-sheet")}
+              className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm text-slate-200 hover:bg-slate-700 transition-colors text-center"
+            >
+              Balance Sheet
+            </button>
         </div>
       </div>
 

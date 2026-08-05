@@ -1,7 +1,7 @@
 // ============================================================
 // app/pages/classes/new.tsx
 // ============================================================
-import { useNavigation, Link, Form } from "react-router";
+import { useNavigation, Link, Form, useNavigate } from "react-router";
 import { api, type CreateClassPayload, type Subject, type Teacher } from "~/lib/api";
 
 interface LoaderData {
@@ -59,9 +59,11 @@ export async function clientAction({ request }: any) {
 export default function NewClassPage({ loaderData, actionData }: any) {
   const { teachers, subjects } = loaderData as LoaderData;
   const navigation = useNavigation();
+  const navigate = useNavigate();
   const submitting = navigation.state === "submitting";
   const errors = (actionData?.errors ?? {}) as Record<string, string[]>;
   const message = actionData?.error;
+  const showAddTeacherOption = teachers.length === 0;
 
   return (
     <div className="max-w-3xl mx-auto py-6 px-4 sm:px-6">
@@ -106,8 +108,19 @@ export default function NewClassPage({ loaderData, actionData }: any) {
         <div className="grid gap-4 md:grid-cols-2">
           <label className="block text-sm text-slate-300">
             Class Teacher
-            <select name="class_teacher_id" className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-blue-500 transition">
+            <select
+              name="class_teacher_id"
+              className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-blue-500 transition"
+              onChange={(event) => {
+                if (event.target.value === "__add_new_teacher__") {
+                  navigate("/teachers/new");
+                }
+              }}
+            >
               <option value="">No teacher assigned</option>
+              {showAddTeacherOption && (
+                <option value="__add_new_teacher__">Add new teacher</option>
+              )}
               {teachers.map((teacher) => (
                 <option key={teacher.id} value={teacher.id}>{teacher.user?.name ?? `Teacher #${teacher.id}`}</option>
               ))}
