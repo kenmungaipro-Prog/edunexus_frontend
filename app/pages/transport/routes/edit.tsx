@@ -31,14 +31,14 @@ export async function clientLoader({ params }: any) {
 export async function clientAction({ request, params }: any) {
   const formData = await request.formData();
   
-  const rawStopsNames = formData.getAll("stop_name[]");
-  const rawPickupTimes = formData.getAll("stop_pickup[]");
-  const rawDropTimes = formData.getAll("stop_drop[]");
+  const rawStopsNames = formData.getAll("stop_name[]").map(String);
+  const rawPickupTimes = formData.getAll("stop_pickup[]").map(String);
+  const rawDropTimes = formData.getAll("stop_drop[]").map(String);
 
-  const stops = rawStopsNames.map((name, i) => ({
-    name: String(name),
-    pickup_time: String(rawPickupTimes[i]),
-    drop_time: String(rawDropTimes[i]),
+  const stops = rawStopsNames.map((name: string, i: number) => ({
+    name,
+    pickup_time: rawPickupTimes[i] ?? "",
+    drop_time: rawDropTimes[i] ?? "",
   }));
 
   const payload = {
@@ -109,11 +109,12 @@ export default function EditTransportRoutePage() {
             <select
               name="vehicle_id"
               required
-              defaultValue={route.vehicle_id}
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none transition"
+              defaultValue={String(route.vehicle_id || "")}
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none transition [&_option]:bg-slate-800 [&_option]:text-white [&_option]:py-1"
             >
+              <option value="">-- Select a vehicle --</option>
               {vehicles.map((v) => (
-                <option key={v.id} value={v.id}>{v.registration_number} ({v.make})</option>
+                <option key={v.id} value={String(v.id)}>{v.registration_number} ({v.make})</option>
               ))}
             </select>
           </div>
@@ -123,11 +124,12 @@ export default function EditTransportRoutePage() {
             <select
               name="driver_id"
               required
-              defaultValue={route.driver_id}
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none transition"
+              defaultValue={String(route.driver_id || "")}
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-blue-500 outline-none transition [&_option]:bg-slate-800 [&_option]:text-white [&_option]:py-1"
             >
+              <option value="">-- Select a driver --</option>
               {drivers.map((d) => (
-                <option key={d.id} value={d.id}>{d.name}</option>
+                <option key={d.id} value={String(d.id)}>{d.name}</option>
               ))}
             </select>
           </div>

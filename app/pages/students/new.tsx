@@ -1,10 +1,11 @@
 // ============================================================
 // app/pages/students/new.tsx
 // ============================================================
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigation, redirect, Form } from "react-router";
 import type { Route } from "./+types/new";
-import { api, type ClassRoom, type CreateStudentPayload } from "~/lib/api";
+import { api, type ClassRoom, type CreateStudentPayload, type ParentProfile } from "~/lib/api";
+import { validateStudent } from "~/lib/validation";
 
 export async function clientLoader() {
   const res = await api.classes.list({ per_page: 100 });
@@ -23,6 +24,15 @@ export async function clientAction({ request }: Route.ActionArgs) {
 
   if (payload.class_id)   payload.class_id   = Number(payload.class_id)   as unknown as typeof payload.class_id;
   if (payload.parent_id)  payload.parent_id  = Number(payload.parent_id)  as unknown as typeof payload.parent_id;
+
+  // Frontend validation
+  const validationErrors = validateStudent(payload);
+  if (Object.keys(validationErrors).length > 0) {
+    return {
+      error: "Please fix the highlighted errors below.",
+      errors: validationErrors,
+    };
+  }
 
   try {
     const res = await api.students.create(payload as CreateStudentPayload);
@@ -102,6 +112,78 @@ export default function NewStudentPage({ loaderData, actionData }: Route.Compone
   const globalError = (actionData as { error?: string })?.error;
   const navigation  = useNavigation();
   const submitting  = navigation.state === "submitting";
+
+  const [parentQuery, setParentQuery] = useState("");
+  const [parentOptions, setParentOptions] = useState<ParentProfile[]>([]);
+  const [selectedParent, setSelectedParent] = useState<ParentProfile | null>(null);
+  const [parentEmail, setParentEmail] = useState("");
+  const [parentPhone, setParentPhone] = useState("");
+  const [showParentModal, setShowParentModal] = useState(false);
+  const [modalLoading, setModalLoading] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
+  const [modalFields, setModalFields] = useState({
+    name: "",
+    email: "",
+    password: "",
+    relationship: "",
+    phone: "",
+    address: "",
+    occupation: "",
+    notes: "",
+  });
+
+  useEffect(() => {
+    const timeout = setTimeout(async () => {
+      if (!parentQuery.trim()) {
+        setParentOptions([]);
+        return;
+      }
+
+      try {
+        const res = await api.parents.list({ per_page: 10, search: parentQuery });
+        setParentOptions(res.data.data ?? []);
+      } catch {
+        setParentOptions([]);
+      }
+    }, 250);
+
+    return () => clearTimeout(timeout);
+  }, [parentQuery]);
+
+  function handleParentSelect(parent: ParentProfile) {
+    setSelectedParent(parent);
+    setParentQuery(parent.user?.name ?? "");
+    setParentEmail(parent.user?.email ?? "");
+    setParentPhone(parent.phone ?? "");
+    setParentOptions([]);
+  }
+
+  function clearSelectedParent() {
+    setSelectedParent(null);
+    setParentQuery("");
+    setParentEmail("");
+    setParentPhone("");
+    setParentOptions([]);
+  }
+
+  async function handleParentSaved(parent: ParentProfile) {
+    setSelectedParent(parent);
+    setParentQuery(parent.user?.name ?? "");
+    setParentEmail(parent.user?.email ?? "");
+    setParentPhone(parent.phone ?? "");
+    setShowParentModal(false);
+    setModalError(null);
+    setModalFields({
+      name: "",
+      email: "",
+      password: "",
+      relationship: "",
+      phone: "",
+      address: "",
+      occupation: "",
+      notes: "",
+    });
+  }
 
   return (
     <div style={s.page} className="responsive-container">
@@ -200,20 +282,159 @@ export default function NewStudentPage({ loaderData, actionData }: Route.Compone
           <div style={s.sectionTitle}><SectionIcon emoji="👨‍👩‍👧" /> Parent / Guardian</div>
 
           <div style={{ background: "rgba(79,142,247,0.04)", border: "1px solid rgba(79,142,247,0.12)", borderRadius: "9px", padding: "12px 14px", marginBottom: "18px", fontSize: "12px", color: "#6b7a99" }}>
-            💡 If the parent already has an account, enter their email below and the system will link them automatically. A temporary password <strong style={{ color: "#a0aec0" }}>Parent@123</strong> will be set for new parent accounts.
+            💡 Search parents by name and select an existing guardian to auto-fill their contact details. If the parent does not exist, click <button type="button" onClick={() => setShowParentModal(true)} style={{ color: "#4f8ef7", textDecoration: "underline", background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: "12px" }}>Add new parent</button>.
           </div>
 
           <div style={s.grid3} className="responsive-grid-3">
-            <Field label="Parent Name" error={errors.parent_name?.[0]} hint="Required only when creating a new parent account.">
-              <input name="parent_name" placeholder="John Omondi" style={{ ...s.input, ...(errors.parent_name ? s.inputError : {}) }} onFocus={focusStyle} onBlur={blurStyle} />
+            <Field label="Search Parent" required error={errors.parent_id?.[0]} hint="Start typing a guardian name to search existing parents.">
+              <div style={{ position: "relative" }}>
+                <input
+                  name="parent_name"
+                  value={selectedParent ? selectedParent.user?.name ?? "" : parentQuery}
+                  onChange={(event) => {
+                    clearSelectedParent();
+                    setParentQuery(event.target.value);
+                  }}
+                  placeholder="Search parent by name..."
+                  style={{ ...s.input, ...(errors.parent_id ? s.inputError : {} ) }}
+                  onFocus={focusStyle}
+                  onBlur={blurStyle}
+                  autoComplete="off"
+                />
+                {parentOptions.length > 0 && (
+                  <div style={{ position: "absolute", zIndex: 10, top: "100%", left: 0, right: 0, background: "#0a0e1a", border: "1px solid #2a3350", borderRadius: "8px", marginTop: "6px", maxHeight: "220px", overflowY: "auto" }}>
+                    {parentOptions.map((parent) => (
+                      <button
+                        type="button"
+                        key={parent.id}
+                        onMouseDown={() => handleParentSelect(parent)}
+                        style={{ width: "100%", textAlign: "left", padding: "10px 12px", background: "#0a0e1a", border: "none", color: "#e2e8f0", cursor: "pointer" }}
+                      >
+                        {parent.user?.name}{parent.phone ? ` • ${parent.phone}` : ""}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </Field>
-            <Field label="Email Address" error={errors.parent_email?.[0]} hint="Enter an existing parent's email to link them, or provide a new email to create a parent account.">
-              <input name="parent_email" type="email" placeholder="john@example.com" style={{ ...s.input, ...(errors.parent_email ? s.inputError : {}) }} onFocus={focusStyle} onBlur={blurStyle} />
+
+            <Field label="Email Address" error={errors.parent_email?.[0]} hint="Auto-filled from selected parent.">
+              <input
+                name="parent_email"
+                type="email"
+                value={selectedParent ? selectedParent.user?.email ?? "" : parentEmail}
+                onChange={(event) => {
+                  if (selectedParent) {
+                    clearSelectedParent();
+                  }
+                  setParentEmail(event.target.value);
+                }}
+                placeholder="john@example.com"
+                style={{ ...s.input, ...(errors.parent_email ? s.inputError : {}) }}
+                onFocus={focusStyle}
+                onBlur={blurStyle}
+              />
             </Field>
-            <Field label="Phone Number" error={errors.parent_phone?.[0]} hint="e.g. +254 712 345 678">
-              <input name="parent_phone" type="tel" placeholder="+254 7XX XXX XXX" style={s.input} onFocus={focusStyle} onBlur={blurStyle} />
+
+            <Field label="Phone Number" required error={errors.parent_phone?.[0]} hint="Required. e.g. +254 712 345 678">
+              <input
+                name="parent_phone"
+                type="tel"
+                value={selectedParent ? selectedParent.phone ?? "" : parentPhone}
+                onChange={(event) => {
+                  if (selectedParent) {
+                    clearSelectedParent();
+                  }
+                  setParentPhone(event.target.value);
+                }}
+                required
+                placeholder="+254 7XX XXX XXX"
+                style={{ ...s.input, ...(errors.parent_phone ? s.inputError : {}) }}
+                onFocus={focusStyle}
+                onBlur={blurStyle}
+              />
             </Field>
           </div>
+
+          {selectedParent?.user?.id && (
+            <input type="hidden" name="parent_id" value={selectedParent.user.id} />
+          )}
+
+          {showParentModal && (
+            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 999, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", overflowY: "auto" }}>
+              <div style={{ width: "100%", maxWidth: "640px", background: "#0f1424", borderRadius: "18px", padding: "24px", border: "1px solid #2a3350", boxSizing: "border-box", position: "relative", maxHeight: "calc(100vh - 60px)", overflowY: "auto" }}>
+                <button type="button" onClick={() => setShowParentModal(false)} style={{ position: "absolute", top: "16px", right: "16px", background: "none", border: "none", color: "#a0aec0", fontSize: "22px", cursor: "pointer" }}>×</button>
+                <h2 style={{ margin: 0, fontSize: "clamp(20px, 4vw, 24px)", color: "#e2e8f0" }}>Register New Parent</h2>
+                <p style={{ marginTop: "10px", color: "#94a3b8" }}>Enter the parent details below. Closing without saving will discard the information.</p>
+                <div style={{ display: "grid", gap: "16px", marginTop: "20px" }}>
+                  <div style={{ display: "grid", gap: "8px" }}>
+                    <label style={s.label}>Full Name</label>
+                    <input value={modalFields.name} onChange={(event) => setModalFields({ ...modalFields, name: event.target.value })} placeholder="Parent name" style={s.input} />
+                  </div>
+                  <div style={{ display: "grid", gap: "8px" }}>
+                    <label style={s.label}>Email address</label>
+                    <input value={modalFields.email} onChange={(event) => setModalFields({ ...modalFields, email: event.target.value })} type="email" placeholder="parent@example.com" style={s.input} />
+                  </div>
+                  <div style={{ display: "grid", gap: "8px" }}>
+                    <label style={s.label}>Password</label>
+                    <input value={modalFields.password} onChange={(event) => setModalFields({ ...modalFields, password: event.target.value })} type="password" placeholder="Leave empty for default" style={s.input} />
+                  </div>
+                  <div style={{ display: "grid", gap: "8px" }}>
+                    <label style={s.label}>Relationship</label>
+                    <input value={modalFields.relationship} onChange={(event) => setModalFields({ ...modalFields, relationship: event.target.value })} placeholder="Mother, Father, Guardian" style={s.input} />
+                  </div>
+                  <div style={{ display: "grid", gap: "8px" }}>
+                    <label style={s.label}>Phone</label>
+                    <input value={modalFields.phone} onChange={(event) => setModalFields({ ...modalFields, phone: event.target.value })} placeholder="+254 7XX XXX XXX" style={s.input} />
+                  </div>
+                  <div style={{ display: "grid", gap: "8px" }}>
+                    <label style={s.label}>Occupation</label>
+                    <input value={modalFields.occupation} onChange={(event) => setModalFields({ ...modalFields, occupation: event.target.value })} placeholder="Occupation" style={s.input} />
+                  </div>
+                  <div style={{ display: "grid", gap: "8px" }}>
+                    <label style={s.label}>Address</label>
+                    <textarea value={modalFields.address} onChange={(event) => setModalFields({ ...modalFields, address: event.target.value })} rows={3} placeholder="Street / City / County" style={s.textarea} />
+                  </div>
+                  <div style={{ display: "grid", gap: "8px" }}>
+                    <label style={s.label}>Notes</label>
+                    <textarea value={modalFields.notes} onChange={(event) => setModalFields({ ...modalFields, notes: event.target.value })} rows={3} placeholder="Optional notes" style={s.textarea} />
+                  </div>
+                  {modalError && <div style={{ color: "#f87171", fontSize: "13px" }}>{modalError}</div>}
+                  <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                    <button type="button" onClick={() => setShowParentModal(false)} style={{ flex: 1, padding: "12px 18px", borderRadius: "10px", background: "#1e2640", border: "1px solid #2a3350", color: "#a0aec0", cursor: "pointer" }}>Cancel</button>
+                    <button
+                      type="button"
+                      disabled={modalLoading}
+                      onClick={async () => {
+                        setModalLoading(true);
+                        setModalError(null);
+                        try {
+                          const res = await api.parents.create({
+                            name: modalFields.name,
+                                email: modalFields.email?.trim() || undefined,
+                            password: modalFields.password || undefined,
+                            relationship: modalFields.relationship || undefined,
+                            phone: modalFields.phone || undefined,
+                            address: modalFields.address || undefined,
+                            occupation: modalFields.occupation || undefined,
+                            notes: modalFields.notes || undefined,
+                          });
+                          await handleParentSaved(res.data);
+                        } catch (error: unknown) {
+                          setModalError((error as { message?: string })?.message ?? "Failed to save parent. Please check the fields.");
+                        } finally {
+                          setModalLoading(false);
+                        }
+                      }}
+                      style={{ flex: 1, padding: "12px 18px", borderRadius: "10px", border: "none", background: "#4f8ef7", color: "#fff", fontWeight: 700, cursor: "pointer" }}
+                    >
+                      {modalLoading ? "Saving…" : "Save Parent"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Actions */}

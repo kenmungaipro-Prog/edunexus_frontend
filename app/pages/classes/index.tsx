@@ -5,9 +5,9 @@ import { Link, Form, useSearchParams, useNavigation } from "react-router";
 import type { Route } from "./+types/index";
 import { api, type ValidationError, type ClassRoom as ApiClassRoom } from "~/lib/api";
 
-interface ClassRoom extends ApiClassRoom {
+interface ClassRoom extends Omit<ApiClassRoom, "class_teacher"> {
   students_count: number;
-  class_teacher: { user: { name: string } } | null;
+  class_teacher: ApiClassRoom["class_teacher"];
 }
 
 interface LoaderData {
@@ -58,22 +58,22 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
 }
 
 const GRADE_ACCENT = [
-  "border-blue-500",
-  "border-emerald-500",
-  "border-amber-500",
-  "border-violet-500",
-  "border-rose-500",
-  "border-cyan-500",
-  "border-orange-500",
-  "border-pink-500",
+  "border-t-blue-500",
+  "border-t-emerald-500",
+  "border-t-amber-500",
+  "border-t-violet-500",
+  "border-t-rose-500",
+  "border-t-cyan-500",
+  "border-t-orange-500",
+  "border-t-pink-500",
 ];
 
 const GRADES = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"];
 
 function occupancyColor(pct: number) {
-  if (pct >= 95) return { bar: "bg-red-400",   text: "text-red-400"   };
-  if (pct >= 75) return { bar: "bg-amber-400", text: "text-amber-400" };
-  return              { bar: "bg-emerald-400", text: "text-emerald-400" };
+  if (pct >= 95) return { bar: "bg-red-500",   text: "text-red-400",   badge: "bg-red-500/10 text-red-400 border-red-500/20" };
+  if (pct >= 75) return { bar: "bg-amber-500", text: "text-amber-400", badge: "bg-amber-500/10 text-amber-400 border-amber-500/20" };
+  return              { bar: "bg-emerald-500", text: "text-emerald-400", badge: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" };
 }
 
 export default function ClassesPage({ loaderData }: Route.ComponentProps) {
@@ -96,51 +96,62 @@ export default function ClassesPage({ loaderData }: Route.ComponentProps) {
   const sort   = searchParams.get("sort")   ?? "grade";
 
   return (
-    <div className={`p-4 sm:p-6 max-w-7xl mx-auto ${isLoading ? "opacity-60 pointer-events-none transition-opacity" : ""}`}>
+    <div className={`p-4 sm:p-8 max-w-7xl mx-auto transition-opacity ${isLoading ? "opacity-60 pointer-events-none" : ""}`}>
 
       {/* ── Header ──────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold">📚 Class Management</h1>
-          <p className="text-slate-400 text-xs sm:text-sm mt-0.5">All classes, sections and academic structure</p>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold mb-2">
+            🏫 Academic Setup
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-100">Class Management</h1>
+          <p className="text-slate-400 text-xs sm:text-sm mt-1">Monitor all active sections, capacities, and group configurations.</p>
         </div>
         <Link
           to="/classes/new"
-          className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg text-sm font-semibold hover:opacity-90 transition text-center shadow-lg shadow-blue-500/20"
+          className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:from-blue-500 hover:to-indigo-500 transition-all text-center shadow-lg shadow-blue-600/25 flex items-center justify-center gap-2 self-start sm:self-auto"
         >
-          ➕ Add Class
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          Add New Class
         </Link>
       </div>
 
       {/* ── Stats ───────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
-          { icon: "📚", val: meta.total,          label: "Total classes",   color: "text-blue-400"    },
-          { icon: "✅", val: meta.active,          label: "Active classes",  color: "text-emerald-400" },
-          { icon: "🔴", val: meta.full,            label: "At capacity",     color: "text-red-400"     },
-          { icon: "📊", val: `${meta.avg_occupancy}%`, label: "Avg occupancy", color: "text-amber-400" },
+          { icon: "📚", val: meta.total,          label: "Total Classes",   color: "text-blue-400",    border: "border-blue-500/20 bg-blue-500/5" },
+          { icon: "✅", val: meta.active,          label: "Active Roster",   color: "text-emerald-400", border: "border-emerald-500/20 bg-emerald-500/5" },
+          { icon: "🔴", val: meta.full,            label: "At Capacity",     color: "text-red-400",     border: "border-red-500/20 bg-red-500/5" },
+          { icon: "📊", val: `${meta.avg_occupancy}%`, label: "Avg Occupancy", color: "text-amber-400",  border: "border-amber-500/20 bg-amber-500/5" },
         ].map(s => (
-          <div key={s.label} className="bg-slate-800 border border-slate-700 rounded-xl p-3.5 sm:p-4 flex items-center gap-3">
-            <span className="text-xl sm:text-2xl flex-shrink-0">{s.icon}</span>
+          <div key={s.label} className={`bg-slate-900/80 backdrop-blur-xl border ${s.border} rounded-2xl p-4 sm:p-5 flex items-center gap-4 shadow-xl`}>
+            <span className="text-2xl sm:text-3xl flex-shrink-0 p-2.5 rounded-xl bg-slate-800/80 border border-slate-700/60 shadow-inner">{s.icon}</span>
             <div className="min-w-0">
-              <div className={`text-lg sm:text-xl font-bold truncate ${s.color}`}>{s.val}</div>
-              <div className="text-xs text-slate-400 truncate">{s.label}</div>
+              <div className={`text-xl sm:text-2xl font-bold tracking-tight truncate ${s.color}`}>{s.val}</div>
+              <div className="text-xs font-medium text-slate-400 truncate mt-0.5">{s.label}</div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* ── Filters ─────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-5">
-        <input
-          className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-blue-500 transition w-full sm:w-64"
-          placeholder="🔍 Search classes..."
-          defaultValue={search}
-          onChange={e => setParam("search", e.target.value)}
-        />
+      {/* ── Filters Bar ─────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-8 bg-slate-900/60 backdrop-blur-xl border border-slate-800 p-3.5 rounded-2xl shadow-xl">
+        <div className="relative flex-1">
+          <svg className="absolute left-3.5 top-3 w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+          </svg>
+          <input
+            className="bg-slate-950/80 border border-slate-700/80 rounded-xl pl-10 pr-3.5 py-2.5 text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all w-full shadow-inner"
+            placeholder="Search classes by name or code..."
+            defaultValue={search}
+            onChange={e => setParam("search", e.target.value)}
+          />
+        </div>
         <div className="grid grid-cols-2 sm:flex gap-3">
           <select
-            className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-200 outline-none focus:border-blue-500 transition flex-1 sm:w-auto"
+            className="bg-slate-950/80 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-slate-200 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all sm:w-44 shadow-inner"
             value={grade}
             onChange={e => setParam("grade", e.target.value)}
           >
@@ -150,29 +161,31 @@ export default function ClassesPage({ loaderData }: Route.ComponentProps) {
             ))}
           </select>
           <select
-            className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-200 outline-none focus:border-blue-500 transition flex-1 sm:w-auto"
+            className="bg-slate-950/80 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-slate-200 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all sm:w-48 shadow-inner"
             value={sort}
             onChange={e => setParam("sort", e.target.value)}
           >
-            <option value="grade">Sort: Grade</option>
-            <option value="name">Sort: Name</option>
+            <option value="grade">Sort: Grade Level</option>
+            <option value="name">Sort: Class Name</option>
             <option value="occupancy">Sort: Occupancy</option>
-            <option value="students_count">Sort: Students</option>
+            <option value="students_count">Sort: Student Count</option>
           </select>
         </div>
       </div>
 
       {/* ── Empty state ─────────────────────────────────── */}
       {classes.length === 0 && (
-        <div className="bg-slate-800 border border-slate-700 rounded-xl py-16 text-center px-4">
-          <p className="text-3xl mb-3">🏫</p>
-          <p className="text-slate-400 text-sm">No classes found.</p>
-          <p className="text-slate-600 text-xs mt-1">Try adjusting your filters or add a new class.</p>
+        <div className="bg-slate-900/60 backdrop-blur-xl border border-slate-800 rounded-3xl py-20 text-center px-4 shadow-2xl">
+          <div className="w-16 h-16 bg-slate-800 border border-slate-700/80 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 shadow-inner">
+            🏫
+          </div>
+          <p className="text-slate-200 font-semibold text-base">No classes found</p>
+          <p className="text-slate-400 text-xs sm:text-sm mt-1 max-w-sm mx-auto">Try adjusting your active search filters or add a new class section to get started.</p>
         </div>
       )}
 
       {/* ── Grid ────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {classes.map((c, i) => {
           const pct    = c.capacity > 0 ? Math.round((c.students_count / c.capacity) * 100) : 0;
           const colors = occupancyColor(pct);
@@ -181,20 +194,21 @@ export default function ClassesPage({ loaderData }: Route.ComponentProps) {
           return (
             <div
               key={c.id}
-              className={`bg-slate-800 border border-slate-700 border-t-2 ${accent} rounded-xl p-4 sm:p-5 hover:-translate-y-1 transition-transform flex flex-col`}
+              className={`bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700/60 border-t-4 ${accent} rounded-2xl p-5 hover:-translate-y-1 transform-gpu transition-all duration-300 flex flex-col shadow-2xl group`}
             >
               {/* Card header */}
-              <div className="flex items-start justify-between gap-2 mb-3">
+              <div className="flex items-start justify-between gap-2 mb-4">
                 <div className="min-w-0">
-                  <h3 className="font-bold text-base text-slate-100 truncate">{c.name}</h3>
-                  <p className="text-xs text-slate-500 mt-0.5 truncate">
+                  <h3 className="font-bold text-base text-slate-100 truncate group-hover:text-blue-400 transition-colors">{c.name}</h3>
+                  <p className="text-xs font-medium text-slate-400 mt-0.5 truncate flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-600" />
                     {c.room ? `Room ${c.room}` : "No room assigned"}
                   </p>
                 </div>
-                <div className="flex items-center gap-1.5 flex-shrink-0">
+                <div className="flex items-center gap-1 flex-shrink-0">
                   <Link
                     to={`/classes/${c.id}/edit`}
-                    className="w-7 h-7 flex items-center justify-center bg-slate-700 text-slate-400 text-xs rounded-lg hover:bg-slate-600 hover:text-slate-200 transition"
+                    className="w-8 h-8 flex items-center justify-center bg-slate-800/80 border border-slate-700/60 text-slate-300 text-xs rounded-xl hover:bg-slate-700 hover:text-white transition-all shadow-sm"
                     title="Edit class"
                   >
                     ✏️
@@ -205,8 +219,8 @@ export default function ClassesPage({ loaderData }: Route.ComponentProps) {
                     <button
                       type="submit"
                       title="Delete class"
-                      className="w-7 h-7 flex items-center justify-center bg-slate-700 text-slate-500 text-xs rounded-lg hover:bg-red-500/15 hover:text-red-400 transition"
-                      onClick={e => { if (!confirm(`Delete class "${c.name}"? This cannot be undone.`)) e.preventDefault(); }}
+                      className="w-8 h-8 flex items-center justify-center bg-slate-800/80 border border-slate-700/60 text-slate-400 text-xs rounded-xl hover:bg-red-500/20 hover:border-red-500/30 hover:text-red-400 transition-all shadow-sm"
+                      onClick={e => { if (!confirm(`Delete class "${c.name}"? This action cannot be undone.`)) e.preventDefault(); }}
                     >
                       ✕
                     </button>
@@ -215,51 +229,54 @@ export default function ClassesPage({ loaderData }: Route.ComponentProps) {
               </div>
 
               {/* Student / capacity counters */}
-              <div className="grid grid-cols-2 gap-2 mb-4">
-                <div className="bg-slate-900/60 rounded-lg p-2.5 text-center">
-                  <div className="text-lg font-bold text-slate-100">{c.students_count}</div>
-                  <div className="text-xs text-slate-500">Students</div>
+              <div className="grid grid-cols-2 gap-2.5 mb-4">
+                <div className="bg-slate-800/70 border border-slate-700/60 rounded-xl p-3 text-center shadow-inner">
+                  <div className="text-lg font-extrabold text-slate-100">{c.students_count}</div>
+                  <div className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Students</div>
                 </div>
-                <div className="bg-slate-900/60 rounded-lg p-2.5 text-center">
-                  <div className="text-lg font-bold text-slate-100">{c.capacity}</div>
-                  <div className="text-xs text-slate-500">Capacity</div>
+                <div className="bg-slate-800/70 border border-slate-700/60 rounded-xl p-3 text-center shadow-inner">
+                  <div className="text-lg font-extrabold text-slate-100">{c.capacity}</div>
+                  <div className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Capacity</div>
                 </div>
               </div>
 
               {/* Occupancy bar */}
-              <div className="mb-3">
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="text-slate-500">Occupancy</span>
-                  <span className={colors.text}>{pct}%</span>
+              <div className="mb-4 bg-slate-800/40 p-3 rounded-xl border border-slate-700/60">
+                <div className="flex justify-between text-xs mb-1.5 items-center">
+                  <span className="text-slate-400 font-medium">Occupancy</span>
+                  <span className={`px-2 py-0.5 rounded-md border text-[11px] font-bold ${colors.badge}`}>{pct}%</span>
                 </div>
-                <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                <div className="h-2 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700/40">
                   <div
                     className={`h-full rounded-full transition-all duration-500 ${colors.bar}`}
-                    style={{ width: `${pct}%` }}
+                    style={{ width: `${Math.min(pct, 100)}%` }}
                   />
                 </div>
               </div>
 
               {/* Class teacher */}
-              <p className="text-xs text-slate-400 mb-4 flex-1 truncate">
-                🧑‍🏫 {c.class_teacher?.user?.name ?? (
-                  <span className="text-slate-600 italic">No class teacher</span>
-                )}
-              </p>
+              <div className="text-xs font-medium text-slate-300 mb-5 flex items-center gap-2 truncate">
+                <span className="w-7 h-7 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center flex-shrink-0 text-indigo-400">🧑‍🏫</span>
+                <span className="truncate">
+                  {c.class_teacher?.user?.name ?? (
+                    <span className="text-slate-500 italic">No class teacher assigned</span>
+                  )}
+                </span>
+              </div>
 
               {/* Footer actions */}
-              <div className="flex gap-2">
+              <div className="flex gap-2 mt-auto pt-2 border-t border-slate-800/80">
                 <Link
                   to={`/classes/${c.id}`}
-                  className="flex-1 text-center py-2 bg-slate-700 text-slate-300 text-xs rounded-lg hover:bg-slate-600 transition"
+                  className="flex-1 text-center py-2.5 bg-slate-800/80 border border-slate-700/60 text-slate-200 text-xs font-semibold rounded-xl hover:bg-slate-700 hover:text-white transition-all shadow-sm"
                 >
-                  👁 View
+                  View Details
                 </Link>
                 <Link
                   to={`/students?class_id=${c.id}`}
-                  className="flex-1 text-center py-2 bg-blue-500/10 text-blue-400 border border-blue-500/20 text-xs rounded-lg hover:bg-blue-500/20 transition"
+                  className="flex-1 text-center py-2.5 bg-blue-600/10 text-blue-400 border border-blue-500/20 text-xs font-semibold rounded-xl hover:bg-blue-600/20 transition-all shadow-sm"
                 >
-                  👥 Students
+                  Roster ({c.students_count})
                 </Link>
               </div>
             </div>

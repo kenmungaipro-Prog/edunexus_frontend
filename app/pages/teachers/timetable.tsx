@@ -4,16 +4,9 @@
 import { Link } from "react-router";
 import type { Route } from "./+types/timetable";
 import { api } from "~/lib/api";
+import type { TimetableSlot } from "~/lib/api";
 
-interface TimetableSlot {
-  id: number;
-  day_of_week: string;
-  period_number: number;
-  start_time: string;
-  end_time: string;
-  subject?: { name: string; code?: string };
-  class_room?: { name: string };
-}
+
 
 type TimetableData = Record<string, TimetableSlot[]>;
 

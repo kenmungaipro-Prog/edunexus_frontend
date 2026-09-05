@@ -12,7 +12,7 @@ export async function clientAction({ request }: { request: Request }) {
     phone: String(formData.get("phone")),
     license_no: String(formData.get("license_no")),
     license_expiry: String(formData.get("license_expiry")),
-    status: "active",
+    status: (String(formData.get("status") || "active")) as "active" | "inactive",
   };
 
   try {

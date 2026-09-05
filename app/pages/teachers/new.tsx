@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { Link, Form, redirect, useNavigation, useActionData } from "react-router";
 import type { Route } from "./+types/new";
 import { api } from "~/lib/api";
+import { validateTeacher } from "~/lib/validation";
 
 interface ActionErrors {
   name?:     string;
@@ -27,45 +28,80 @@ interface ClassRoom {
 
 export async function clientAction({ request }: Route.ClientActionArgs) {
   const form = await request.formData();
-  const errors: ActionErrors = {};
+
   const name     = String(form.get("name")       ?? "").trim();
   const email    = String(form.get("email")      ?? "").trim();
   const dept     = String(form.get("department") ?? "").trim();
-  const username = String(form.get("username")   ?? "").trim();
+  const phone    = String(form.get("phone")      ?? "").trim();
   const password = String(form.get("password")   ?? "");
+  const qualification = String(form.get("qualification") ?? "").trim();
+  const experience_yrs = String(form.get("experience") ?? "").trim();
+  const join_date = String(form.get("join_date") ?? "").trim();
 
-  if (!name)                           errors.name     = "Full name is required.";
-  if (!email || !email.includes("@")) errors.email    = "A valid email is required.";
-  if (!dept)                           errors.dept     = "Department is required.";
-  if (!username)                       errors.username = "Username is required.";
-  if (password.length < 8)             errors.password = "Password must be at least 8 characters.";
+  // Prepare payload for validation
+  const payload = {
+    name,
+    email,
+    phone,
+    department: dept,
+    qualification,
+    experience_yrs: experience_yrs ? Number(experience_yrs) : undefined,
+    join_date,
+    gender: String(form.get("gender") || ""),
+    dob: String(form.get("dob") || ""),
+    nationality: String(form.get("nationality") || ""),
+    employment_type: String(form.get("employment_type") || ""),
+    salary: String(form.get("salary") || ""),
+    bio: String(form.get("bio") || ""),
+    status: String(form.get("status") ?? "active"),
+    password,
+  };
 
-  if (Object.keys(errors).length > 0) return { errors };
+  // Frontend validation
+  const validationErrors = validateTeacher(payload);
+  if (Object.keys(validationErrors).length > 0) {
+    return {
+      errors: validationErrors,
+    };
+  }
 
   try {
     const selectedSubjects = Array.from(form.getAll("subject_ids")) as string[];
-    const selectedClasses  = Array.from(form.getAll("classroom_ids")) as string[];
+
+    const genderValue = String(form.get("gender") || "");
+    const gender =
+      genderValue === "male" ||
+      genderValue === "female" ||
+      genderValue === "other"
+        ? genderValue
+        : undefined;
+
+    const statusValue = String(form.get("status") ?? "active");
+    const status = (["active", "inactive", "on_leave"].includes(statusValue) 
+      ? statusValue 
+      : "active") as "active" | "inactive" | "on_leave";
+
+    const emptyOrValue = (val: string): string | undefined => val.trim() === "" ? undefined : val.trim();
 
     await api.teachers.create({
-      name, 
+      name,
       email,
-      phone:           String(form.get("phone") || ""),
-      gender:          String(form.get("gender") || ""),
-      dob:             String(form.get("dob") || ""),
-      nationality:     String(form.get("nationality") || ""),
-      department:      dept,
-      qualification:   String(form.get("qualification") || ""),
-      experience_yrs:  Number(form.get("experience") ?? 0),
-      join_date:       String(form.get("join_date") || ""),
-      employment_type: String(form.get("employment_type") || ""),
-      bio:             String(form.get("bio") || ""),
-      subjects:        selectedSubjects.length > 0 
+      phone,
+      gender,
+      dob: emptyOrValue(String(form.get("dob") || "")),
+      nationality: emptyOrValue(String(form.get("nationality") || "")),
+      department: dept,
+      qualification,
+      experience_yrs: Number(experience_yrs) || 0,
+      join_date,
+      employment_type: emptyOrValue(String(form.get("employment_type") || "")),
+      bio: emptyOrValue(String(form.get("bio") || "")),
+      salary: emptyOrValue(String(form.get("salary") || "")) ? Number(form.get("salary")) : undefined,
+      subjects: selectedSubjects.length > 0
         ? selectedSubjects.map(s => parseInt(s))
         : undefined,
-      username, 
       password,
-      role:   String(form.get("role") || ""),
-      status: String(form.get("status") ?? "active"),
+      status,
     });
     return redirect("/teachers");
   } catch (err: any) {
@@ -76,7 +112,6 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
           name: backendErrors.name?.[0],
           email: backendErrors.email?.[0],
           dept: backendErrors.department?.[0],
-          username: backendErrors.username?.[0],
           password: backendErrors.password?.[0],
           general: err?.response?.data?.message ?? "Please resolve the highlighted errors below."
         } as ActionErrors

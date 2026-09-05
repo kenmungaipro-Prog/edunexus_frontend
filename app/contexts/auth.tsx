@@ -3,14 +3,14 @@
 // ============================================================
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 import { api } from "~/lib/api";
+import type { User } from "~/lib/api";
 
-interface User {
-  id: number;
-  name: string;
-  email: string;
-  role: string;
-  profile_photo?: string;
-  school_id?: number;
+interface AuthContextType {
+  user: User | null;
+  token: string | null;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  isLoading: boolean;
 }
 
 interface AuthContextType {

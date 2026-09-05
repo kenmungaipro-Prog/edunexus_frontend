@@ -45,6 +45,11 @@ export default [
     route("classes/:id", "pages/classes/show.tsx"),
     route("classes/:id/edit", "pages/classes/edit.tsx"),
 
+    // ── Subjects ──────────────────────────────────────────────
+    route("subjects", "pages/subjects/index.tsx"),
+    route("subjects/new", "pages/subjects/new.tsx"),
+    route("subjects/:id/edit", "pages/subjects/[id]/edit.tsx"),
+
     // ── Timetable ─────────────────────────────────────────────
     route("timetable", "pages/timetable/index.tsx"),
 
@@ -87,6 +92,7 @@ export default [
     route("accounting/reports", "pages/accounting/reports/index.tsx"),
     route("accounting/reports/income-statement", "pages/accounting/reports/income-statement.tsx"),
     route("accounting/reports/balance-sheet", "pages/accounting/reports/balance-sheet.tsx"),
+    route("accounting/reports/cash-flow", "pages/accounting/reports/cash-flow.tsx"),
 
     // ── Library ───────────────────────────────────────────────
     route("library", "pages/library/index.tsx"),
@@ -107,10 +113,15 @@ export default [
     route("transport/new", "pages/transport/new.tsx"),
     
     // Fleet & Driver Management
+    route("transport/vehicles", "pages/transport/vehicles/index.tsx"),
+    route("transport/vehicles/:id/edit", "pages/transport/vehicles/$id.edit.tsx"),
     route("transport/vehicles/new", "pages/transport/vehicles/new2.tsx"),
+    route("transport/drivers", "pages/transport/drivers/index.tsx"),
+    route("transport/drivers/:id/edit", "pages/transport/drivers/$id.edit.tsx"),
     route("transport/drivers/new", "pages/transport/drivers/new3.tsx"),
     
     // Route Management (Static actions first, dynamic ID matching last)
+    route("transport/routes", "pages/transport/routes/index.tsx"),
     route("transport/routes/:id/assign", "pages/transport/routes/assign.tsx"),
     route("transport/routes/:id/edit", "pages/transport/routes/edit.tsx"),
     route("transport/routes/:id", "pages/transport/routes/$id.tsx"),

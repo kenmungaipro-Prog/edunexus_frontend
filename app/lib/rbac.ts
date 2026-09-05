@@ -165,6 +165,9 @@ function hasMenuItemAccess(role: UserRole, route: string): boolean {
     "/accounting/accounts": ["superadmin", "admin", "accountant"],
     "/accounting/journals": ["superadmin", "admin", "accountant"],
     "/accounting/reports": ["superadmin", "admin", "accountant"],
+    "/accounting/reports/income-statement": ["superadmin", "admin", "accountant"],
+    "/accounting/reports/balance-sheet": ["superadmin", "admin", "accountant"],
+    "/accounting/reports/cash-flow": ["superadmin", "admin", "accountant"],
     "/portal/analytics": ["parent"],
     "/portal/payments": ["parent"],
 

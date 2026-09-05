@@ -58,8 +58,8 @@ export async function clientLoader({ request }: Route.LoaderArgs) {
   return {
     exams:       examsRes.data.data,
     stats:       analyticsRes.data.stats,
-    gradeData:   analyticsRes.data.grades,
-    subjectData: analyticsRes.data.subjects,
+    gradeData:   analyticsRes.data.grades as GradeRow[],
+    subjectData: analyticsRes.data.subjects as SubjectRow[],
     statusParam: status,
   };
 }

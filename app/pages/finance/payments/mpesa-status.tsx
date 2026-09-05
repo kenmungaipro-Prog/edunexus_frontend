@@ -4,7 +4,7 @@
 
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
-import { api, type MpesaStatusEntry } from "~/lib/api";
+import { api, type PaymentGatewayStatusEntry } from "~/lib/api";
 
 function money(value: number | string | null | undefined) {
   const numeric = Number(value ?? 0);
@@ -35,7 +35,7 @@ function badgeClass(status: string) {
 }
 
 export default function MpesaStatusPage() {
-  const [entries, setEntries] = useState<MpesaStatusEntry[]>([]);
+  const [entries, setEntries] = useState<PaymentGatewayStatusEntry[]>([]);
   const [selectedGateway, setSelectedGateway] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +47,7 @@ export default function MpesaStatusPage() {
   useEffect(() => {
     let mounted = true;
 
-    api.finance.mpesaStatus()
+    api.finance.paymentGatewayStatus()
       .then((res) => {
         if (mounted) {
           setEntries(res.data ?? []);
@@ -70,7 +70,7 @@ export default function MpesaStatusPage() {
     <div className="space-y-5 p-2 sm:p-0">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white">Gateway Status</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-white">Payment Gateway Status</h1>
           <p className="mt-1 text-xs sm:text-sm text-slate-400">Recent payment gateway activity, callbacks, and processing state across M-Pesa and bank integrations.</p>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
@@ -80,7 +80,7 @@ export default function MpesaStatusPage() {
             <option value="coop_400222">Co-op Bank 400222</option>
             <option value="bank_transfer">Bank Transfer</option>
           </select>
-          <span className="text-center rounded-full bg-slate-700/60 px-3 py-1.5 text-xs font-semibold text-slate-200">Includes Co-op Bank 400222</span>
+          <span className="text-center rounded-full bg-slate-700/60 px-3 py-1.5 text-xs font-semibold text-slate-200">Includes Co-op Bank 400222 and M-Pesa</span>
         </div>
       </div>
 

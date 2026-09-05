@@ -4,8 +4,9 @@
 ============================================================ */
 
 @import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
 
-@theme {
+:root {
   --font-sora: 'Sora', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 }
@@ -76,12 +77,48 @@ td {
   min-width: 0;
 }
 
-input,
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="search"],
+input[type="tel"],
+input[type="url"],
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
 select,
 textarea {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.leaflet-container {
+  height: 100%;
   width: 100%;
-  min-width: 0;
-  max-width: 100%;
+  background: #0f172a;
+}
+
+.leaflet-control-zoom {
+  border: 1px solid rgba(148, 163, 184, 0.35) !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+}
+
+.leaflet-control-zoom a {
+  background: rgba(15, 23, 42, 0.9) !important;
+  color: #e2e8f0 !important;
+}
+
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: rgba(15, 23, 42, 0.96) !important;
+  color: #e2e8f0 !important;
+}
+
+.leaflet-popup-content {
+  margin: 12px 14px;
 }
 
 @media (max-width: 768px) {

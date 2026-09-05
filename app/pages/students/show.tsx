@@ -161,7 +161,7 @@ export default function StudentShowPage({ loaderData }: Route.ComponentProps) {
     : (student.grades ?? []);
 
   const allFees: Fee[] = feeHistory?.fees ?? (student.fees ?? []);
-  const allAttendance: Attendance[] = attendance?.records ?? (student.attendance ?? []);
+  const allAttendance: Attendance[] = attendance?.records ?? [];
 
   const TABS: { id: TabId; label: string; count?: number }[] = [
     { id: "overview",   label: "Overview" },
@@ -425,10 +425,10 @@ export default function StudentShowPage({ loaderData }: Route.ComponentProps) {
 
           {allFees.length > 0 ? (
             <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px", minWidth: "600px" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px", minWidth: "700px" }}>
                 <thead>
                   <tr style={{ borderBottom: "1px solid #1e2640" }}>
-                    {["Receipt", "Fee Type", "Amount", "Method", "Paid On", "Status"].map((h) => <TH key={h}>{h}</TH>)}
+                    {['Receipt', 'Fee Type', 'Amount', 'Method', 'Paid On', 'Status', 'Action'].map((h) => <TH key={h}>{h}</TH>)}
                   </tr>
                 </thead>
                 <tbody>
@@ -444,6 +444,17 @@ export default function StudentShowPage({ loaderData }: Route.ComponentProps) {
                         <td style={{ padding: "11px 12px", color: "#6b7a99", fontSize: "12px", textTransform: "capitalize" }}>{f.payment_method ?? "—"}</td>
                         <td style={{ padding: "11px 12px", color: "#4b5a7a", fontSize: "12px", fontFamily: "'JetBrains Mono', monospace", whiteSpace: "nowrap" }}>{f.paid_at ? f.paid_at.split("T")[0] : "—"}</td>
                         <td style={{ padding: "11px 12px" }}><Pill bg={fc.bg} color={fc.color} label={fc.label} /></td>
+                        <td style={{ padding: "11px 12px" }}>
+                          <a
+                            href={api.fees.receiptUrl(f.id)}
+                            target="_blank"
+                            rel="noreferrer"
+                            title="Download receipt"
+                            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "6px 10px", borderRadius: "8px", background: "rgba(79,142,247,0.1)", color: "#4f8ef7", fontSize: "12px", fontWeight: 700, textDecoration: "none", border: "1px solid rgba(79,142,247,0.2)" }}
+                          >
+                            🖨 Download
+                          </a>
+                        </td>
                       </tr>
                     );
                   })}

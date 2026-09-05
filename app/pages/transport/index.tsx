@@ -67,6 +67,15 @@ export default function TransportPage({ loaderData }: TransRoute.ComponentProps)
           <Link to="/transport/notifications" className="px-3 sm:px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-xs sm:text-sm font-medium hover:bg-slate-700 transition">
             🔔 Notifications
           </Link>
+          <Link to="/transport/vehicles" className="px-3 sm:px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-xs sm:text-sm font-medium hover:bg-slate-700 transition">
+            🚌 Manage Buses
+          </Link>
+          <Link to="/transport/drivers" className="px-3 sm:px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-xs sm:text-sm font-medium hover:bg-slate-700 transition">
+            👨‍✈️ Manage Drivers
+          </Link>
+          <Link to="/transport/routes" className="px-3 sm:px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-xs sm:text-sm font-medium hover:bg-slate-700 transition">
+            🗺️ Manage Routes
+          </Link>
           <Link to="/transport/vehicles/new" className="px-3 sm:px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-xs sm:text-sm font-medium hover:bg-slate-700 transition">
             🚛 Add Vehicle
           </Link>

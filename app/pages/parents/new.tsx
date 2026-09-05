@@ -60,7 +60,8 @@ export default function ParentNewPage() {
 
         <div style={{ display: "grid", gap: "8px" }}>
           <label style={{ color: "#94a3b8", fontSize: "13px", fontWeight: 600 }}>Email address</label>
-          <input name="email" type="email" required placeholder="parent@example.com" style={inputStyle} />
+          <input name="email" type="email" placeholder="parent@example.com" style={inputStyle} />
+          <span style={{ color: "#94a3b8", fontSize: "12px" }}>Optional - leave blank if the parent has no email.</span>
         </div>
 
         <div style={{ display: "grid", gap: "8px" }}>

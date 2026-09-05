@@ -39,6 +39,7 @@ const NAV: { group: string; items: NavItem[] }[] = [
       { to: "/students",   icon: "🎓", label: "Students"      },
       { to: "/parents",    icon: "👪", label: "Parents"       },
       { to: "/teachers",   icon: "👨‍🏫", label: "Teachers"     },
+          { to: "/subjects",   icon: "📘", label: "Subjects"      },
       { to: "/classes",    icon: "📚", label: "Classes"       },
       { to: "/timetable",  icon: "📅", label: "Timetable"     },
       { to: "/attendance", icon: "✅", label: "Attendance"    },
@@ -99,6 +100,7 @@ const NAV: { group: string; items: NavItem[] }[] = [
       { to: "/accounting/reports",   icon: "📉", label: "Trial Balance"     },
       { to: "/accounting/reports/income-statement", icon: "💹", label: "Income Statement" },
       { to: "/accounting/reports/balance-sheet", icon: "⚖️", label: "Balance Sheet" },
+      { to: "/accounting/reports/cash-flow", icon: "💰", label: "Cash Flow" },
     ],
   },
   {

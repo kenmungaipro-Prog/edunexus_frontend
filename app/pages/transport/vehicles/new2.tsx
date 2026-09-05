@@ -8,12 +8,15 @@ import { api } from "~/lib/api";
 export async function clientAction({ request }: { request: Request }) {
   const formData = await request.formData();
   const payload = {
-    registration_number: String(formData.get("registration_number")).trim().toUpperCase(),
-    make: String(formData.get("make")) || null,
-    model: String(formData.get("model")) || null,
-    capacity: Number(formData.get("capacity")),
-    status: "active",
-  };
+        registration_number: String(formData.get("registration_number") ?? "").trim().toUpperCase(),
+        make: String(formData.get("make") ?? "").trim() || null,
+        model: String(formData.get("model") ?? "").trim() || null,
+        capacity: Number(formData.get("capacity")),
+        year: formData.get("year")
+          ? Number(formData.get("year"))
+          : null,
+        status: "active" as const,
+    };
 
   try {
     await api.transport.createVehicle(payload);

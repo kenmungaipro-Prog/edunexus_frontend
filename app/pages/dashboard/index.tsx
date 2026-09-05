@@ -14,20 +14,51 @@ export async function clientLoader() {
       apiService.dashboard.stats(),
       apiService.dashboard.activity(),
       apiService.dashboard.charts(),
-      apiService.analytics.gradePerformance(), // For Top Performers
-      apiService.analytics.feeAnalytics(),      // For Fee Status Details
+      apiService.analytics.gradePerformance(),
+      apiService.analytics.feeAnalytics(),
     ]);
 
     return {
-      stats: stats.data || {},
+      stats: stats.data,
       activity: activity.data || [],
-      charts: charts.data || { enrollment: {}, fees: {}, attendance: {} },
+      charts: charts.data,
       topPerformers: perf.data || [],
-      feeDetails: fees.data?.totals || { paid: 0, pending: 0, overdue: 0 },
+      feeDetails: {
+        paid: fees.data?.paid || 0,
+        pending: fees.data?.pending || 0,
+        overdue: fees.data?.overdue || 0,
+      },
     };
   } catch (error) {
     console.error("Dashboard Sync Failed:", error);
-    return { stats: {}, activity: [], charts: {}, topPerformers: [], feeDetails: { paid: 0, pending: 0, overdue: 0 } };
+
+    return {
+      stats: {
+        students: 0,
+        teachers: 0,
+        fee_collected: 0,
+        avg_attendance: 0,
+        upcoming_events: 0,
+        pending_fees: 0,
+        low_attendance: 0,
+        classes_count: 0,
+        my_students_count: 0,
+        total_books: 0,
+        borrowed_books: 0,
+      },
+      activity: [],
+      charts: {
+        enrollment: {},
+        fees: {},
+        attendance: {},
+      },
+      topPerformers: [],
+      feeDetails: {
+        paid: 0,
+        pending: 0,
+        overdue: 0,
+      },
+    };
   }
 }
 
@@ -268,6 +299,47 @@ export default function DashboardPage({ loaderData }: Route.ComponentProps) {
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 sm:gap-8 mt-3">
+            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-4 sm:p-6">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-white">Accounting Reports</h3>
+                  <p className="text-sm text-slate-400 mt-1">Quick access to your financial statements.</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+                <Link
+                  to="/accounting/reports"
+                  className="block rounded-2xl border border-slate-700 bg-slate-800 px-4 py-4 text-left text-sm text-slate-200 transition hover:border-blue-500 hover:bg-slate-900"
+                >
+                  <div className="font-semibold text-white">Trial Balance</div>
+                  <p className="mt-1 text-xs text-slate-500">View trial balance summary</p>
+                </Link>
+                <Link
+                  to="/accounting/reports/income-statement"
+                  className="block rounded-2xl border border-slate-700 bg-slate-800 px-4 py-4 text-left text-sm text-slate-200 transition hover:border-blue-500 hover:bg-slate-900"
+                >
+                  <div className="font-semibold text-white">Income Statement</div>
+                  <p className="mt-1 text-xs text-slate-500">Review profit and loss</p>
+                </Link>
+                <Link
+                  to="/accounting/reports/balance-sheet"
+                  className="block rounded-2xl border border-slate-700 bg-slate-800 px-4 py-4 text-left text-sm text-slate-200 transition hover:border-blue-500 hover:bg-slate-900"
+                >
+                  <div className="font-semibold text-white">Balance Sheet</div>
+                  <p className="mt-1 text-xs text-slate-500">See assets and liabilities</p>
+                </Link>
+                <Link
+                  to="/accounting/reports/cash-flow"
+                  className="block rounded-2xl border border-slate-700 bg-slate-800 px-4 py-4 text-left text-sm text-slate-200 transition hover:border-blue-500 hover:bg-slate-900"
+                >
+                  <div className="font-semibold text-white">Cash Flow</div>
+                  <p className="mt-1 text-xs text-slate-500">Open the cash flow report</p>
+                </Link>
               </div>
             </div>
           </div>

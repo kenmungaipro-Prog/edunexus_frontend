@@ -117,7 +117,7 @@ export default function FeeShowPage() {
           <div className="bg-slate-900 border border-slate-700/60 rounded-xl p-4 sm:p-5 print:bg-white print:border-slate-300">
             <h3 className="text-xs uppercase tracking-wider text-slate-500 font-bold mb-3 print:text-slate-700">Payment Parameters</h3>
             <div className="space-y-1 text-sm text-slate-400 print:text-slate-700">
-              <p>Date Settled: <span className="font-medium text-slate-200 print:text-black">{formatDate(fee.created_at || fee.updated_at)}</span></p>
+              <p>Date Settled: <span className="font-medium text-slate-200 print:text-black">{formatDate(fee.created_at)}</span></p>
               <p>Payment Route: <span className="font-medium text-slate-200 print:text-black">{formatPaymentMethod(fee.payment_method)}</span></p>
               {fee.transaction_id && (
                 <p>Reference Ref: <span className="font-mono bg-slate-800 text-blue-300 px-1.5 py-0.5 rounded text-xs print:bg-none print:text-black print:font-bold">{fee.transaction_id}</span></p>

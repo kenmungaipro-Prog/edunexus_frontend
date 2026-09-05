@@ -72,6 +72,7 @@ export interface User {
   role: UserRole;
   status: "active" | "inactive";
   profile_photo: string | null;
+  phone?: string | null;
   last_login_at: string | null;
   created_at: string;
 }
@@ -112,7 +113,7 @@ export interface ClassRoom {
   room: string | null;
   students_count?: number;
   occupancy_rate?: number;
-  class_teacher?: Teacher;
+  class_teacher?: Teacher | null;
 }
 
 export interface Subject {
@@ -147,6 +148,7 @@ export interface Student {
   category: string | null;
   attendance_percentage: number;
   fee_status: "paid" | "pending" | "overdue";
+  parent_phone?: string | null;
   class_room?: ClassRoom;
   parent?: User;
   grades?: Grade[];
@@ -172,13 +174,15 @@ export interface ParentProfile {
 
 export interface CreateParentPayload {
   name: string;
-  email: string;
+  email?: string;
   password?: string;
   relationship?: string;
   phone?: string;
   address?: string;
   occupation?: string;
   notes?: string;
+  whatsapp_phone?: string;
+  preferred_whatsapp?: boolean;
 }
 
 export interface UpdateParentPayload {
@@ -190,6 +194,8 @@ export interface UpdateParentPayload {
   address?: string;
   occupation?: string;
   notes?: string;
+  whatsapp_phone?: string;
+  preferred_whatsapp?: boolean;
 }
 
 export interface ParentStats {
@@ -207,15 +213,34 @@ export interface Teacher {
   school_id: number;
   employee_id: string;
   phone: string | null;
+  gender?: "male" | "female" | "other" | null;
+  dob?: string | null;
+  nationality?: string | null;
   department: string | null;
   qualification: string | null;
   experience_yrs: number;
+  employment_type?: string | null;
   join_date: string | null;
   salary: number | null;
+  bio?: string | null;
   status: "active" | "inactive" | "on_leave";
   user?: User;
   subjects?: Subject[];
   class_rooms?: ClassRoom[];
+}
+
+export interface TeacherResponse extends Teacher {
+  user?: User & {
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+    status: "active" | "inactive";
+  };
+  subjects?: Subject[];
+  class_rooms?: ClassRoom[];
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface TeacherPerformance {
@@ -251,15 +276,30 @@ export interface AttendanceStats {
 export interface TimetableSlot {
   id: number;
   class_id: number;
-  subject_id: number;
-  teacher_id: number;
+  subject_id?: number | null;
+  teacher_id?: number | null;
   day_of_week: 1 | 2 | 3 | 4 | 5 | 6;
   period_number: number;
   start_time: string;
   end_time: string;
-  room: string | null;
+  room?: string | null;
+  slot_type?: "class" | "break" | "lunch" | "event";
+  title?: string | null;
   subject?: Subject;
   teacher?: Teacher;
+  class_room?: ClassRoom | null;
+}
+
+export interface TimetableGetResponse extends ApiResponse<Record<string, TimetableSlot[]>> {
+  settings?: {
+    total_periods?: number;
+    period_duration_minutes?: number;
+    day_start_time?: string;
+    break_after_period?: number | null;
+    break_duration_minutes?: number | null;
+    lunch_after_period?: number | null;
+    lunch_duration_minutes?: number | null;
+  };
 }
 
 export type ExamStatus = "scheduled" | "ongoing" | "completed" | "cancelled";
@@ -394,6 +434,26 @@ export interface FeeStructure {
   session?: AcademicSession | null;
 }
 
+export interface FeeStructureItemPayload {
+  fee_category_id: number;
+  description: string | null;
+  amount: number;
+  is_mandatory: boolean;
+  is_recurring: boolean;
+}
+
+export interface FeeStructurePayload {
+  session_id: number;
+  class_id: number | null;
+  name: string;
+  billing_period: string;
+  currency: string;
+  status: "draft" | "active" | "inactive";
+  effective_from: string | null;
+  effective_to: string | null;
+  items: FeeStructureItemPayload[];
+}
+
 export type InvoiceStatus = "draft" | "issued" | "partially_paid" | "paid" | "overdue" | "cancelled" | "reversed";
 
 export interface InvoiceItem {
@@ -472,7 +532,7 @@ export interface FinancePayment {
   allocations?: Array<{ id: number; amount_allocated: number; invoice?: Invoice }>;
 }
 
-export interface MpesaStatusEntry {
+export interface PaymentGatewayStatusEntry {
   gateway_transaction_id: number;
   gateway_name: string | null;
   transaction_type: string;
@@ -581,6 +641,7 @@ export interface TransportRoute {
   students_count?: number;
   vehicle?: Vehicle;
   driver?: Driver;
+  students?: Student[];
 }
 
 export interface Vehicle {
@@ -590,7 +651,7 @@ export interface Vehicle {
   model: string | null;
   year: number | null;
   capacity: number;
-  status: "active" | "maintenance" | "inactive";
+  status: "active" | "inactive";
   last_lat: number | null;
   last_lng: number | null;
   last_speed: number | null;
@@ -750,6 +811,11 @@ export interface DashboardStats {
   upcoming_events: number;
   pending_fees: number;
   low_attendance: number;
+
+  classes_count?: number;
+  my_students_count?: number;
+  total_books?: number;
+  borrowed_books?: number;
 }
 
 export interface ActivityItem {
@@ -794,17 +860,23 @@ export interface CreateStudentPayload {
   date_of_birth: string;
   gender: "male" | "female" | "other";
   class_id: number;
-  blood_group?: string;
+  blood_group?: "A+" | "A-" | "B+" | "B-" | "O+" | "O-" | "AB+" | "AB-";
   address?: string;
   session_id?: number;
   parent_id?: number;
+  secondary_parent_id?: number;
+  emergency_contact_parent_id?: number;
+  profile_photo?: File | string;
   status?: "active" | "inactive" | "alumni";
   admission_date?: string;
   religion?: string;
-  category?: string;
+  category?: "General" | "OBC" | "SC" | "ST" | "EWS";
   parent_name?: string;
   parent_email?: string;
   parent_phone?: string;
+  secondary_parent_name?: string;
+  secondary_parent_email?: string;
+  secondary_parent_phone?: string;
 }
 
 export type UpdateStudentPayload = Partial<CreateStudentPayload>;
@@ -831,6 +903,7 @@ export interface CreateExamPayload {
   room?: string;
   invigilator_id?: number;
   instructions?: string;
+  status?: ExamStatus;
 }
 
 export interface EnterGradesPayload {
@@ -865,18 +938,40 @@ export interface SendMessagePayload {
 export interface CreateTeacherPayload {
   name: string;
   email: string;
-  phone: string;
+  phone?: string;
+  gender?: "male" | "female" | "other";
+  dob?: string;
+  nationality?: string;
   department: string;
-  qualification: string;
-  experience_yrs: number;
-  join_date: string;
+  qualification?: string;
+  experience_yrs?: number;
+  employment_type?: string;
+  join_date?: string;
   salary?: number;
+  subjects?: number[];
+  bio?: string;
+  password?: string;
+  status?: "active" | "inactive" | "on_leave";
+}
+
+export interface UpdateTeacherPayload {
+  name?: string;
+  email?: string;
+  phone?: string;
+  gender?: "male" | "female" | "other";
+  dob?: string;
+  nationality?: string;
+  department?: string;
+  qualification?: string;
+  experience_yrs?: number;
+  employment_type?: string;
+  join_date?: string;
+  salary?: number;
+  bio?: string;
+  status?: "active" | "inactive" | "on_leave";
   subjects?: number[];
 }
 
-export type UpdateTeacherPayload = Partial<CreateTeacherPayload> & {
-  status?: "active" | "inactive" | "on_leave";
-};
 
 export interface CreateClassPayload {
   name: string;
@@ -1234,6 +1329,14 @@ export const portal = {
 
   initiatePayment: (payload: { student_id: number; amount: string; phone_number: string }) =>
     post<ApiResponse<{ message: string }>>( "/portal/payments/mpesa/stk-push", payload ),
+
+  // Transport tracking for parents
+  transport: {
+    studentTrip: (studentId: number) =>
+      get<ApiResponse<any>>(`/portal/students/${studentId}/transport/trip`),
+    studentStatus: (studentId: number) =>
+      get<ApiResponse<any>>(`/portal/students/${studentId}/transport/status`),
+  },
 };
 
 export const teachers = {
@@ -1334,13 +1437,19 @@ export const attendance = {
 
 export const timetable = {
   get: (classId: number) =>
-    get<ApiResponse<Record<string, TimetableSlot[]>>>("/timetable", { class_id: classId }),
+    get<TimetableGetResponse>("/timetable", { class_id: classId }),
+
+  list: (params?: Record<string, unknown>) =>
+    get<TimetableGetResponse>("/timetable", params),
 
   store: (payload: Omit<TimetableSlot, "id" | "subject" | "teacher">) =>
     post<ApiResponse<TimetableSlot>>("/timetable", payload),
 
   update: (slotId: number, payload: Partial<TimetableSlot>) =>
     put<ApiResponse<TimetableSlot>>(`/timetable/${slotId}`, payload),
+
+  delete: (slotId: number) =>
+    del<ApiResponse<{ message: string }>>(`/timetable/${slotId}`),
 
   generate: (payload: GenerateTimetablePayload) =>
     post<ApiResponse<{ message: string }>>("/timetable/generate", payload),
@@ -1473,7 +1582,7 @@ export const finance = {
   createFeeStructure: (payload: Omit<FeeStructure, "id" | "school_id" | "items" | "class_room" | "session">) =>
     post<ApiResponse<FeeStructure>>("/finance/fee-structures", payload),
 
-  updateFeeStructure: (id: number, payload: Partial<FeeStructure>) =>
+  updateFeeStructure: (id: number, payload: Partial<FeeStructurePayload>) =>
     put<ApiResponse<FeeStructure>>(`/finance/fee-structures/${id}`, payload),
 
   deleteFeeStructure: (id: number) =>
@@ -1497,8 +1606,8 @@ export const finance = {
   payments: (filters?: { page?: number; per_page?: number; student_id?: number; method?: PaymentMethod; status?: FinancePaymentStatus }) =>
     get<PaginatedResponse<FinancePayment>>("/finance/payments", filters as Record<string, unknown>),
 
-  mpesaStatus: () =>
-    get<ApiResponse<MpesaStatusEntry[]>>("/finance/payments/mpesa-status"),
+  paymentGatewayStatus: () =>
+    get<ApiResponse<PaymentGatewayStatusEntry[]>>("/finance/payments/mpesa-status"),
 
   collectPayment: (payload: {
     student_id: number;
@@ -1657,6 +1766,30 @@ export interface BalanceSheetData {
   to_date: string;
 }
 
+export interface CashFlowAccount {
+  id: number;
+  account_code: string;
+  account_name: string;
+  account_type: AccountType;
+  normal_balance: NormalBalance;
+  starting_balance: number;
+  inflows: number;
+  outflows: number;
+  net_change: number;
+  ending_balance: number;
+}
+
+export interface CashFlowData {
+  cash_accounts: CashFlowAccount[];
+  total_starting_balance: number;
+  total_inflows: number;
+  total_outflows: number;
+  total_net_change: number;
+  total_ending_balance: number;
+  from_date: string;
+  to_date: string;
+}
+
 // ============================================================
 // Â§ 18b â€” Accounting API
 // ============================================================
@@ -1721,6 +1854,8 @@ export const accounting = {
     get<ApiResponse<IncomeStatementData>>("/accounting/reports/income-statement", params as Record<string, unknown>),
   balanceSheet: (params?: { from_date?: string; to_date?: string }) =>
     get<ApiResponse<BalanceSheetData>>("/accounting/reports/balance-sheet", params as Record<string, unknown>),
+  cashFlow: (params?: { from_date?: string; to_date?: string }) =>
+    get<ApiResponse<CashFlowData>>("/accounting/reports/cash-flow", params as Record<string, unknown>),
 };
 
 // ============================================================
@@ -1783,14 +1918,32 @@ export const transport = {
   vehicles: () =>
     get<ApiResponse<Vehicle[]>>("/transport/vehicles"),
 
+  getVehicle: (id: number) =>
+    get<ApiResponse<Vehicle>>(`/transport/vehicles/${id}`),
+
   createVehicle: (payload: Omit<Vehicle, "id" | "last_lat" | "last_lng" | "last_speed" | "location_updated_at">) =>
     post<ApiResponse<Vehicle>>("/transport/vehicles", payload),
+
+  updateVehicle: (id: number, payload: Partial<Vehicle>) =>
+    put<ApiResponse<Vehicle>>(`/transport/vehicles/${id}`, payload),
+
+  deleteVehicle: (id: number) =>
+    del<ApiResponse<null>>(`/transport/vehicles/${id}`),
 
   drivers: () =>
     get<ApiResponse<Driver[]>>("/transport/drivers"),
 
+  getDriver: (id: number) =>
+    get<ApiResponse<Driver>>(`/transport/drivers/${id}`),
+
   createDriver: (payload: Omit<Driver, "id" | "is_license_valid">) =>
     post<ApiResponse<Driver>>("/transport/drivers", payload),
+
+  updateDriver: (id: number, payload: Partial<Driver>) =>
+    put<ApiResponse<Driver>>(`/transport/drivers/${id}`, payload),
+
+  deleteDriver: (id: number) =>
+    del<ApiResponse<null>>(`/transport/drivers/${id}`),
 
   live: () =>
     get<ApiResponse<LiveVehicle[]>>("/transport/live"),
@@ -1817,6 +1970,16 @@ export const transport = {
 
   emergencyAlert: (payload: { driver: string; vehicle: string; timestamp: string; gps?: { lat: number; lng: number; speed?: number; heading?: number } }) =>
     post<ApiResponse<{ message: string }>>('/transport/emergency', payload),
+
+  // Trips / Driver actions
+  trips: {
+    list: () => get<ApiResponse<any[]>>('/transport/trips'),
+    my: () => get<ApiResponse<any[]>>('/transport/trips/my'),
+    show: (tripId: number) => get<ApiResponse<any>>(`/transport/trips/${tripId}`),
+    start: (tripId: number) => post<ApiResponse<{ message: string }>>(`/transport/trips/${tripId}/start`),
+    end: (tripId: number) => post<ApiResponse<{ message: string }>>(`/transport/trips/${tripId}/end`),
+    storeStop: (tripId: number, stopId: number) => post<ApiResponse<{ message: string }>>(`/transport/trips/${tripId}/stops/${stopId}`),
+  },
 };
 
 // ============================================================

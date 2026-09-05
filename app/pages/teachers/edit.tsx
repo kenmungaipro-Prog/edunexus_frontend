@@ -76,24 +76,32 @@ export async function clientAction({ request, params }: Route.ClientActionArgs) 
   try {
     const selectedSubjects = Array.from(form.getAll("subject_ids")) as string[];
     const selectedClasses  = Array.from(form.getAll("classroom_ids")) as string[];
+    const genderValue = String(form.get("gender") || "");
+
+    const gender =
+      genderValue === "male" ||
+      genderValue === "female" ||
+      genderValue === "other"
+        ? genderValue
+        : undefined;
 
     await api.teachers.update(Number(params.id), {
       name, 
       email,
-      phone:           form.get("phone") || undefined,
-      gender:          form.get("gender") || undefined,
-      dob:             form.get("dob") || undefined,
-      nationality:     form.get("nationality") || undefined,
+      phone: String(form.get("phone") || "") || undefined,
+      gender,
+      dob:             String(form.get("dob") || "") || undefined,
+      nationality:     String(form.get("nationality") || "") || undefined,
       department:      dept,
-      qualification:   form.get("qualification") || undefined,
+      qualification: String(form.get("qualification") || "") || undefined,
       experience_yrs:  Number(form.get("experience") ?? 0) || undefined,
-      join_date:       form.get("join_date") || undefined,
-      employment_type: form.get("employment_type") || undefined,
-      bio:             form.get("bio") || undefined,
+      join_date: String(form.get("join_date") || "") || undefined,
+      employment_type: String(form.get("employment_type") || "") || undefined,
+      bio:             String(form.get("bio") || "") || undefined,
       subjects:        selectedSubjects.length > 0 
         ? selectedSubjects.map(s => parseInt(s))
         : undefined,
-      status:          form.get("status") ?? "active",
+      status: (String(form.get("status") || "active")) as "active" | "inactive" | "on_leave",
     });
     return redirect(`/teachers/${params.id}`);
   } catch (err: any) {

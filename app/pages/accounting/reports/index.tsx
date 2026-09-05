@@ -74,51 +74,16 @@ export default function AccountingReportsPage({
   return (
     <div className="space-y-6 p-4 sm:p-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="space-y-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Accounting Reports</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Trial Balance</h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Financial statements and ledger reports
+            General ledger trial balance for the selected reporting period.
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-          <button
-            onClick={() => navigate("/accounting/accounts")}
-            className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm text-slate-200 hover:bg-slate-700 transition-colors text-center"
-          >
-            Chart of Accounts
-          </button>
-          <button
-            onClick={() => navigate("/accounting/journals")}
-            className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm text-slate-200 hover:bg-slate-700 transition-colors text-center"
-          >
-            Journal Entries
-          </button>
-            <button
-              onClick={() => navigate("/accounting/reports/income-statement")}
-              className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm text-slate-200 hover:bg-slate-700 transition-colors text-center"
-            >
-              Income Statement
-            </button>
-            <button
-              onClick={() => navigate("/accounting/reports/balance-sheet")}
-              className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm text-slate-200 hover:bg-slate-700 transition-colors text-center"
-            >
-              Balance Sheet
-            </button>
-        </div>
-      </div>
 
-      {/* Report Selector - Trial Balance */}
-      <div className="rounded-xl border border-slate-700 bg-slate-800 p-4 sm:p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-white mb-2">Trial Balance</h2>
-        <p className="text-xs sm:text-sm text-slate-400 mb-6">
-          Shows all accounts with their debit/credit balances for the selected period.
-        </p>
-
-        {/* Date Filters */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap items-end gap-4 mb-6">
-          <div className="w-full sm:w-auto flex-1 min-w-[200px]">
+        <div className="grid gap-3 sm:grid-cols-[repeat(3,minmax(180px,1fr))]">
+          <div>
             <label className="mb-1.5 block text-xs font-semibold text-slate-400 uppercase tracking-wide">
               From Date
             </label>
@@ -129,7 +94,7 @@ export default function AccountingReportsPage({
               className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-white focus:border-blue-500 focus:outline-none transition-colors"
             />
           </div>
-          <div className="w-full sm:w-auto flex-1 min-w-[200px]">
+          <div>
             <label className="mb-1.5 block text-xs font-semibold text-slate-400 uppercase tracking-wide">
               To Date
             </label>
@@ -140,36 +105,38 @@ export default function AccountingReportsPage({
               className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-white focus:border-blue-500 focus:outline-none transition-colors"
             />
           </div>
-          <button
-            onClick={fetchReport}
-            disabled={loading}
-            className="w-full lg:w-auto rounded-lg bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-600 disabled:opacity-50 transition-colors text-center"
-          >
-            {loading ? "Loading..." : "Generate Report"}
-          </button>
-        </div>
-
-        {/* Balance Check */}
-        <div className={`rounded-lg border p-4 mb-6 ${report.is_balanced ? "border-emerald-500/30 bg-emerald-500/10" : "border-red-500/30 bg-red-500/10"}`}>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <p className={`text-sm font-semibold ${report.is_balanced ? "text-emerald-400" : "text-red-400"}`}>
-                {report.is_balanced ? "Balanced" : "Out of Balance"}
-              </p>
-              <p className="text-xs text-slate-400 mt-1">
-                Total Debits: {money(report.total_debit)} | Total Credits: {money(report.total_credit)}
-              </p>
-            </div>
-            <div className="text-left sm:text-right">
-              <p className="text-2xl font-bold text-white">
-                {money(Math.abs(report.total_debit - report.total_credit))}
-              </p>
-              <p className="text-xs text-slate-500">difference</p>
-            </div>
+          <div className="flex items-end">
+            <button
+              onClick={fetchReport}
+              disabled={loading}
+              className="w-full rounded-lg bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-600 disabled:opacity-50 transition-colors"
+            >
+              {loading ? "Loading..." : "Generate Report"}
+            </button>
           </div>
         </div>
+      </div>
 
-        {/* Accounts by Type */}
+      <div className={`rounded-2xl border p-4 ${report.is_balanced ? "border-emerald-500/30 bg-emerald-500/10" : "border-red-500/30 bg-red-500/10"}`}>
+        <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
+          <div>
+            <p className={`text-sm font-semibold ${report.is_balanced ? "text-emerald-400" : "text-red-400"}`}>
+              {report.is_balanced ? "Balanced" : "Out of Balance"}
+            </p>
+            <p className="text-xs text-slate-400 mt-1">
+              Total Debits: {money(report.total_debit)} | Total Credits: {money(report.total_credit)}
+            </p>
+          </div>
+          <div className="text-left sm:text-right">
+            <p className="text-2xl font-bold text-white">
+              {money(Math.abs(report.total_debit - report.total_credit))}
+            </p>
+            <p className="text-xs text-slate-500">difference</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Accounts by Type */}
         <div className="space-y-6">
           {Object.entries(accountsByType).map(([type, accounts]) => (
             <div key={type} className="rounded-lg border border-slate-700 bg-slate-900/50 overflow-hidden">
@@ -221,10 +188,9 @@ export default function AccountingReportsPage({
 
         {report.accounts.length === 0 && (
           <div className="py-12 text-center text-slate-500 text-sm">
-            No journal entries found for this period. Post some journal entries to see the trial balance.
+            No posted journal entries found for this period. Post and post entries to see the trial balance.
           </div>
         )}
       </div>
-    </div>
   );
 }

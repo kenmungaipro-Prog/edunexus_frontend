@@ -1,7 +1,7 @@
 // ============================================================
 // app/pages/classes/[id]/edit.tsx
 // ============================================================
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   useNavigation,
   useLoaderData,
@@ -93,7 +93,6 @@ export async function clientAction({
   }
 
   const section = getString("section");
-  if (!section) clientErrors.section = ["Section is required."];
 
   const capacityStr = getString("capacity");
   const capacityNum = capacityStr ? Number(capacityStr) : NaN;
@@ -123,7 +122,7 @@ export async function clientAction({
 
   const room = getString("room");
   if (room !== undefined) {
-    payload.room = room === "" ? null : room;
+    payload.room = room === "" ? undefined : room;
   }
 
   const subjectsRaw = formData.getAll("subjects");
@@ -170,10 +169,10 @@ export function ErrorBoundary() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto py-16 px-4 text-center">
-      <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-red-900/20 mb-4">
+    <div className="max-w-3xl mx-auto py-20 px-4 text-center">
+      <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 mb-4 shadow-lg shadow-red-500/5">
         <svg
-          className="w-7 h-7 text-red-400"
+          className="w-8 h-8 text-red-400"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -187,20 +186,20 @@ export function ErrorBoundary() {
           />
         </svg>
       </div>
-      <h1 className="text-xl font-semibold text-slate-100 mb-2">{heading}</h1>
-      <p className="text-sm text-slate-400 mb-6">{body}</p>
+      <h1 className="text-xl font-bold text-slate-100 mb-2">{heading}</h1>
+      <p className="text-sm text-slate-400 mb-6 max-w-md mx-auto">{body}</p>
       <div className="flex flex-col sm:flex-row gap-3 justify-center">
         {isRouteErrorResponse(error) && error.status >= 500 && (
           <button
             onClick={() => revalidator.revalidate()}
-            className="rounded-xl bg-slate-800 px-4 py-2.5 text-sm text-slate-200 hover:bg-slate-700 transition-colors"
+            className="rounded-xl bg-slate-800 border border-slate-700 px-4 py-2.5 text-sm text-slate-200 hover:bg-slate-700 transition-all font-medium"
           >
             Try again
           </button>
         )}
         <Link
           to="/classes"
-          className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm text-white hover:bg-blue-500 transition-colors"
+          className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm text-white hover:bg-blue-500 transition-all font-medium shadow-lg shadow-blue-600/20"
         >
           Back to classes
         </Link>
@@ -212,7 +211,7 @@ export function ErrorBoundary() {
 function Skeleton({ className = "" }: { className?: string }) {
   return (
     <div
-      className={`animate-pulse rounded-lg bg-slate-800/60 ${className}`}
+      className={`animate-pulse rounded-xl bg-slate-800/80 ${className}`}
       aria-hidden
     />
   );
@@ -220,35 +219,35 @@ function Skeleton({ className = "" }: { className?: string }) {
 
 function FormSkeleton() {
   return (
-    <div className="max-w-3xl mx-auto py-6 px-4 sm:px-6" aria-label="Loading class data">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+    <div className="max-w-3xl mx-auto py-8 px-4 sm:px-6" aria-label="Loading class data">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8">
         <div className="space-y-2">
-          <Skeleton className="h-7 w-32" />
-          <Skeleton className="h-4 w-56" />
+          <Skeleton className="h-8 w-40" />
+          <Skeleton className="h-4 w-64" />
         </div>
         <Skeleton className="h-4 w-24 self-start sm:self-auto" />
       </div>
 
-      <div className="space-y-6 bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6">
-        <div className="grid gap-4 md:grid-cols-2">
+      <div className="space-y-6 bg-slate-900/60 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 sm:p-8 shadow-2xl">
+        <div className="grid gap-5 md:grid-cols-2">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="space-y-2">
               <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-11 w-full rounded-xl" />
             </div>
           ))}
         </div>
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-5 md:grid-cols-2">
           {Array.from({ length: 2 }).map((_, i) => (
             <div key={i} className="space-y-2">
               <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-11 w-full rounded-xl" />
             </div>
           ))}
         </div>
         <div className="space-y-2">
           <Skeleton className="h-4 w-16" />
-          <Skeleton className="h-36 w-full" />
+          <Skeleton className="h-40 w-full rounded-xl" />
         </div>
         <Skeleton className="h-12 w-full rounded-2xl" />
       </div>
@@ -265,16 +264,17 @@ function FieldError({
 }) {
   if (!messages || messages.length === 0) return null;
   return (
-    <p id={id} className="mt-1 text-xs text-red-400" role="alert">
+    <p id={id} className="mt-1.5 text-xs text-red-400 font-medium flex items-center gap-1.5" role="alert">
+      <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
       {messages[0]}
     </p>
   );
 }
 
 const inputClass =
-  "mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-slate-100 outline-none focus:border-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
+  "mt-2 w-full rounded-xl border border-slate-700/80 bg-slate-950/60 px-3.5 py-2.5 text-sm text-slate-100 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-inner";
 
-const labelClass = "block text-sm text-slate-300";
+const labelClass = "block text-xs font-semibold uppercase tracking-wider text-slate-400";
 
 function SubjectsCheckboxList({
   subjects,
@@ -288,42 +288,100 @@ function SubjectsCheckboxList({
   disabled?: boolean;
 }) {
   const hasError = error && error.length > 0;
+  const selectedSubjects = subjects.filter((subject) => selectedIds.has(String(subject.id)));
 
   return (
     <fieldset
       aria-invalid={hasError ? "true" : "false"}
       aria-describedby={hasError ? "error-subjects" : undefined}
+      className="space-y-2"
     >
-      <legend className={labelClass}>Subjects</legend>
+      <legend className={labelClass}>Assigned Subjects</legend>
+      {selectedSubjects.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-2">
+          {selectedSubjects.map((subject) => (
+            <span
+              key={subject.id}
+              className="inline-flex items-center gap-2 rounded-full bg-slate-800/80 border border-slate-700 px-3 py-1 text-xs font-medium text-slate-200"
+            >
+              {subject.name}
+            </span>
+          ))}
+        </div>
+      )}
       <div
-        className={`mt-2 rounded-xl border bg-slate-950 p-3 max-h-48 overflow-y-auto ${
-          hasError ? "border-red-500/60" : "border-slate-700"
+        className={`rounded-3xl border bg-slate-950/60 p-4 shadow-inner scrollbar-thin scrollbar-thumb-slate-700 ${
+          hasError ? "border-red-500/60" : "border-slate-700/80"
         } ${disabled ? "opacity-50" : ""}`}
       >
         {subjects.length === 0 ? (
-          <p className="text-xs text-slate-500 py-2 text-center">
-            No subjects available
+          <p className="text-xs text-slate-500 py-6 text-center">
+            No subjects available in the system
           </p>
         ) : (
-          <ul className="space-y-1" role="list">
-            {subjects.map((subject) => (
-              <li key={subject.id}>
-                <label className="flex items-center gap-2.5 cursor-pointer group px-1 py-1.5 rounded-lg hover:bg-slate-800/60 transition-colors">
-                  <input
-                    type="checkbox"
-                    name="subjects"
-                    value={String(subject.id)}
-                    defaultChecked={selectedIds.has(String(subject.id))}
-                    disabled={disabled}
-                    className="h-4 w-4 rounded border-slate-600 bg-slate-800 accent-blue-500 cursor-pointer flex-shrink-0"
-                  />
-                  <span className="text-sm text-slate-300 group-hover:text-slate-100 transition-colors break-words">
-                    {subject.name}
-                  </span>
-                </label>
-              </li>
-            ))}
-          </ul>
+          <>
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-200">
+                  Pick subjects for this class
+                </p>
+                <p className="text-xs text-slate-500 mt-1">
+                  Toggle the subjects below to assign them to this class.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center rounded-full bg-slate-800/80 px-3 py-1 text-xs text-slate-300">
+                  {selectedSubjects.length} selected
+                </span>
+              </div>
+            </div>
+
+            <div className="max-h-64 overflow-y-auto">
+              <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2" role="list">
+                {subjects.map((subject) => (
+                  <li key={subject.id}>
+                    <label
+                      htmlFor={`subject-${subject.id}`}
+                      className="flex items-center gap-3 rounded-3xl border border-slate-800/90 bg-slate-900/60 p-3 cursor-pointer hover:border-slate-700/80 hover:bg-slate-800/70 transition-all"
+                    >
+                      <input
+                        id={`subject-${subject.id}`}
+                        type="checkbox"
+                        name="subjects"
+                        value={String(subject.id)}
+                        defaultChecked={selectedIds.has(String(subject.id))}
+                        disabled={disabled}
+                        className="h-3.5 w-3.5 rounded-sm border border-slate-400 bg-slate-900 text-blue-600 focus:ring-blue-500 focus:ring-offset-slate-900 cursor-pointer flex-shrink-0"
+                      />
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-slate-200 truncate">
+                              {subject.name ?? subject.code ?? `Subject #${subject.id}`}
+                            </p>
+                            {(subject.code || subject.type) && (
+                              <p className="text-xs text-slate-400 truncate mt-0.5">
+                                {subject.code}
+                                {subject.code && subject.type ? " • " : ""}
+                                {subject.type}
+                              </p>
+                            )}
+                          </div>
+                          {subject.exams_count ? (
+                            <span className="text-xs text-slate-400 whitespace-nowrap">
+                              {subject.exams_count} exams
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </>
         )}
       </div>
       <FieldError id="error-subjects" messages={error} />
@@ -353,27 +411,28 @@ export default function EditClassPage() {
   const errorMessage = actionData?.error;
 
   const selectedSubjectIds = new Set<string>(
-    classData.subjects?.map((s: { id: number | string }) => String(s.id)) ?? []
+    ((classData as any).subjects ?? []).map((s: { id: number | string }) => String(s.id)) ?? []
   );
 
   return (
-    <div className="max-w-3xl mx-auto py-6 px-4 sm:px-6">
+    <div className="max-w-3xl mx-auto py-8 px-4 sm:px-6">
       {/* ── Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-xl sm:text-2xl font-semibold text-slate-100">Edit Class</h1>
-          <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
-            Update academic group details for{" "}
-            <span className="text-slate-300 font-medium">{classData.name}</span>
-            .
+          <h1 className="text-2xl font-bold tracking-tight text-slate-100">Edit Class Room</h1>
+          <p className="text-xs sm:text-sm text-slate-400 mt-1">
+            Updating settings and parameters for{" "}
+            <span className="text-slate-200 font-semibold bg-slate-800 px-2 py-0.5 rounded-md border border-slate-700/60">
+              {classData.name}
+            </span>
           </p>
         </div>
         <Link
           to={`/classes/${classData.id}`}
-          className="inline-flex items-center gap-1.5 text-blue-400 hover:text-blue-300 hover:underline text-sm transition-colors self-start sm:self-auto"
+          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800/80 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 text-xs sm:text-sm font-medium transition-all shadow-sm self-start sm:self-auto"
         >
           <svg
-            className="w-3.5 h-3.5 flex-shrink-0"
+            className="w-4 h-4 flex-shrink-0 text-slate-400"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -394,12 +453,12 @@ export default function EditClassPage() {
       {errorMessage && (
         <div
           ref={errorBannerRef}
-          className="mb-4 rounded-xl bg-red-900/20 border border-red-500/30 p-4 text-sm text-red-200 flex gap-3"
+          className="mb-6 rounded-2xl bg-red-500/10 border border-red-500/20 p-4 text-sm text-red-200 flex items-start gap-3 shadow-lg shadow-red-500/5 animate-shake"
           role="alert"
           aria-live="polite"
         >
           <svg
-            className="w-4 h-4 mt-0.5 shrink-0 text-red-400"
+            className="w-5 h-5 mt-0.5 shrink-0 text-red-400"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -412,7 +471,10 @@ export default function EditClassPage() {
               d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"
             />
           </svg>
-          <span className="break-words">{errorMessage}</span>
+          <div className="flex-1">
+            <span className="font-semibold block text-red-100">Action Failed</span>
+            <span className="text-xs text-red-300/90">{errorMessage}</span>
+          </div>
         </div>
       )}
 
@@ -420,12 +482,14 @@ export default function EditClassPage() {
       <Form
         method="post"
         replace
-        className="space-y-6 bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6"
+        className="space-y-6 bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-3xl p-6 sm:p-8 shadow-2xl"
       >
         {/* Row 1: Name + Grade */}
-        <div className="grid gap-4 md:grid-cols-2">
-          <label className={labelClass} htmlFor="name">
-            Name <span className="text-red-400" aria-hidden>*</span>
+        <div className="grid gap-5 md:grid-cols-2">
+          <div>
+            <label className={labelClass} htmlFor="name">
+              Class Name <span className="text-red-400">*</span>
+            </label>
             <input
               id="name"
               name="name"
@@ -437,10 +501,12 @@ export default function EditClassPage() {
               className={`${inputClass} ${errors.name ? "border-red-500/60" : ""}`}
             />
             <FieldError id="error-name" messages={errors.name} />
-          </label>
+          </div>
 
-          <label className={labelClass} htmlFor="grade">
-            Grade <span className="text-red-400" aria-hidden>*</span>
+          <div>
+            <label className={labelClass} htmlFor="grade">
+              Grade Level <span className="text-red-400">*</span>
+            </label>
             <input
               id="grade"
               name="grade"
@@ -455,26 +521,29 @@ export default function EditClassPage() {
               className={`${inputClass} ${errors.grade ? "border-red-500/60" : ""}`}
             />
             <FieldError id="error-grade" messages={errors.grade} />
-          </label>
+          </div>
 
           {/* Row 2: Section + Capacity */}
-          <label className={labelClass} htmlFor="section">
-            Section <span className="text-red-400" aria-hidden>*</span>
+          <div>
+            <label className={labelClass} htmlFor="section">
+              Section
+            </label>
             <input
               id="section"
               name="section"
               defaultValue={classData.section ?? ""}
-              required
               disabled={submitting}
               aria-invalid={errors.section ? "true" : "false"}
               aria-describedby={errors.section ? "error-section" : undefined}
               className={`${inputClass} ${errors.section ? "border-red-500/60" : ""}`}
             />
             <FieldError id="error-section" messages={errors.section} />
-          </label>
+          </div>
 
-          <label className={labelClass} htmlFor="capacity">
-            Capacity <span className="text-red-400" aria-hidden>*</span>
+          <div>
+            <label className={labelClass} htmlFor="capacity">
+              Maximum Capacity <span className="text-red-400">*</span>
+            </label>
             <input
               id="capacity"
               name="capacity"
@@ -488,13 +557,15 @@ export default function EditClassPage() {
               className={`${inputClass} ${errors.capacity ? "border-red-500/60" : ""}`}
             />
             <FieldError id="error-capacity" messages={errors.capacity} />
-          </label>
+          </div>
         </div>
 
         {/* Row 3: Teacher + Room */}
-        <div className="grid gap-4 md:grid-cols-2">
-          <label className={labelClass} htmlFor="class_teacher_id">
-            Class Teacher
+        <div className="grid gap-5 md:grid-cols-2">
+          <div>
+            <label className={labelClass} htmlFor="class_teacher_id">
+              Class Teacher
+            </label>
             <select
               id="class_teacher_id"
               name="class_teacher_id"
@@ -525,22 +596,24 @@ export default function EditClassPage() {
               id="error-class_teacher_id"
               messages={errors.class_teacher_id}
             />
-          </label>
+          </div>
 
-          <label className={labelClass} htmlFor="room">
-            Room
+          <div>
+            <label className={labelClass} htmlFor="room">
+              Room Location
+            </label>
             <input
               id="room"
               name="room"
               defaultValue={classData.room ?? ""}
               disabled={submitting}
-              placeholder="e.g. B-204"
+              placeholder="e.g. Building B, Room 204"
               aria-invalid={errors.room ? "true" : "false"}
               aria-describedby={errors.room ? "error-room" : undefined}
               className={`${inputClass} ${errors.room ? "border-red-500/60" : ""}`}
             />
             <FieldError id="error-room" messages={errors.room} />
-          </label>
+          </div>
         </div>
 
         {/* Subjects */}
@@ -551,18 +624,18 @@ export default function EditClassPage() {
           disabled={submitting}
         />
 
-        {/* Footer */}
-        <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-3 pt-2">
+        {/* Footer Actions */}
+        <div className="flex flex-col-reverse sm:flex-row items-center gap-3 pt-4 border-t border-slate-800">
           <Link
             to={`/classes/${classData.id}`}
-            className="rounded-2xl border border-slate-700 px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 transition-colors text-center"
+            className="w-full sm:w-auto rounded-xl border border-slate-700 bg-slate-800/50 px-5 py-3 text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-all text-center"
           >
             Cancel
           </Link>
           <button
             type="submit"
             disabled={submitting}
-            className="flex-1 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-60 transition-colors flex items-center justify-center gap-2"
+            className="w-full sm:flex-1 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-3 text-sm font-semibold text-white hover:from-blue-500 hover:to-indigo-500 disabled:opacity-60 transition-all shadow-lg shadow-blue-600/25 flex items-center justify-center gap-2"
           >
             {submitting ? (
               <>
@@ -586,16 +659,16 @@ export default function EditClassPage() {
                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
                   />
                 </svg>
-                Saving…
+                Saving Changes…
               </>
             ) : (
-              "Update Class"
+              "Save Class Updates"
             )}
           </button>
         </div>
 
-        <p className="text-xs text-slate-500 text-center -mt-2">
-          Fields marked <span className="text-red-400">*</span> are required
+        <p className="text-xs text-slate-500 text-center pt-1">
+          Fields marked with <span className="text-red-400">*</span> are mandatory parameters.
         </p>
       </Form>
     </div>

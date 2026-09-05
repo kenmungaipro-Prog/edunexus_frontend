@@ -4,6 +4,7 @@
 import { Form, redirect, useNavigation, useActionData, Link } from "react-router";
 import type { Route } from "./+types/new";
 import { api } from "~/lib/api";
+import { validateExam } from "~/lib/validation";
 
 export async function clientLoader() {
   const [classesRes, subjectsRes, teachersRes] = await Promise.all([
@@ -35,6 +36,15 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
     room: formData.get("room") as string,
     instructions: formData.get("instructions") as string,
   };
+
+  // Frontend validation
+  const validationErrors = validateExam(payload);
+  if (Object.keys(validationErrors).length > 0) {
+    return {
+      error: "Please fix the highlighted errors below.",
+      errors: validationErrors,
+    };
+  }
 
   try {
     await api.exams.create(payload);

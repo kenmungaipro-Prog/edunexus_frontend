@@ -12,7 +12,7 @@ import api, {
 } from "~/lib/api";
 
 interface ByTypeRow {
-  name: string;
+  type: string;
   collected: number;
   amount: number;
   rate: number;
@@ -30,7 +30,7 @@ interface SummaryData {
   defaulters: number;
   collection_rate: number;
   by_type: ByTypeRow[];
-  by_month: ByMonthRow[];
+  monthly: ByMonthRow[];
 }
 
 interface LoaderData {
@@ -107,7 +107,7 @@ export default function FeesPage({ loaderData }: Route.ComponentProps) {
 
   const rate = summary?.collection_rate ?? 0;
   const colors = rateColor(rate);
-  const byMonth = summary?.by_month ?? [];
+  const byMonth = summary?.monthly ?? [];
   const maxMonthVal = byMonth.length > 0 ? Math.max(...byMonth.map(m => m.collected)) : 1;
   const currentYear = new Date().getFullYear();
   const fyLabel = `FY ${currentYear}–${String(currentYear + 1).slice(2)}`;
@@ -193,9 +193,9 @@ export default function FeesPage({ loaderData }: Route.ComponentProps) {
           {summary?.by_type?.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 mt-2">
               {summary.by_type.slice(0, 6).map((t, i) => (
-                <div key={`${t.name}-${i}`} className="w-full">
+                <div key={`${t.type}-${i}`} className="w-full">
                   <div className="flex justify-between items-end text-sm mb-1.5">
-                    <span className="text-slate-300 font-medium truncate pr-3">{t.name}</span>
+                    <span className="text-slate-300 font-medium truncate pr-3">{t.type}</span>
                     <div className="flex items-center gap-3 shrink-0">
                       <span className="hidden sm:inline text-xs text-slate-500">{formatKES(t.collected)}</span>
                       <span className={`font-mono text-xs font-semibold ${rateColor(t.rate).text}`}>{t.rate.toFixed(1)}%</span>

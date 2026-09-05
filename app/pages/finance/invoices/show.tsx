@@ -73,11 +73,11 @@ export default function InvoiceShowPage({ loaderData }: Route.ComponentProps) {
               <StatusBadge status={invoice.status} />
             </div>
             <p className="text-sm text-slate-400 mt-1">
-              {invoice.student?.name} — {invoice.student?.class_room?.name || "No class"}
+              {invoice.student?.full_name} — {invoice.student?.class_room?.name || "No class"}
             </p>
           </div>
         </div>
-        <div style={{ display: "flex", gap: "10px", width: "100%", sm: { width: "auto" } }}>
+        <div className="flex gap-[10px] w-full sm:w-auto">
           {invoice.status === "draft" && (
             <button
               onClick={async () => { await api.finance.issueInvoice(invoice.id); window.location.reload(); }}
@@ -188,11 +188,11 @@ export default function InvoiceShowPage({ loaderData }: Route.ComponentProps) {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: "16px" }}>
             <div>
               <div style={{ fontSize: "12px", color: "#64748b", marginBottom: "4px" }}>Name</div>
-              <div style={{ fontSize: "14px", color: "#e2e8f0", fontWeight: 500 }}>{invoice.student.name}</div>
+              <div style={{ fontSize: "14px", color: "#e2e8f0", fontWeight: 500 }}>{invoice.student.full_name}</div>
             </div>
             <div>
               <div style={{ fontSize: "12px", color: "#64748b", marginBottom: "4px" }}>Admission Number</div>
-              <div style={{ fontSize: "14px", color: "#e2e8f0" }}>{invoice.student.admission_number}</div>
+              <div style={{ fontSize: "14px", color: "#e2e8f0" }}>{invoice.student.admission_no}</div>
             </div>
             <div>
               <div style={{ fontSize: "12px", color: "#64748b", marginBottom: "4px" }}>Class</div>
