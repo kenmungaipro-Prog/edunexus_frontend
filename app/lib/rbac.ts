@@ -3,7 +3,7 @@
  * Defines which menu items and features are available for each role
  */
 
-export type UserRole = "admin" | "superadmin" | "teacher" | "student" | "accountant" | "librarian" | "receptionist" | "parent";
+export type UserRole = "admin" | "superadmin" | "teacher" | "student" | "accountant" | "librarian" | "receptionist" | "parent" | "driver";
 
 interface RolePermissions {
   labels: string[];
@@ -23,6 +23,7 @@ export const ROLE_MENU_ACCESS: Record<UserRole, string[]> = {
   receptionist: ["Overview", "Academic", "Administration", "Messages"],
   student: ["Overview", "Messages"],
   parent: ["Overview", "Messages", "Parent Portal"],
+  driver: ["Overview", "Administration"],
 };
 
 /**
@@ -38,6 +39,7 @@ export function getDashboardTitle(role: UserRole): string {
     receptionist: "Reception Desk",
     student: "Student Portal",
     parent: "Parent Portal",
+    driver: "Driver Console",
   };
   return titles[role] || "Dashboard";
 }
@@ -55,6 +57,7 @@ export function getDashboardSubtitle(role: UserRole): string {
     receptionist: "Support families, admissions, and student records.",
     student: "Track grades, attendance, and assignments.",
     parent: "View your child's academic progress and communication.",
+    driver: "Manage assigned routes, trips, stops, and vehicle telemetry.",
   };
   return subtitles[role] || "Dashboard";
 }
@@ -74,6 +77,7 @@ export function hasFeatureAccess(role: UserRole, feature: string): boolean {
     receptionist: ["students", "parents", "classes", "attendance", "events", "messages"],
     student: ["messages"],
     parent: ["messages"],
+    driver: ["transport"],
   };
 
   const allowed = accessMap[role] || [];
@@ -94,6 +98,7 @@ export function getDashboardCards(role: UserRole): string[] {
     receptionist: ["stats", "activity", "attendance", "events"],
     student: ["myGrades", "attendance", "assignments"],
     parent: ["childGrades", "attendance", "communications"],
+    driver: ["transport", "trips", "stops"],
   };
   return cardMap[role] || [];
 }
@@ -148,7 +153,8 @@ function hasMenuItemAccess(role: UserRole, route: string): boolean {
     // Administration
     "/fees": ["superadmin", "admin"],
     "/library": ["superadmin", "admin", "librarian"],
-    "/transport": ["superadmin", "admin"],
+    "/transport": ["superadmin", "admin", "driver"],
+    "/transport/driver": ["driver"],
     "/events": ["superadmin", "admin"],
     "/messages": ["superadmin", "admin", "accountant", "teacher", "librarian", "student", "parent"],
 

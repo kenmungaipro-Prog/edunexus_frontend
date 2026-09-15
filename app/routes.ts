@@ -84,6 +84,7 @@ export default [
     route("finance/payments/mpesa-status", "pages/finance/payments/mpesa-status.tsx"),
     route("finance/payments/collect", "pages/finance/payments/collect.tsx"),
     route("finance/receipts", "pages/finance/receipts/index.tsx"),
+    route("finance/reconciliation", "pages/finance/reconciliation/index.tsx"),
     route("finance/students/:id/statement", "pages/finance/students/statement.tsx"),
 
     // ── Accounting ───────────────────────────────────────────
@@ -110,6 +111,7 @@ export default [
     route("transport/analytics", "pages/transport/analytics.tsx"),
     route("transport/playback", "pages/transport/playback.tsx"),
     route("transport/notifications", "pages/transport/notifications.tsx"),
+    route("transport/driver", "pages/transport/driver.tsx"),
     route("transport/new", "pages/transport/new.tsx"),
     
     // Fleet & Driver Management

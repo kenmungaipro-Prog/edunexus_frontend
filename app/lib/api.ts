@@ -559,6 +559,17 @@ export interface PaymentGatewayStatusEntry {
   callback_updated_at: string | null;
 }
 
+export interface PaymentReconciliationItem {
+  id: number;
+  amount: number | string;
+  phone_number: string | null;
+  mpesa_receipt_number: string | null;
+  gateway_name: string | null;
+  status: "unmatched" | "resolved" | "refunded" | string;
+  created_at: string;
+  resolution_notes?: string | null;
+}
+
 export interface PaymentAllocationResult {
   payment: FinancePayment;
   allocated_amount: number;
@@ -1608,6 +1619,12 @@ export const finance = {
 
   paymentGatewayStatus: () =>
     get<ApiResponse<PaymentGatewayStatusEntry[]>>("/finance/payments/mpesa-status"),
+
+  reconciliation: (params?: { status?: string; page?: number; per_page?: number }) =>
+    get<PaginatedResponse<PaymentReconciliationItem>>("/finance/reconciliation", params as Record<string, unknown>),
+
+  resolveReconciliation: (id: number, payload: { student_id: number; resolution_notes?: string }) =>
+    post<ApiResponse<FinancePayment>>(`/finance/reconciliation/${id}/resolve`, payload),
 
   collectPayment: (payload: {
     student_id: number;

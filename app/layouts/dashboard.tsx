@@ -62,6 +62,10 @@ const NAV: { group: string; items: NavItem[] }[] = [
           { to: "/transport/analytics", icon: "📊", label: "Analytics" },
           { to: "/transport/playback", icon: "▶️", label: "Playback" },
           { to: "/transport/notifications", icon: "🔔", label: "Notifications" },
+          { to: "/transport/driver", icon: "🚍", label: "Driver Console" },
+          { to: "/transport/vehicles", icon: "🚐", label: "Vehicles" },
+          { to: "/transport/drivers", icon: "🧑‍✈️", label: "Drivers" },
+          { to: "/transport/routes", icon: "🗺️", label: "Routes" },
         ],
       },
       { to: "/events",     icon: "🎉", label: "Events",   badge: 3 },
@@ -89,6 +93,7 @@ const NAV: { group: string; items: NavItem[] }[] = [
       { to: "/finance/payments/collect", icon: "💵", label: "Collect Payment"  },
       
       { to: "/finance/receipts",         icon: "🗞️", label: "Receipts"         },
+      { to: "/finance/reconciliation",  icon: "🔄", label: "Reconciliation"  },
 
     ],
   },
@@ -217,7 +222,9 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
               )}
               {group.items.map(item => {
                 const itemIsActive = location.pathname === item.to || location.pathname.startsWith(item.to + "/");
-                const childItems: NavItem[] = item.children ?? [];
+                const childItems: NavItem[] = (item.children ?? []).filter((child: NavItem) =>
+                  user?.role === "driver" ? child.to === "/transport/driver" : child.to !== "/transport/driver"
+                );
                 const showChildren = childItems.length > 0 && itemIsActive && !isCollapsed;
 
                 return (
@@ -389,7 +396,11 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
                 { to: "/transport/analytics", label: "Analytics" },
                 { to: "/transport/playback", label: "Playback" },
                 { to: "/transport/notifications", label: "Notifications" },
-              ].map((item) => (
+                { to: "/transport/driver", label: "Driver Console" },
+                { to: "/transport/vehicles", label: "Vehicles" },
+                { to: "/transport/drivers", label: "Drivers" },
+                { to: "/transport/routes", label: "Routes" },
+              ].filter((item) => user?.role === "driver" ? item.to === "/transport/driver" : item.to !== "/transport/driver").map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
