@@ -328,7 +328,13 @@ export default function TimetablePage({ loaderData }: TTRoute.ComponentProps) {
       setSlotType("class");
       await loadTimetable(classId);
     } catch (err: any) {
-      setFeedback({ success: false, message: err?.message || "Operation failed." });
+      const validationMessages = Object.values(err?.errors ?? {})
+        .flat()
+        .filter((message): message is string => typeof message === "string");
+      setFeedback({
+        success: false,
+        message: validationMessages.join(" ") || err?.message || "Operation failed.",
+      });
     }
   };
 

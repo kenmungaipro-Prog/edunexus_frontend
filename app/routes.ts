@@ -60,6 +60,8 @@ export default [
     // ── Exams ─────────────────────────────────────────────────
     route("exams", "pages/exams/index.tsx"),
     route("exams/new", "pages/exams/new.tsx"),
+    route("exams/:id/edit", "pages/exams/edit.tsx"),
+    route("exams/:id/view", "pages/exams/view.tsx"),
     route("exams/:id", "pages/exams/show.tsx"),
 
     // ── Fees ──────────────────────────────────────────────────

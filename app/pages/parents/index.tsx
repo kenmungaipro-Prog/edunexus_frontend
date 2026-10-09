@@ -265,7 +265,7 @@ export default function ParentsIndexPage({ loaderData, actionData }: Route.Compo
                     </span>
                   </td>
                   <td style={{ padding: "12px 16px", color: "#cbd5e1", fontSize: "14px", fontWeight: 600 }}>
-                    {parent.children?.length ?? 0}
+                    {parent.children_count ?? parent.children?.length ?? 0}
                   </td>
                   <td style={{ padding: "12px 16px" }}>
                     <span style={{ background: pill.bg, color: pill.text, border: pill.border, padding: "4px 10px", borderRadius: "999px", fontSize: "11px", fontWeight: 600, textTransform: "capitalize" }}>

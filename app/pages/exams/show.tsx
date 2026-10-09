@@ -1,185 +1,258 @@
-// ============================================================
-// app/pages/fees/show.tsx
-// EduNexus — Dynamic Fee Transaction Details & Receipt View
-// ============================================================
-import { Link, useLoaderData, useParams } from "react-router";
-import { api } from "~/lib/api";
-import type { Fee } from "~/lib/api";
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router";
+import type { Route } from "./+types/show";
+import { api, type Exam, type Grade, type Student } from "~/lib/api";
 
-interface LoaderData {
-  fee: Fee;
+interface ExamDetails extends Exam {
+  class_room?: Exam["class_room"] & { students?: Student[] };
 }
 
-export async function clientLoader({ params }: { params: { id: string } }) {
-  try {
-    const response = await api.fees.get(Number(params.id));
-    return {
-      fee: response.data,
-    };
-  } catch (error) {
-    console.error("Failed fetching fee receipt data:", error);
-    throw new Response("Fee transaction record not found", { status: 404 });
+interface MarkEntry {
+  marks: string;
+  remarks: string;
+}
+
+export async function clientLoader({ params }: Route.LoaderArgs) {
+  const response = await api.exams.get(Number(params.id));
+  return { exam: response.data as ExamDetails };
+}
+
+const studentName = (student: Student) =>
+  student.full_name || `${student.first_name} ${student.last_name}`;
+
+function errorMessage(error: unknown): string {
+  if (error && typeof error === "object") {
+    if ("errors" in error && error.errors && typeof error.errors === "object") {
+      const messages = Object.values(error.errors)
+        .flatMap((value) => Array.isArray(value) ? value : [])
+        .filter((value): value is string => typeof value === "string");
+      if (messages.length > 0) return messages.join(" ");
+    }
+    if ("message" in error && typeof error.message === "string") {
+      return error.message;
+    }
   }
+  return "Marks could not be saved. Please try again.";
 }
 
-const formatCurrency = (amount: number | string) => {
-  const value = typeof amount === "string" ? parseFloat(amount) : amount;
-  return new Intl.NumberFormat("en-KE", {
-    style: "currency",
-    currency: "KES",
-  }).format(value || 0);
-};
+export default function ExamShowPage({ loaderData }: Route.ComponentProps) {
+  const { exam: initialExam } = loaderData;
+  const [exam, setExam] = useState(initialExam);
+  const [entries, setEntries] = useState<Record<number, MarkEntry>>({});
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-const formatDate = (dateStr?: string | null) => {
-  if (!dateStr) return "N/A";
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
+  const students = exam.class_room?.students ?? [];
+  const existingGrades = useMemo(
+    () => new Map((exam.grades ?? []).map((grade) => [grade.student_id, grade])),
+    [exam.grades],
+  );
+  const enteredCount = students.filter((student) => {
+    const current = entries[student.id];
+    return current ? current.marks.trim() !== "" : existingGrades.has(student.id);
+  }).length;
 
-const formatPaymentMethod = (method?: string) => {
-  if (!method) return "Unknown";
-  const map: Record<string, string> = {
-    mpesa: "M-Pesa",
-    cash: "Cash",
-    bank_deposit: "Bank Deposit",
-    card: "Credit/Debit Card",
-    cheque: "Cheque",
-    online: "Online Payment",
+  useEffect(() => {
+    setEntries((current) => {
+      const next = { ...current };
+      for (const student of students) {
+        if (!next[student.id]) {
+          const grade = existingGrades.get(student.id);
+          next[student.id] = {
+            marks: grade ? String(grade.marks_obtained) : "",
+            remarks: grade?.remarks ?? "",
+          };
+        }
+      }
+      return next;
+    });
+  }, [students, existingGrades]);
+
+  const updateEntry = (studentId: number, field: keyof MarkEntry, value: string) => {
+    setEntries((current) => ({
+      ...current,
+      [studentId]: { ...current[studentId], [field]: value },
+    }));
+    setError("");
+    setSuccess("");
   };
-  return map[method.toLowerCase()] || method.toUpperCase();
-};
 
-export default function FeeShowPage() {
-  const { fee } = useLoaderData<typeof clientLoader>() as LoaderData;
-  const { id } = useParams();
+  const saveMarks = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError("");
+    setSuccess("");
 
-  const getStatusStyles = (status?: string) => {
-    switch (status?.toLowerCase()) {
-      case "paid":
-        return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
-      case "pending":
-        return "bg-amber-500/10 text-amber-400 border-amber-500/20";
-      case "reversed":
-        return "bg-rose-500/10 text-rose-400 border-rose-500/20";
-      default:
-        return "bg-slate-500/10 text-slate-400 border-slate-500/20";
+    const grades = students.flatMap((student) => {
+      const entry = entries[student.id];
+      if (!entry?.marks.trim()) return [];
+      const marks = Number(entry.marks);
+      if (!Number.isFinite(marks) || marks < 0 || marks > exam.total_marks) return [];
+      return [{
+        student_id: student.id,
+        marks_obtained: marks,
+        remarks: entry.remarks.trim() || undefined,
+      }];
+    });
+    const invalidStudent = students.find((student) => {
+      const mark = entries[student.id]?.marks.trim();
+      return mark !== undefined && mark !== "" &&
+        (!Number.isFinite(Number(mark)) || Number(mark) < 0 || Number(mark) > exam.total_marks);
+    });
+
+    if (invalidStudent) {
+      setError(`${studentName(invalidStudent)}'s score must be between 0 and ${exam.total_marks}.`);
+      return;
+    }
+    if (grades.length === 0) {
+      setError("Enter at least one student's mark before saving.");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const response = await api.grades.enter({ exam_id: exam.id, grades });
+      const updated = await api.exams.get(exam.id);
+      setExam(updated.data as ExamDetails);
+      setSuccess(response.message || "Marks saved successfully.");
+    } catch (saveError) {
+      setError(errorMessage(saveError));
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  return (
-    <div className="max-w-3xl mx-auto px-3 sm:px-4 py-4 sm:py-6 selection:bg-blue-500 selection:text-white">
-      <div className="flex items-center justify-between mb-4 sm:mb-6 print:hidden">
-        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-          <Link to="/fees" className="text-slate-400 hover:text-white text-xs sm:text-sm transition-colors flex items-center gap-1.5">
-            ← Back to Fees
-          </Link>
-          <span className="text-slate-600">/</span>
-          <span className="text-xs sm:text-sm text-slate-300 font-medium truncate">Receipt #{fee.receipt_no}</span>
-        </div>
-      </div>
+  const resultFor = (grade?: Grade) => {
+    if (!grade) return null;
+    return `${Number(grade.percentage).toFixed(1)}% · ${grade.letter_grade} · ${grade.status}`;
+  };
 
-      <div className="bg-slate-800 border border-slate-700 rounded-2xl shadow-xl overflow-hidden print:bg-white print:border-none print:shadow-none">
-        
-        <div className="p-4 sm:p-6 border-b border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-800/50 print:bg-white print:border-b-2 print:border-slate-300 print:p-0 print:pb-6">
-          <div className="w-full sm:w-auto">
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-              <h1 className="text-lg sm:text-xl font-bold text-slate-100 print:text-black print:text-2xl">
-                EduNexus Receipt
-              </h1>
-              <span className={`text-[10px] sm:text-xs px-2.5 py-1 rounded-full font-semibold border ${getStatusStyles(fee.status)} print:text-black print:border-black print:px-2 print:py-0.5`}>
-                {fee.status?.toUpperCase()}
-              </span>
-            </div>
-            <p className="text-slate-400 text-xs sm:text-sm mt-1 print:text-slate-600 break-all">
-              Transaction token: <span className="font-mono text-blue-300 font-medium print:text-black">{fee.receipt_no}</span>
+  return (
+    <div className="mx-auto max-w-5xl p-4 sm:p-6">
+      <Link to="/exams" className="mb-5 inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white">
+        <span aria-hidden="true">←</span> Back to exams
+      </Link>
+
+      <section className="mb-6 rounded-xl border border-slate-700 bg-slate-800 p-5 sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-blue-400">
+              {exam.subject?.name || "Exam"} · {exam.class_room?.name || "Class"}
+            </p>
+            <h1 className="mt-2 text-2xl font-bold text-white">{exam.title}</h1>
+            <p className="mt-2 text-sm text-slate-400">
+              {new Date(exam.exam_date).toLocaleDateString("en-KE", {
+                day: "numeric", month: "long", year: "numeric",
+              })}
+              {" · "}Passing mark {exam.passing_marks} / {exam.total_marks}
             </p>
           </div>
-          
-          <button onClick={() => window.print()} className="w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs sm:text-sm font-medium transition shadow-md flex items-center justify-center gap-2 print:hidden">
-            <span>🖨</span> Print Receipt
-          </button>
+          <span className="w-fit rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold capitalize text-slate-300">
+            {exam.status}
+          </span>
+        </div>
+      </section>
+
+      <section className="overflow-hidden rounded-xl border border-slate-700 bg-slate-800">
+        <div className="flex flex-col gap-2 border-b border-slate-700 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+          <div>
+            <h2 className="font-bold text-white">Enter marks</h2>
+            <p className="mt-1 text-xs text-slate-400">
+              Scores are out of {exam.total_marks}. Existing marks can be updated.
+            </p>
+          </div>
+          <span className="text-sm text-slate-400">
+            {enteredCount} of {students.length} students entered
+          </span>
         </div>
 
-        <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 print:p-0 print:pt-6">
-          <div className="bg-slate-900 border border-slate-700/60 rounded-xl p-4 sm:p-5 print:bg-white print:border-slate-300">
-            <h3 className="text-xs uppercase tracking-wider text-slate-500 font-bold mb-3 print:text-slate-700">Student Details</h3>
-            <div className="space-y-1">
-              <p className="font-bold text-slate-100 text-sm sm:text-base print:text-black break-words">
-                {fee.student?.full_name || "Unknown Student"}
+        {error && <div role="alert" className="m-4 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300">{error}</div>}
+        {success && <div role="status" className="m-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-emerald-300">{success}</div>}
+
+        {exam.status !== "completed" ? (
+          <div className="p-8 text-center">
+            <div role="alert" className="mx-auto max-w-xl rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-left">
+              <p className="font-semibold text-amber-200">Marks can only be entered for completed exams.</p>
+              <p className="mt-1 text-sm text-amber-100/80">
+                This exam is currently {exam.status}. Edit the exam and change its status to Completed before recording marks.
               </p>
-              <p className="text-slate-400 text-xs sm:text-sm print:text-slate-700">
-                Adm No: <span className="text-slate-200 font-medium print:text-black">{fee.student?.admission_no || "N/A"}</span>
+            </div>
+          </div>
+        ) : students.length === 0 ? (
+          <div className="p-8 text-center">
+            <p className="font-semibold text-slate-200">No students found in this class</p>
+            <p className="mt-1 text-sm text-slate-400">Add students to the exam class before recording marks.</p>
+          </div>
+        ) : (
+          <form onSubmit={saveMarks}>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[650px] text-left text-sm">
+                <thead className="bg-slate-900/70 text-xs uppercase tracking-wide text-slate-400">
+                  <tr>
+                    <th className="px-4 py-3 font-semibold">Student</th>
+                    <th className="w-40 px-4 py-3 font-semibold">Score / {exam.total_marks}</th>
+                    <th className="w-64 px-4 py-3 font-semibold">Remarks</th>
+                    <th className="w-48 px-4 py-3 font-semibold">Result</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-700">
+                  {students.map((student) => {
+                    const grade = existingGrades.get(student.id);
+                    const score = entries[student.id]?.marks;
+                    return (
+                      <tr key={student.id} className="hover:bg-slate-700/20">
+                        <td className="px-4 py-3">
+                          <p className="font-medium text-slate-100">{studentName(student)}</p>
+                          <p className="mt-0.5 text-xs text-slate-500">{student.admission_no}</p>
+                        </td>
+                        <td className="px-4 py-3">
+                          <input
+                            type="number"
+                            min="0"
+                            max={exam.total_marks}
+                            step="0.01"
+                            inputMode="decimal"
+                            aria-label={`Marks for ${studentName(student)}`}
+                            value={score ?? ""}
+                            onChange={(event) => updateEntry(student.id, "marks", event.target.value)}
+                            className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-white outline-none focus:border-blue-500"
+                            placeholder="—"
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <input
+                            type="text"
+                            aria-label={`Remarks for ${studentName(student)}`}
+                            value={entries[student.id]?.remarks ?? ""}
+                            onChange={(event) => updateEntry(student.id, "remarks", event.target.value)}
+                            className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-white outline-none focus:border-blue-500"
+                            placeholder="Optional"
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-xs capitalize text-slate-400">
+                          {resultFor(grade) ?? "Not saved"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex flex-col gap-3 border-t border-slate-700 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+              <p className="text-xs text-slate-500">
+                Percentage, letter grade, and pass/fail are calculated automatically.
               </p>
-              {fee.student?.class_room?.name && (
-                <p className="text-slate-400 text-xs sm:text-sm print:text-slate-700">
-                  Class: <span className="text-slate-200 font-medium print:text-black">{fee.student.class_room.name}</span>
-                </p>
-              )}
+              <button
+                type="submit"
+                disabled={isSaving}
+                className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSaving ? "Saving marks…" : "Save marks"}
+              </button>
             </div>
-          </div>
-
-          <div className="bg-slate-900 border border-slate-700/60 rounded-xl p-4 sm:p-5 print:bg-white print:border-slate-300">
-            <h3 className="text-xs uppercase tracking-wider text-slate-500 font-bold mb-3 print:text-slate-700">Payment Parameters</h3>
-            <div className="space-y-1 text-xs sm:text-sm text-slate-400 print:text-slate-700">
-              <p>Settled: <span className="font-medium text-slate-200 print:text-black">{formatDate(fee.paid_at)}</span></p>
-              <p>Method: <span className="font-medium text-slate-200 print:text-black">{formatPaymentMethod(fee.payment_method)}</span></p>
-              {fee.transaction_id && (
-                <p className="truncate">Ref: <span className="font-mono bg-slate-800 text-blue-300 px-1.5 py-0.5 rounded text-xs print:bg-none print:text-black print:font-bold">{fee.transaction_id}</span></p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="px-4 sm:px-6 pb-4 sm:pb-6 print:px-0">
-          <div className="bg-slate-900 border border-slate-700/60 rounded-xl overflow-hidden print:bg-white print:border-slate-300">
-            <div className="grid grid-cols-3 bg-slate-950/40 px-4 sm:px-5 py-3 border-b border-slate-700/60 text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider print:bg-slate-100 print:text-slate-700 print:border-slate-300">
-              <div className="col-span-2">Allocation Structure</div>
-              <div className="text-right">Subtotal</div>
-            </div>
-            <div className="divide-y divide-slate-700/40 print:divide-slate-300">
-              <div className="grid grid-cols-3 px-4 sm:px-5 py-3.5 sm:py-4 items-center text-xs sm:text-sm">
-                <div className="col-span-2 pr-2">
-                  <p className="font-semibold text-slate-200 print:text-black break-words">{fee.fee_type?.name || "General Fee"}</p>
-                  {fee.fee_type?.description && (
-                    <p className="text-[11px] text-slate-500 mt-0.5 print:text-slate-600 break-words">{fee.fee_type.description}</p>
-                  )}
-                </div>
-                <div className="text-right font-medium text-slate-200 print:text-black whitespace-nowrap">{formatCurrency(fee.amount)}</div>
-              </div>
-            </div>
-            <div className="bg-slate-950/20 px-4 sm:px-5 py-3.5 sm:py-4 border-t border-slate-700/60 space-y-2 print:bg-white print:border-slate-300">
-              <div className="flex justify-between items-center text-sm sm:text-base font-bold">
-                <span className="text-slate-200 print:text-black">Total Paid (Net)</span>
-                <span className="text-blue-400 text-base sm:text-lg print:text-black">{formatCurrency(fee.amount)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {fee.remarks && (
-          <div className="mx-4 sm:mx-6 mb-4 sm:mb-6 p-3.5 sm:p-4 bg-slate-900/40 border border-dashed border-slate-700 rounded-xl text-xs text-slate-400 print:bg-white print:border-slate-300 print:text-slate-700 print:mx-0 break-words">
-            <span className="font-bold text-slate-300 block mb-1 print:text-black">Remarks:</span>{fee.remarks}
-          </div>
+          </form>
         )}
-
-        <div className="hidden print:block mt-16 px-4">
-          <div className="flex justify-between items-end text-xs text-slate-600">
-            <div>
-              <p>Issued By: {fee.collected_by_user?.name || "System"}</p>
-              <p>Date Printed: {new Date().toLocaleDateString()}</p>
-            </div>
-            <div className="text-center w-48">
-              <div className="border-b border-black h-8 mb-1"></div>
-              <p className="font-medium">Authorized Signature</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      </section>
     </div>
   );
 }

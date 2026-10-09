@@ -11,6 +11,7 @@ import {
   type Fee,
   type Attendance,
   type AttendanceStatus,
+  type User,
 } from "~/lib/api";
 
 export async function clientLoader({ params }: Route.LoaderArgs) {
@@ -162,6 +163,10 @@ export default function StudentShowPage({ loaderData }: Route.ComponentProps) {
 
   const allFees: Fee[] = feeHistory?.fees ?? (student.fees ?? []);
   const allAttendance: Attendance[] = attendance?.records ?? [];
+  const studentParents = [
+    { label: "Primary Parent / Guardian", parent: student.parent },
+    { label: "Second Parent / Guardian", parent: student.secondary_parent },
+  ].filter((entry): entry is { label: string; parent: User } => Boolean(entry.parent));
 
   const TABS: { id: TabId; label: string; count?: number }[] = [
     { id: "overview",   label: "Overview" },
@@ -297,18 +302,23 @@ export default function StudentShowPage({ loaderData }: Route.ComponentProps) {
           </Card>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-            {student.parent && (
+            {studentParents.length > 0 && (
               <Card>
-                <SectionHeading>👨‍👩‍👧 Parent / Guardian</SectionHeading>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-                  <div style={{ width: "38px", height: "38px", borderRadius: "50%", flexShrink: 0, background: "rgba(16,185,129,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "13px", fontWeight: 700, color: "#34d399" }}>
-                    {initials(student.parent.name)}
-                  </div>
-                  <div style={{ flex: 1, minWidth: "140px" }}>
-                    <div style={{ fontSize: "14px", fontWeight: 600, wordBreak: "break-word" }}>{student.parent.name}</div>
-                    <div style={{ fontSize: "12px", color: "#6b7a99", wordBreak: "break-all" }}>{student.parent.email}</div>
-                  </div>
-                  <Link to="/messages" style={{ padding: "6px 12px", borderRadius: "7px", background: "#1e2640", border: "1px solid #2a3350", color: "#a0aec0", textDecoration: "none", fontSize: "11px", fontWeight: 600, whiteSpace: "nowrap" }}>💬 Message</Link>
+                <SectionHeading>👨‍👩‍👧 Parents / Guardians</SectionHeading>
+                <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                  {studentParents.map(({ label, parent }) => (
+                    <div key={parent.id} style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                      <div style={{ width: "38px", height: "38px", borderRadius: "50%", flexShrink: 0, background: "rgba(16,185,129,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "13px", fontWeight: 700, color: "#34d399" }}>
+                        {initials(parent.name)}
+                      </div>
+                      <div style={{ flex: 1, minWidth: "140px" }}>
+                        <div style={{ fontSize: "11px", color: "#6b7a99", marginBottom: "2px" }}>{label}</div>
+                        <div style={{ fontSize: "14px", fontWeight: 600, wordBreak: "break-word" }}>{parent.name}</div>
+                        <div style={{ fontSize: "12px", color: "#6b7a99", wordBreak: "break-all" }}>{parent.email}</div>
+                      </div>
+                      <Link to="/messages" style={{ padding: "6px 12px", borderRadius: "7px", background: "#1e2640", border: "1px solid #2a3350", color: "#a0aec0", textDecoration: "none", fontSize: "11px", fontWeight: 600, whiteSpace: "nowrap" }}>💬 Message</Link>
+                    </div>
+                  ))}
                 </div>
               </Card>
             )}

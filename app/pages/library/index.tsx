@@ -7,9 +7,11 @@ import type { Route as LibRoute } from "./+types/index";
 import { api, type Book, type PaginationMeta } from "~/lib/api";
 
 interface LibraryStats {
+  total_titles: number;
   total_books: number;
   issued: number;
   returned_today: number;
+  overdue: number;
 }
 
 interface LoaderData {
@@ -28,16 +30,14 @@ export async function clientLoader({ request }: LibRoute.LoaderArgs): Promise<Lo
   try {
     const [booksRes, statsRes] = await Promise.all([
       api.library.list({ search, category, per_page: 20 }),
-      api.analytics.library().catch(() => ({
-        data: { total_books: 0, issued: 0, returned_today: 0, overdue: 0 }
-      }))
+      api.analytics.library(),
     ]);
 
     return {
       books: booksRes.data.data || [],
       meta: booksRes.data.meta || null,
       stats: statsRes.data,
-      overdueCount: statsRes.data.overdue
+      overdueCount: statsRes.data.overdue,
     };
   } catch (error) {
     console.error("Failed to load library data:", error);
@@ -45,7 +45,7 @@ export async function clientLoader({ request }: LibRoute.LoaderArgs): Promise<Lo
       books: [],
       meta: null,
       overdueCount: 0,
-      stats: { total_books: 0, issued: 0, returned_today: 0 },
+      stats: { total_titles: 0, total_books: 0, issued: 0, returned_today: 0 },
       error: "Failed to load library data. Please try again later."
     };
   }
@@ -69,7 +69,8 @@ export default function LibraryPage({ loaderData }: LibRoute.ComponentProps) {
   }
 
   const analyticsItems = [
-    { label: "Total Books", value: stats.total_books, icon: "📚", color: "text-blue-400", bg: "bg-blue-500/10" },
+    { label: "Book Titles", value: stats.total_titles, icon: "📚", color: "text-blue-400", bg: "bg-blue-500/10" },
+    { label: "Physical Copies", value: stats.total_books, icon: "📖", color: "text-cyan-400", bg: "bg-cyan-500/10" },
     { label: "Issued Books", value: stats.issued, icon: "📖", color: "text-amber-400", bg: "bg-amber-500/10" },
     { label: "Overdue", value: overdueCount, icon: "⚠️", color: "text-red-400", bg: "bg-red-500/10" },
     { label: "Returned Today", value: stats.returned_today, icon: "🔄", color: "text-emerald-400", bg: "bg-emerald-500/10" },
@@ -88,7 +89,7 @@ export default function LibraryPage({ loaderData }: LibRoute.ComponentProps) {
       </div>
 
       {/* Analytics Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 mb-8">
         {analyticsItems.map((item) => (
           <div key={item.label} className="bg-slate-800 border border-slate-700 p-4 rounded-xl flex items-center gap-4">
             <div className={`w-12 h-12 rounded-lg ${item.bg} flex items-center justify-center text-2xl flex-shrink-0`}>

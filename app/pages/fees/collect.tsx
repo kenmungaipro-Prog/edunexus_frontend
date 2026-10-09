@@ -2,7 +2,7 @@
 // app/pages/fees/collect.tsx
 // EduNexus — Enterprise Payment Collection & Auto-Allocation
 // ============================================================
-import { Form, Link, useActionData, useNavigation, useSubmit } from "react-router";
+import { Form, Link, useNavigation } from "react-router";
 import { useState, useEffect } from "react";
 import { api } from "~/lib/api";
 import type { PaymentMethod } from "~/lib/api";
@@ -46,21 +46,71 @@ export default function CollectPaymentPage({ loaderData, actionData }: any) {
   const [selectedStudent, setSelectedStudent] = useState<string>("");
   const [balanceData, setBalanceData] = useState<{ balance: number; overdue: number } | null>(null);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
+  const [balanceError, setBalanceError] = useState("");
+  const [receiptDownloadError, setReceiptDownloadError] = useState("");
+  const [isDownloadingReceipt, setIsDownloadingReceipt] = useState(false);
+
+  async function downloadReceipt(receiptId: number) {
+    setIsDownloadingReceipt(true);
+    setReceiptDownloadError("");
+    try {
+      const response = await api.finance.receiptPdf(receiptId);
+      const url = URL.createObjectURL(response);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `receipt-${receiptId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error: unknown) {
+      setReceiptDownloadError(
+        error && typeof error === "object" && "message" in error && typeof error.message === "string"
+          ? error.message
+          : "Could not download the receipt. Please try again.",
+      );
+    } finally {
+      setIsDownloadingReceipt(false);
+    }
+  }
 
   useEffect(() => {
+    let isCurrentRequest = true;
     if (!selectedStudent) {
       setBalanceData(null);
-      return;
+      setBalanceError("");
+      setIsLoadingBalance(false);
+      return () => {
+        isCurrentRequest = false;
+      };
     }
     
     setIsLoadingBalance(true);
+    setBalanceError("");
+    setBalanceData(null);
     api.finance.studentSummary(Number(selectedStudent))
-      .then(res => setBalanceData({
-        balance: res.data.balance,
-        overdue: res.data.overdue_balance
-      }))
-      .catch(console.error)
-      .finally(() => setIsLoadingBalance(false));
+      .then((res) => {
+        if (!isCurrentRequest) return;
+        setBalanceData({
+          balance: Number(res.data.balance?.balance ?? 0),
+          overdue: Number(res.data.overdue_balance ?? 0),
+        });
+      })
+      .catch((error: unknown) => {
+        if (!isCurrentRequest) return;
+        setBalanceError(
+          error && typeof error === "object" && "message" in error && typeof error.message === "string"
+            ? error.message
+            : "Could not load this student's outstanding balance.",
+        );
+      })
+      .finally(() => {
+        if (isCurrentRequest) setIsLoadingBalance(false);
+      });
+
+    return () => {
+      isCurrentRequest = false;
+    };
   }, [selectedStudent]);
 
   if (actionData?.success) {
@@ -75,15 +125,18 @@ export default function CollectPaymentPage({ loaderData, actionData }: any) {
           <Link to="/fees" className="w-full sm:w-auto px-4 py-2.5 rounded-lg text-sm bg-slate-700 text-slate-300 hover:bg-slate-600 transition text-center">
             ← Back to Dashboard
           </Link>
-          <a 
-            href={`${import.meta.env.VITE_API_URL}/api/v1/finance/receipts/${actionData.receiptId}/pdf`} 
-            target="_blank" 
-            rel="noreferrer" 
-            className="w-full sm:w-auto px-4 py-2.5 rounded-lg text-sm bg-blue-500 text-white hover:bg-blue-600 transition text-center"
+          <button
+            type="button"
+            onClick={() => downloadReceipt(actionData.receiptId)}
+            disabled={isDownloadingReceipt}
+            className="w-full sm:w-auto px-4 py-2.5 rounded-lg text-sm bg-blue-500 text-white hover:bg-blue-600 transition text-center disabled:cursor-wait disabled:opacity-60"
           >
-            🖨 Print Official Receipt
-          </a>
+            {isDownloadingReceipt ? "Preparing receipt…" : "🖨 Download / Print Receipt"}
+          </button>
         </div>
+        {receiptDownloadError && (
+          <p role="alert" className="mt-4 text-sm text-red-400">{receiptDownloadError}</p>
+        )}
       </div>
     );
   }
@@ -120,7 +173,7 @@ export default function CollectPaymentPage({ loaderData, actionData }: any) {
               </select>
             </div>
 
-            <div className={`transition-all duration-300 overflow-hidden ${selectedStudent ? 'max-h-28 opacity-100' : 'max-h-0 opacity-0'}`}>
+            <div className={`transition-all duration-300 overflow-hidden ${selectedStudent ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}>
               <div className="bg-slate-900/50 rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border border-slate-700/50">
                 <div>
                   <p className="text-xs text-slate-400 mb-1">Total Outstanding Balance</p>
@@ -128,7 +181,9 @@ export default function CollectPaymentPage({ loaderData, actionData }: any) {
                     <div className="h-6 w-24 bg-slate-700 animate-pulse rounded"></div>
                   ) : (
                     <p className="text-lg font-bold text-slate-200">
-                      KES {Number(balanceData?.balance || 0).toLocaleString("en-KE")}
+                      KES {balanceData && Number.isFinite(balanceData.balance)
+                        ? balanceData.balance.toLocaleString("en-KE")
+                        : "—"}
                     </p>
                   )}
                 </div>
@@ -138,11 +193,18 @@ export default function CollectPaymentPage({ loaderData, actionData }: any) {
                     <div className="h-6 w-24 bg-slate-700 animate-pulse rounded sm:ml-auto"></div>
                   ) : (
                     <p className={`text-sm font-bold ${balanceData?.overdue ? 'text-red-400' : 'text-emerald-400'}`}>
-                      KES {Number(balanceData?.overdue || 0).toLocaleString("en-KE")}
+                      KES {balanceData && Number.isFinite(balanceData.overdue)
+                        ? balanceData.overdue.toLocaleString("en-KE")
+                        : "—"}
                     </p>
                   )}
                 </div>
               </div>
+              {balanceError && (
+                <p role="alert" className="mt-2 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300">
+                  {balanceError}
+                </p>
+              )}
             </div>
           </div>
 

@@ -31,8 +31,12 @@ export async function clientAction({ request, params }: Route.ActionArgs) {
   try {
     await api.library.update(Number(params.id), payload);
     return redirect(`/library/books/${params.id}`);
-  } catch (error: any) {
-    return { error: error.response?.data?.message || "Failed to update book." };
+  } catch (error: unknown) {
+    return {
+      error: error && typeof error === "object" && "message" in error && typeof error.message === "string"
+        ? error.message
+        : "Failed to update book.",
+    };
   }
 }
 

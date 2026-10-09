@@ -13,6 +13,11 @@ interface ActionErrors {
   dept?:     string;
   username?: string;
   password?: string;
+  phone?: string;
+  qualification?: string;
+  experience_yrs?: string;
+  dob?: string;
+  join_date?: string;
   general?:  string;
 }
 
@@ -61,7 +66,10 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
   const validationErrors = validateTeacher(payload);
   if (Object.keys(validationErrors).length > 0) {
     return {
-      errors: validationErrors,
+      errors: {
+        ...validationErrors,
+        general: "Please correct the highlighted fields before saving.",
+      } as ActionErrors,
     };
   }
 
@@ -104,8 +112,13 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
       status,
     });
     return redirect("/teachers");
-  } catch (err: any) {
-    const backendErrors = err?.response?.data?.errors;
+  } catch (err: unknown) {
+    const apiError = err as {
+      message?: string;
+      errors?: Record<string, string[]>;
+      response?: { data?: { message?: string; errors?: Record<string, string[]> } };
+    };
+    const backendErrors = apiError?.errors ?? apiError?.response?.data?.errors;
     if (backendErrors) {
       return {
         errors: {
@@ -113,11 +126,16 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
           email: backendErrors.email?.[0],
           dept: backendErrors.department?.[0],
           password: backendErrors.password?.[0],
-          general: err?.response?.data?.message ?? "Please resolve the highlighted errors below."
+          phone: backendErrors.phone?.[0],
+          qualification: backendErrors.qualification?.[0],
+          experience_yrs: backendErrors.experience_yrs?.[0],
+          dob: backendErrors.dob?.[0],
+          join_date: backendErrors.join_date?.[0],
+          general: apiError?.message ?? apiError?.response?.data?.message ?? "Please resolve the highlighted errors below."
         } as ActionErrors
       };
     }
-    return { errors: { general: err?.message ?? "Something went wrong. Please try again." } as ActionErrors };
+    return { errors: { general: apiError?.message ?? "Something went wrong. Please try again." } as ActionErrors };
   }
 }
 
@@ -132,6 +150,37 @@ const STEPS = [
   { label: "Subjects & Classes",   icon: "📚", desc: "Teaching assignments" },
   { label: "Account Setup",        icon: "🔐", desc: "Login credentials & role" },
 ];
+
+function Field({
+  label,
+  required,
+  error,
+  hint,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  error?: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className="text-xs font-semibold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+        {label}
+        {required && <span className="text-red-400 text-sm leading-none">*</span>}
+      </label>
+      {children}
+      {hint && !error && <p className="text-[11px] text-slate-600">{hint}</p>}
+      {error && (
+        <p className="text-[11px] text-red-400 flex items-center gap-1">
+          <span className="inline-block w-3 h-3 rounded-full bg-red-500/20 text-center leading-3">!</span>
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
 
 export default function NewTeacherPage() {
   const actionData   = useActionData<typeof clientAction>();
@@ -173,9 +222,9 @@ export default function NewTeacherPage() {
   }, []);
 
   useEffect(() => {
-    if (errors.name || errors.email) {
+    if (errors.name || errors.email || errors.phone || errors.dob) {
       setStep(0);
-    } else if (errors.dept) {
+    } else if (errors.dept || errors.qualification || errors.experience_yrs || errors.join_date) {
       setStep(1);
     } else if (errors.username || errors.password) {
       setStep(3);
@@ -208,27 +257,6 @@ export default function NewTeacherPage() {
   function toggleClass(id: number) {
     setSelectedClassIds(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
   }
-
-  const Field = ({
-    label, required, error, hint, children
-  }: {
-    label: string; required?: boolean; error?: string; hint?: string; children: React.ReactNode;
-  }) => (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-xs font-semibold text-slate-400 uppercase tracking-widest flex items-center gap-1">
-        {label}
-        {required && <span className="text-red-400 text-sm leading-none">*</span>}
-      </label>
-      {children}
-      {hint && !error && <p className="text-[11px] text-slate-600">{hint}</p>}
-      {error && (
-        <p className="text-[11px] text-red-400 flex items-center gap-1">
-          <span className="inline-block w-3 h-3 rounded-full bg-red-500/20 text-center leading-3">!</span>
-          {error}
-        </p>
-      )}
-    </div>
-  );
 
   const inputCls = (hasError?: boolean) =>
     `bg-slate-900/60 border rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-600
@@ -352,7 +380,7 @@ export default function NewTeacherPage() {
                 placeholder="teacher@school.edu" />
             </Field>
 
-            <Field label="Phone Number">
+            <Field label="Phone Number" error={errors.phone}>
               <input name="phone" type="tel" className={inputCls()}
                 placeholder="+254 700 000 000" />
             </Field>
@@ -367,8 +395,8 @@ export default function NewTeacherPage() {
               </select>
             </Field>
 
-            <Field label="Date of Birth">
-              <input name="dob" type="date" className={inputCls()} />
+            <Field label="Date of Birth" error={errors.dob}>
+              <input name="dob" type="date" className={inputCls(!!errors.dob)} />
             </Field>
 
             <div className="sm:col-span-2">
@@ -393,18 +421,18 @@ export default function NewTeacherPage() {
               </Field>
             </div>
 
-            <Field label="Qualification">
-              <input name="qualification" className={inputCls()}
+            <Field label="Qualification" error={errors.qualification}>
+              <input name="qualification" className={inputCls(!!errors.qualification)}
                 placeholder="e.g. B.Ed Mathematics" />
             </Field>
 
-            <Field label="Years of Experience">
+            <Field label="Years of Experience" error={errors.experience_yrs}>
               <input name="experience" type="number" min={0} max={50}
-                className={inputCls()} placeholder="e.g. 5" />
+                className={inputCls(!!errors.experience_yrs)} placeholder="e.g. 5" />
             </Field>
 
-            <Field label="Join Date">
-              <input name="join_date" type="date" className={inputCls()} />
+            <Field label="Join Date" error={errors.join_date}>
+              <input name="join_date" type="date" className={inputCls(!!errors.join_date)} />
             </Field>
 
             <Field label="Employment Type">

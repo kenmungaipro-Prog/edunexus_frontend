@@ -125,6 +125,37 @@ const DEPTS = [
   "Computer", "Hindi", "Art", "Physical Education",
 ];
 
+function Field({
+  label,
+  required,
+  error,
+  hint,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  error?: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className="text-xs font-semibold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+        {label}
+        {required && <span className="text-red-400 text-sm leading-none">*</span>}
+      </label>
+      {children}
+      {hint && !error && <p className="text-[11px] text-slate-600">{hint}</p>}
+      {error && (
+        <p className="text-[11px] text-red-400 flex items-center gap-1">
+          <span className="inline-block w-3 h-3 rounded-full bg-red-500/20 text-center leading-3">!</span>
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function EditTeacherPage({ loaderData }: Route.ComponentProps) {
   const { teacher, allSubjects, allClasses }  = loaderData as any;
   const actionData   = useActionData<typeof clientAction>();
@@ -155,27 +186,6 @@ export default function EditTeacherPage({ loaderData }: Route.ComponentProps) {
   function toggleClass(id: number) {
     setSelectedClassIds(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
   }
-
-  const Field = ({
-    label, required, error, hint, children
-  }: {
-    label: string; required?: boolean; error?: string; hint?: string; children: React.ReactNode;
-  }) => (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-xs font-semibold text-slate-400 uppercase tracking-widest flex items-center gap-1">
-        {label}
-        {required && <span className="text-red-400 text-sm leading-none">*</span>}
-      </label>
-      {children}
-      {hint && !error && <p className="text-[11px] text-slate-600">{hint}</p>}
-      {error && (
-        <p className="text-[11px] text-red-400 flex items-center gap-1">
-          <span className="inline-block w-3 h-3 rounded-full bg-red-500/20 text-center leading-3">!</span>
-          {error}
-        </p>
-      )}
-    </div>
-  );
 
   const inputCls = (hasError?: boolean) =>
     `bg-slate-900/60 border rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-600

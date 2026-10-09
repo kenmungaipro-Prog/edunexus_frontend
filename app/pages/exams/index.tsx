@@ -1,6 +1,7 @@
 // ============================================================
 // app/pages/exams/index.tsx
 // ============================================================
+import { useState } from "react";
 import { Link, Form, useSearchParams, useNavigation } from "react-router";
 import type { Route } from "./+types/index";
 import { api } from "~/lib/api";
@@ -79,6 +80,7 @@ export default function ExamsPage({ loaderData }: Route.ComponentProps) {
   const { exams, stats, gradeData, subjectData, statusParam } = loaderData;
   const [searchParams, setSearchParams] = useSearchParams();
   const navigation = useNavigation();
+  const [marksAlertExamId, setMarksAlertExamId] = useState<number | null>(null);
 
   const STATUS_COLORS: Record<string, string> = {
     scheduled: "bg-blue-500/15 text-blue-400",
@@ -134,7 +136,8 @@ export default function ExamsPage({ loaderData }: Route.ComponentProps) {
 
           <div className="divide-y divide-slate-700">
             {exams.length > 0 ? exams.map((exam) => (
-              <div key={exam.id} className="p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 hover:bg-slate-700/30 transition group">
+              <div key={exam.id}>
+              <div className="p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 hover:bg-slate-700/30 transition group">
                 <div className="flex items-center justify-between sm:justify-start gap-3">
                   <div className="text-center min-w-[45px] sm:min-w-[50px] bg-slate-900 rounded-lg py-1.5 sm:py-2 border border-slate-700 shrink-0">
                     <p className="text-base sm:text-lg font-bold text-blue-400">{new Date(exam.exam_date).getDate()}</p>
@@ -154,14 +157,41 @@ export default function ExamsPage({ loaderData }: Route.ComponentProps) {
                   </p>
                 </div>
 
-                <div className="hidden sm:flex items-center gap-3 shrink-0">
-                  <span className={`text-[10px] px-2.5 py-1 rounded-full font-bold uppercase border ${STATUS_COLORS[exam.status] || "bg-slate-700"}`}>
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  <span className={`hidden sm:inline-block text-[10px] px-2.5 py-1 rounded-full font-bold uppercase border ${STATUS_COLORS[exam.status] || "bg-slate-700"}`}>
                     {exam.status}
                   </span>
-                  <Link to={`/exams/${exam.id}`} className="p-2 text-slate-500 hover:text-white transition">
-                    👁️
+                  <Link to={`/exams/${exam.id}/view`} className="rounded-lg border border-slate-600 px-3 py-2 text-xs font-semibold text-slate-300 transition hover:border-slate-400 hover:bg-slate-700 hover:text-white">
+                    View
                   </Link>
+                  {exam.status !== "cancelled" && (
+                    <Link to={`/exams/${exam.id}/edit`} className="rounded-lg border border-amber-500/30 px-3 py-2 text-xs font-semibold text-amber-300 transition hover:border-amber-400 hover:bg-amber-500/10 hover:text-white">
+                      Edit
+                    </Link>
+                  )}
+                  {exam.status !== "cancelled" && (
+                    exam.status === "completed" ? (
+                      <Link to={`/exams/${exam.id}`} className="rounded-lg border border-blue-500/30 px-3 py-2 text-xs font-semibold text-blue-300 transition hover:border-blue-400 hover:bg-blue-500/10 hover:text-white">
+                        Enter marks
+                      </Link>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setMarksAlertExamId((current) => current === exam.id ? null : exam.id)}
+                        aria-label={`Enter marks for ${exam.title}`}
+                        className="rounded-lg border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-500 transition hover:border-amber-500/40 hover:text-amber-300"
+                      >
+                        Enter marks
+                      </button>
+                    )
+                  )}
                 </div>
+              </div>
+              {marksAlertExamId === exam.id && (
+                <p role="alert" className="border-t border-amber-500/20 bg-amber-500/5 px-4 py-3 text-xs text-amber-200">
+                  Marks can only be entered for completed exams. Change this exam’s status to Completed first.
+                </p>
+              )}
               </div>
             )) : (
               <div className="p-8 sm:p-12 text-center text-slate-500 italic text-sm">No examinations found for this criteria.</div>

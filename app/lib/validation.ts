@@ -84,12 +84,7 @@ export function validateTeacher(data: Record<string, unknown>): ValidationErrors
   // Required fields
   if (!data.name) errors.name = "Full name is required.";
   if (!data.email) errors.email = "Email is required.";
-  if (!data.phone) errors.phone = "Phone number is required.";
   if (!data.department) errors.department = "Department is required.";
-  if (!data.qualification) errors.qualification = "Qualification is required.";
-  if (data.experience_yrs === undefined || data.experience_yrs === "") {
-    errors.experience_yrs = "Years of experience is required.";
-  }
 
 
   // Email format
@@ -147,7 +142,9 @@ export function validateTeacher(data: Record<string, unknown>): ValidationErrors
   }
 
   // Password validation
-  if (data.password && String(data.password).length < 8) {
+  if (!data.password) {
+    errors.password = "Initial password is required.";
+  } else if (String(data.password).length < 8) {
     errors.password = "Password must be at least 8 characters.";
   }
 

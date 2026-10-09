@@ -132,6 +132,7 @@ export interface Student {
   session_id: number;
   class_id: number;
   parent_id: number | null;
+  secondary_parent_id?: number | null;
   admission_no: string;
   roll_number: string;
   first_name: string;
@@ -151,6 +152,7 @@ export interface Student {
   parent_phone?: string | null;
   class_room?: ClassRoom;
   parent?: User;
+  secondary_parent?: User | null;
   grades?: Grade[];
   fees?: Fee[];
   created_at: string;
@@ -168,6 +170,7 @@ export interface ParentProfile {
   user?: User;
   school?: School;
   children?: Student[];
+  children_count?: number;
   created_at: string;
   updated_at: string;
 }
@@ -273,6 +276,48 @@ export interface AttendanceStats {
   class_wise: Array<{ class: string; present: number; absent: number; late: number }>;
 }
 
+export interface AttendanceReportStudent {
+  id: number;
+  roll_number: string;
+  name: string;
+  present: number;
+  absent: number;
+  late: number;
+  holiday: number;
+  excused: number;
+  recorded_days: number;
+  attendance_rate: number | null;
+}
+
+export interface AttendanceReportDay {
+  date: string;
+  present: number;
+  absent: number;
+  late: number;
+  holiday: number;
+  excused: number;
+  records_count: number;
+  attendance_rate: number | null;
+}
+
+export interface AttendanceReport {
+  class: { id: number; name: string };
+  date_from: string;
+  date_to: string;
+  summary: {
+    present: number;
+    absent: number;
+    late: number;
+    holiday: number;
+    excused: number;
+    recorded_days: number;
+    students_count: number;
+    attendance_rate: number | null;
+  };
+  students: AttendanceReportStudent[];
+  daily: AttendanceReportDay[];
+}
+
 export interface TimetableSlot {
   id: number;
   class_id: number;
@@ -321,7 +366,7 @@ export interface Exam {
   instructions: string | null;
   status: ExamStatus;
   pass_rate?: number;
-  class_room?: ClassRoom;
+  class_room?: ClassRoom & { students?: Student[] };
   subject?: Subject;
   invigilator?: Teacher;
   grades?: Grade[];
@@ -331,6 +376,7 @@ export interface Grade {
   id: number;
   exam_id: number;
   student_id: number;
+  class_id?: number;
   entered_by: number;
   marks_obtained: number;
   total_marks: number;
@@ -391,8 +437,11 @@ export interface FeeSummary {
   total_budget: number;
   total_collected: number;
   total_pending: number;
+  overdue_balance: number;
   defaulters: number;
   collection_rate: number;
+  session_name: string;
+  monthly_year: number;
   by_type: Array<{ type: string; amount: number; collected: number; rate: number }>;
   monthly: Array<{ month: string; collected: number }>;
 }
@@ -599,6 +648,13 @@ export interface StudentFinanceBalance {
   last_updated_at: string | null;
 }
 
+export interface StudentFinanceSummary {
+  student: Student;
+  balance: StudentFinanceBalance;
+  overdue_balance: number;
+  due_soon_balance: number;
+}
+
 export interface FinanceDashboardSummary {
   total_invoiced: number;
   total_collected: number;
@@ -639,6 +695,7 @@ export interface BookIssue {
   calculated_fine: number;
   book?: Book;
   member?: User;
+  issued_by_user?: Pick<User, "id" | "name">;
 }
 
 export interface TransportRoute {
@@ -916,6 +973,14 @@ export interface CreateExamPayload {
   instructions?: string;
   status?: ExamStatus;
 }
+
+export type UpdateExamPayload = Partial<
+  Omit<CreateExamPayload, "invigilator_id" | "room" | "instructions">
+> & {
+  invigilator_id?: number | null;
+  room?: string | null;
+  instructions?: string | null;
+};
 
 export interface EnterGradesPayload {
   exam_id: number;
@@ -1423,6 +1488,9 @@ export const attendance = {
   list: (filters?: AttendanceFilters) =>
     get<PaginatedResponse<Attendance>>("/attendance", filters as Record<string, unknown>),
 
+  report: (filters: { class_id: number; date_from: string; date_to: string }) =>
+    get<ApiResponse<AttendanceReport>>("/attendance/report", filters),
+
   mark: (payload: MarkAttendancePayload) =>
     post<ApiResponse<{ message: string }>>("/attendance/mark", payload),
 
@@ -1483,7 +1551,7 @@ export const exams = {
   create: (payload: CreateExamPayload) =>
     post<ApiResponse<Exam>>("/exams", payload),
 
-  update: (id: number, payload: Partial<CreateExamPayload> & { status?: ExamStatus }) =>
+  update: (id: number, payload: UpdateExamPayload) =>
     put<ApiResponse<Exam>>(`/exams/${id}`, payload),
 
   delete: (id: number) =>
@@ -1614,7 +1682,7 @@ export const finance = {
   cancelInvoice: (id: number) =>
     post<ApiResponse<null>>(`/finance/invoices/${id}/cancel`),
 
-  payments: (filters?: { page?: number; per_page?: number; student_id?: number; method?: PaymentMethod; status?: FinancePaymentStatus }) =>
+  payments: (filters?: { page?: number; per_page?: number; student_id?: number; method?: PaymentMethod; status?: FinancePaymentStatus; month?: number; year?: number }) =>
     get<PaginatedResponse<FinancePayment>>("/finance/payments", filters as Record<string, unknown>),
 
   paymentGatewayStatus: () =>
@@ -1648,8 +1716,11 @@ export const finance = {
   paymentReceipt: (id: number) =>
     get<ApiResponse<Receipt>>(`/finance/payments/${id}/receipt`),
 
+  receiptPdf: (id: number) =>
+    get<Blob>(`/finance/receipts/${id}/pdf`, undefined, { responseType: "blob" }),
+
   studentSummary: (studentId: number) =>
-    get<ApiResponse<StudentFinanceBalance>>(`/students/${studentId}/finance-summary`),
+    get<ApiResponse<StudentFinanceSummary>>(`/students/${studentId}/finance-summary`),
 
   studentStatement: (studentId: number) =>
     get<ApiResponse<{
@@ -1880,11 +1951,17 @@ export const accounting = {
 // ============================================================
 
 export const library = {
+  members: () =>
+    get<ApiResponse<Array<Pick<User, "id" | "name" | "role">>>>("/books/members"),
+
   list: (filters?: BookFilters) =>
     get<PaginatedResponse<Book>>("/books", filters as Record<string, unknown>),
 
   get: (id: number) =>
     get<ApiResponse<Book>>(`/books/${id}`),
+
+  issues: (bookId: number, status?: "issued" | "returned" | "lost") =>
+    get<ApiResponse<BookIssue[]>>(`/books/${bookId}/issues`, status ? { status } : undefined),
 
   create: (payload: Omit<Book, "id" | "book_id" | "available_copies" | "is_available">) =>
     post<ApiResponse<Book>>("/books", payload),
@@ -1898,7 +1975,7 @@ export const library = {
   issue: (bookId: number, payload: IssueBooksPayload) =>
     post<ApiResponse<{ message: string }>>(`/books/${bookId}/issue`, payload),
 
-  return: (bookId: number, payload: { member_id: number }) =>
+  return: (bookId: number, payload: { issue_id: number } | { member_id: number }) =>
     post<ApiResponse<{ message: string; fine: number }>>(`/books/${bookId}/return`, payload),
 
   overdue: () =>
@@ -2064,6 +2141,7 @@ export const analytics = {
 
     library: () => 
     get<ApiResponse<{ 
+      total_titles: number;
       total_books: number; 
       issued: number; 
       returned_today: number; 

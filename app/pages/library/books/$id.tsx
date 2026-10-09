@@ -3,16 +3,24 @@
 // ============================================================
 
 import { Link, Form, redirect } from "react-router";
+import { useState } from "react";
 import type { Route } from "./+types/\$id";
 import { api } from "~/lib/api";
 
+function localDateInputValue(date: Date): string {
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
+}
+
 export async function clientLoader({ params }: Route.LoaderArgs) {
   try {
-    const book = await api.library.get(Number(params.id));
-    return book.data;
+    const [bookResponse, membersResponse] = await Promise.all([
+      api.library.get(Number(params.id)),
+      api.library.members(),
+    ]);
+    return { book: bookResponse.data, members: membersResponse.data };
   } catch (error) {
     console.error("Failed to load book:", error);
-    throw new Error("Book not found");
+    throw new Error("Could not load this book or the library member list.");
   }
 }
 
@@ -23,15 +31,42 @@ export async function clientAction({ request, params }: Route.ActionArgs) {
       return redirect("/library");
     } catch (error) {
       console.error("Failed to delete book:", error);
-      return { error: "Failed to delete book" };
+      return {
+        error: error && typeof error === "object" && "message" in error && typeof error.message === "string"
+          ? error.message
+          : "Failed to delete book.",
+      };
+    }
+  }
+
+  if (request.method === "POST") {
+    const formData = await request.formData();
+    try {
+      await api.library.issue(Number(params.id), {
+        member_id: Number(formData.get("member_id")),
+        due_date: String(formData.get("due_date")),
+      });
+      return redirect(`/library/books/${params.id}`);
+    } catch (error) {
+      console.error("Failed to issue book:", error);
+      return {
+        error: error && typeof error === "object" && "message" in error && typeof error.message === "string"
+          ? error.message
+          : "Could not issue this book. Check the selected member and due date.",
+      };
     }
   }
   return null;
 }
 
 export default function BookDetailPage({ loaderData, actionData }: Route.ComponentProps) {
-  const book = loaderData;
+  const { book, members } = loaderData;
+  const [isIssueDialogOpen, setIsIssueDialogOpen] = useState(false);
   const error = actionData?.error;
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const suggestedDueDate = new Date();
+  suggestedDueDate.setDate(suggestedDueDate.getDate() + 14);
 
   const handleDelete = (e: React.FormEvent<HTMLFormElement>) => {
     if (!confirm("Are you sure you want to delete this book?")) {
@@ -129,7 +164,11 @@ export default function BookDetailPage({ loaderData, actionData }: Route.Compone
             {/* Quick Actions */}
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               {book.available_copies > 0 && (
-                <button className="w-full sm:w-auto px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-medium transition text-sm text-center">
+                <button
+                  type="button"
+                  onClick={() => setIsIssueDialogOpen(true)}
+                  className="w-full sm:w-auto px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-medium transition text-sm text-center"
+                >
                   Issue Book
                 </button>
               )}
@@ -171,6 +210,88 @@ export default function BookDetailPage({ loaderData, actionData }: Route.Compone
           </div>
         </div>
       </div>
+
+      {isIssueDialogOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          onMouseDown={event => {
+            if (event.target === event.currentTarget) setIsIssueDialogOpen(false);
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="issue-book-title"
+            className="w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-800 p-6 shadow-2xl"
+          >
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <h2 id="issue-book-title" className="text-xl font-bold text-white">Issue this book</h2>
+                <p className="mt-1 text-sm text-slate-400">{book.title} · {book.available_copies} available</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsIssueDialogOpen(false)}
+                aria-label="Close"
+                className="text-xl leading-none text-slate-400 hover:text-white"
+              >
+                ×
+              </button>
+            </div>
+
+            {members.length === 0 ? (
+              <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-200">
+                No active students, teachers, or parents are available to borrow books.
+              </div>
+            ) : (
+              <Form method="post" className="space-y-5">
+                <div>
+                  <label htmlFor="member_id" className="mb-2 block text-sm font-medium text-slate-300">Borrower</label>
+                  <select
+                    id="member_id"
+                    name="member_id"
+                    required
+                    defaultValue=""
+                    className="w-full rounded-lg border border-slate-600 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-blue-500"
+                  >
+                    <option value="" disabled>Select a borrower</option>
+                    {members.map(member => (
+                      <option key={member.id} value={member.id}>{member.name} ({member.role})</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="due_date" className="mb-2 block text-sm font-medium text-slate-300">Due date</label>
+                  <input
+                    id="due_date"
+                    name="due_date"
+                    type="date"
+                    min={localDateInputValue(tomorrow)}
+                    defaultValue={localDateInputValue(suggestedDueDate)}
+                    required
+                    className="w-full rounded-lg border border-slate-600 bg-slate-900 px-4 py-3 text-sm text-white outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div className="flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsIssueDialogOpen(false)}
+                    className="rounded-lg border border-slate-600 px-4 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-700"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500"
+                  >
+                    Confirm issue
+                  </button>
+                </div>
+              </Form>
+            )}
+          </section>
+        </div>
+      )}
     </div>
   );
 }

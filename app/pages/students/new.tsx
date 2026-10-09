@@ -4,12 +4,18 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigation, redirect, Form } from "react-router";
 import type { Route } from "./+types/new";
-import { api, type ClassRoom, type CreateStudentPayload, type ParentProfile } from "~/lib/api";
-import { validateStudent } from "~/lib/validation";
+import { api, type ClassRoom, type CreateClassPayload, type CreateStudentPayload, type ParentProfile, type Subject, type Teacher } from "~/lib/api";
+import { validateClassRoom, validateStudent } from "~/lib/validation";
 
 export async function clientLoader() {
-  const res = await api.classes.list({ per_page: 100 });
-  return { classes: res.data as ClassRoom[] };
+  const [classesRes, teachersRes, subjectsRes] = await Promise.all([
+    api.classes.list({ per_page: 100 }),
+    api.teachers.list({ per_page: 200 }),
+    api.subjects.list(),
+  ]);
+  const teachers = ((teachersRes as any).data?.data ?? (teachersRes as any).data ?? []) as Teacher[];
+  const subjects = ((subjectsRes as any).data?.data ?? (subjectsRes as any).data ?? []) as Subject[];
+  return { classes: classesRes.data as ClassRoom[], teachers, subjects };
 }
 
 export async function clientAction({ request }: Route.ActionArgs) {
@@ -24,6 +30,7 @@ export async function clientAction({ request }: Route.ActionArgs) {
 
   if (payload.class_id)   payload.class_id   = Number(payload.class_id)   as unknown as typeof payload.class_id;
   if (payload.parent_id)  payload.parent_id  = Number(payload.parent_id)  as unknown as typeof payload.parent_id;
+  if (payload.secondary_parent_id) payload.secondary_parent_id = Number(payload.secondary_parent_id) as unknown as typeof payload.secondary_parent_id;
 
   // Frontend validation
   const validationErrors = validateStudent(payload);
@@ -107,15 +114,40 @@ function SectionIcon({ emoji }: { emoji: string }) {
 }
 
 export default function NewStudentPage({ loaderData, actionData }: Route.ComponentProps) {
-  const { classes } = loaderData as { classes: ClassRoom[] };
+  const { classes, teachers, subjects } = loaderData as { classes: ClassRoom[]; teachers: Teacher[]; subjects: Subject[] };
+  const [availableClasses, setAvailableClasses] = useState<ClassRoom[]>(classes);
   const errors      = (actionData as { errors?: Record<string, string[]> })?.errors ?? {};
   const globalError = (actionData as { error?: string })?.error;
   const navigation  = useNavigation();
   const submitting  = navigation.state === "submitting";
 
+  const [selectedClassId, setSelectedClassId] = useState("");
+  const [showClassModal, setShowClassModal] = useState(false);
+  const [classSaving, setClassSaving] = useState(false);
+  const [classModalError, setClassModalError] = useState<string | null>(null);
+  const [classModalErrors, setClassModalErrors] = useState<Record<string, string[]>>({});
+  const [classNotice, setClassNotice] = useState<string | null>(null);
+  const [classFields, setClassFields] = useState({ name: "", grade: "", section: "", capacity: "", class_teacher_id: "", room: "" });
+  const [classSubjectQuery, setClassSubjectQuery] = useState("");
+  const [selectedClassSubjects, setSelectedClassSubjects] = useState<number[]>([]);
+
+  const filteredClassSubjects = subjects.filter((subject) => {
+    const query = classSubjectQuery.trim().toLowerCase();
+    return !query ||
+      subject.name.toLowerCase().includes(query) ||
+      (subject.code ?? "").toLowerCase().includes(query);
+  });
+  const visibleClassSubjectIds = filteredClassSubjects.map((subject) => subject.id);
+  const allVisibleClassSubjectsSelected =
+    visibleClassSubjectIds.length > 0 &&
+    visibleClassSubjectIds.every((id) => selectedClassSubjects.includes(id));
+
   const [parentQuery, setParentQuery] = useState("");
   const [parentOptions, setParentOptions] = useState<ParentProfile[]>([]);
   const [selectedParent, setSelectedParent] = useState<ParentProfile | null>(null);
+  const [secondaryParentQuery, setSecondaryParentQuery] = useState("");
+  const [secondaryParentOptions, setSecondaryParentOptions] = useState<ParentProfile[]>([]);
+  const [selectedSecondaryParent, setSelectedSecondaryParent] = useState<ParentProfile | null>(null);
   const [parentEmail, setParentEmail] = useState("");
   const [parentPhone, setParentPhone] = useState("");
   const [showParentModal, setShowParentModal] = useState(false);
@@ -131,6 +163,15 @@ export default function NewStudentPage({ loaderData, actionData }: Route.Compone
     occupation: "",
     notes: "",
   });
+
+  useEffect(() => {
+    if (!showClassModal) return;
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape" && !classSaving) setShowClassModal(false);
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showClassModal, classSaving]);
 
   useEffect(() => {
     const timeout = setTimeout(async () => {
@@ -150,12 +191,40 @@ export default function NewStudentPage({ loaderData, actionData }: Route.Compone
     return () => clearTimeout(timeout);
   }, [parentQuery]);
 
+  useEffect(() => {
+    const timeout = setTimeout(async () => {
+      if (!secondaryParentQuery.trim()) {
+        setSecondaryParentOptions([]);
+        return;
+      }
+
+      try {
+        const res = await api.parents.list({ per_page: 10, search: secondaryParentQuery });
+        setSecondaryParentOptions(
+          (res.data.data ?? []).filter((parent) => parent.user_id !== selectedParent?.user_id)
+        );
+      } catch {
+        setSecondaryParentOptions([]);
+      }
+    }, 250);
+
+    return () => clearTimeout(timeout);
+  }, [secondaryParentQuery, selectedParent?.user_id]);
+
   function handleParentSelect(parent: ParentProfile) {
+    if (selectedSecondaryParent?.user_id === parent.user_id) clearSelectedSecondaryParent();
     setSelectedParent(parent);
     setParentQuery(parent.user?.name ?? "");
     setParentEmail(parent.user?.email ?? "");
     setParentPhone(parent.phone ?? "");
     setParentOptions([]);
+  }
+
+  function handleSecondaryParentSelect(parent: ParentProfile) {
+    if (selectedParent?.user_id === parent.user_id) return;
+    setSelectedSecondaryParent(parent);
+    setSecondaryParentQuery(parent.user?.name ?? "");
+    setSecondaryParentOptions([]);
   }
 
   function clearSelectedParent() {
@@ -164,6 +233,13 @@ export default function NewStudentPage({ loaderData, actionData }: Route.Compone
     setParentEmail("");
     setParentPhone("");
     setParentOptions([]);
+    setSecondaryParentOptions((current) => current.filter((parent) => parent.user_id !== selectedParent?.user_id));
+  }
+
+  function clearSelectedSecondaryParent() {
+    setSelectedSecondaryParent(null);
+    setSecondaryParentQuery("");
+    setSecondaryParentOptions([]);
   }
 
   async function handleParentSaved(parent: ParentProfile) {
@@ -183,6 +259,62 @@ export default function NewStudentPage({ loaderData, actionData }: Route.Compone
       occupation: "",
       notes: "",
     });
+  }
+
+  function toggleClassSubject(id: number) {
+    setSelectedClassSubjects((current) =>
+      current.includes(id) ? current.filter((subjectId) => subjectId !== id) : [...current, id]
+    );
+  }
+
+  function toggleVisibleClassSubjects() {
+    setSelectedClassSubjects((current) => {
+      if (allVisibleClassSubjectsSelected) {
+        return current.filter((id) => !visibleClassSubjectIds.includes(id));
+      }
+      return [...new Set([...current, ...visibleClassSubjectIds])];
+    });
+  }
+
+  async function handleClassCreate(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const payload: CreateClassPayload = {
+      name: classFields.name.trim(),
+      grade: Number(classFields.grade),
+      section: classFields.section.trim(),
+      capacity: Number(classFields.capacity),
+      subjects: selectedClassSubjects,
+      ...(classFields.class_teacher_id ? { class_teacher_id: Number(classFields.class_teacher_id) } : {}),
+      ...(classFields.room.trim() ? { room: classFields.room.trim() } : {}),
+    };
+    const validationErrors = validateClassRoom({ ...payload });
+    setClassModalErrors(Object.fromEntries(Object.entries(validationErrors).map(([field, message]) => [field, [message]])));
+    setClassModalError(null);
+    if (Object.keys(validationErrors).length > 0) return;
+
+    setClassSaving(true);
+    try {
+      const response = await api.classes.create(payload);
+      const createdClass = response.data;
+      setAvailableClasses((current) => [
+        ...current.filter((classRoom) => classRoom.id !== createdClass.id),
+        createdClass,
+      ]);
+      setClassNotice(`${createdClass.name} was added. Select it from the class list.`);
+      setShowClassModal(false);
+      setClassFields({ name: "", grade: "", section: "", capacity: "", class_teacher_id: "", room: "" });
+      setSelectedClassSubjects([]);
+      setClassSubjectQuery("");
+      setClassModalErrors({});
+    } catch (error: unknown) {
+      const apiError = error as { message?: string; errors?: Record<string, string[]> };
+      setClassModalError(apiError?.message ?? "Could not add this class. Please check your details and try again.");
+      if (apiError?.errors) {
+        setClassModalErrors(apiError.errors);
+      }
+    } finally {
+      setClassSaving(false);
+    }
   }
 
   return (
@@ -267,13 +399,27 @@ export default function NewStudentPage({ loaderData, actionData }: Route.Compone
         {/* Academic Details */}
         <div style={s.card} className="responsive-card">
           <div style={s.sectionTitle}><SectionIcon emoji="🎓" /> Academic Details</div>
-          <div style={{ maxWidth: "340px" }} className="responsive-full-width">
+          <div style={{ maxWidth: "380px" }} className="responsive-full-width">
             <Field label="Class / Section" required error={errors.class_id?.[0]}>
-              <select name="class_id" required defaultValue="" style={{ ...s.select, ...(errors.class_id ? s.inputError : {}) }} onFocus={focusStyle} onBlur={blurStyle}>
+              <select name="class_id" required value={selectedClassId} onChange={(event) => setSelectedClassId(event.target.value)} style={{ ...s.select, ...(errors.class_id ? s.inputError : {}) }} onFocus={focusStyle} onBlur={blurStyle}>
                 <option value="" disabled>Select a class…</option>
-                {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {availableClasses.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </Field>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginTop: "8px", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setClassModalError(null);
+                  setClassModalErrors({});
+                  setShowClassModal(true);
+                }}
+                style={{ color: "#75a7ff", background: "none", border: "none", padding: 0, fontSize: "12px", fontWeight: 600, cursor: "pointer", fontFamily: "'Sora', sans-serif" }}
+              >
+                + Add a new class
+              </button>
+              {classNotice && <span role="status" style={{ color: "#4ade80", fontSize: "11px" }}>{classNotice}</span>}
+            </div>
           </div>
         </div>
 
@@ -286,7 +432,7 @@ export default function NewStudentPage({ loaderData, actionData }: Route.Compone
           </div>
 
           <div style={s.grid3} className="responsive-grid-3">
-            <Field label="Search Parent" required error={errors.parent_id?.[0]} hint="Start typing a guardian name to search existing parents.">
+            <Field label="Primary Parent / Guardian" required error={errors.parent_id?.[0]} hint="Start typing a guardian name to search existing parent accounts.">
               <div style={{ position: "relative" }}>
                 <input
                   name="parent_name"
@@ -358,6 +504,48 @@ export default function NewStudentPage({ loaderData, actionData }: Route.Compone
 
           {selectedParent?.user?.id && (
             <input type="hidden" name="parent_id" value={selectedParent.user.id} />
+          )}
+
+          <div style={{ maxWidth: "420px", marginTop: "16px" }}>
+            <Field label="Second Parent / Guardian" hint="Optional. A student can be linked to up to two parent accounts.">
+              <div style={{ position: "relative" }}>
+                <input
+                  value={selectedSecondaryParent?.user?.name ?? secondaryParentQuery}
+                  onChange={(event) => {
+                    setSelectedSecondaryParent(null);
+                    setSecondaryParentQuery(event.target.value);
+                  }}
+                  placeholder="Search for a second parent..."
+                  style={s.input}
+                  onFocus={focusStyle}
+                  onBlur={blurStyle}
+                  autoComplete="off"
+                />
+                {secondaryParentOptions.length > 0 && (
+                  <div style={{ position: "absolute", zIndex: 10, top: "100%", left: 0, right: 0, background: "#0a0e1a", border: "1px solid #2a3350", borderRadius: "8px", marginTop: "6px", maxHeight: "220px", overflowY: "auto" }}>
+                    {secondaryParentOptions.map((parent) => (
+                      <button
+                        type="button"
+                        key={parent.id}
+                        onMouseDown={() => handleSecondaryParentSelect(parent)}
+                        style={{ width: "100%", textAlign: "left", padding: "10px 12px", background: "#0a0e1a", border: "none", color: "#e2e8f0", cursor: "pointer" }}
+                      >
+                        {parent.user?.name}{parent.phone ? ` • ${parent.phone}` : ""}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {selectedSecondaryParent && (
+                <button type="button" onClick={clearSelectedSecondaryParent} style={{ marginTop: "7px", background: "none", border: "none", color: "#75a7ff", cursor: "pointer", padding: 0, fontSize: "11px" }}>
+                  Remove second parent
+                </button>
+              )}
+            </Field>
+          </div>
+
+          {selectedSecondaryParent?.user_id && (
+            <input type="hidden" name="secondary_parent_id" value={selectedSecondaryParent.user_id} />
           )}
 
           {showParentModal && (
@@ -450,6 +638,129 @@ export default function NewStudentPage({ loaderData, actionData }: Route.Compone
           </button>
         </div>
       </Form>
+
+      {showClassModal && (
+        <div
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !classSaving) setShowClassModal(false);
+          }}
+          style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", background: "rgba(3, 7, 18, 0.78)", backdropFilter: "blur(6px)", overflowY: "auto" }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="add-class-title"
+            style={{ width: "100%", maxWidth: "780px", maxHeight: "calc(100vh - 40px)", overflowY: "auto", background: "linear-gradient(145deg, #121a2e, #0d1220)", border: "1px solid #293555", borderRadius: "20px", padding: "clamp(20px, 4vw, 32px)", boxSizing: "border-box", boxShadow: "0 24px 80px rgba(0,0,0,0.55)" }}
+          >
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "16px", marginBottom: "24px" }}>
+              <div>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "6px 10px", borderRadius: "999px", background: "rgba(79,142,247,0.12)", border: "1px solid rgba(79,142,247,0.2)", color: "#75a7ff", fontSize: "11px", fontWeight: 700, marginBottom: "12px" }}>
+                  🏫 Academic Setup
+                </div>
+                <h2 id="add-class-title" style={{ margin: 0, color: "#e2e8f0", fontSize: "22px", fontWeight: 700 }}>Add New Class Room</h2>
+                <p style={{ margin: "7px 0 0", color: "#8391ad", fontSize: "13px", lineHeight: 1.6 }}>Configure the class details below. You can select it for the student after saving.</p>
+              </div>
+              <button type="button" aria-label="Close dialog" disabled={classSaving} onClick={() => setShowClassModal(false)} style={{ background: "#1b2439", border: "1px solid #2a3652", borderRadius: "9px", width: "36px", height: "36px", color: "#a0aec0", fontSize: "21px", cursor: "pointer", flexShrink: 0 }}>×</button>
+            </div>
+
+            {classModalError && (
+              <div role="alert" style={{ ...s.errorBanner, marginBottom: "20px" }}>
+                <span>⚠</span>
+                <div>{classModalError}</div>
+              </div>
+            )}
+
+            <form onSubmit={handleClassCreate} noValidate style={{ background: "rgba(15,23,42,0.72)", border: "1px solid rgba(51,65,85,0.7)", borderRadius: "18px", padding: "clamp(16px, 3vw, 26px)", display: "grid", gap: "22px" }}>
+              <div style={s.grid2} className="responsive-grid-2">
+                <Field label="Class Name" required error={classModalErrors.name?.[0]}>
+                  <input autoFocus required maxLength={50} value={classFields.name} onChange={(event) => setClassFields({ ...classFields, name: event.target.value })} placeholder="e.g. Form 4 East" style={{ ...s.input, marginTop: "8px", ...(classModalErrors.name ? s.inputError : {}) }} onFocus={focusStyle} onBlur={blurStyle} />
+                </Field>
+                <Field label="Grade Level" required error={classModalErrors.grade?.[0]}>
+                  <input required type="number" min="1" max="12" value={classFields.grade} onChange={(event) => setClassFields({ ...classFields, grade: event.target.value })} placeholder="1-12" style={{ ...s.input, marginTop: "8px", ...(classModalErrors.grade ? s.inputError : {}) }} onFocus={focusStyle} onBlur={blurStyle} />
+                </Field>
+              </div>
+
+              <div style={s.grid2} className="responsive-grid-2">
+                <Field label="Section" required error={classModalErrors.section?.[0]} hint="For example: A, B, or North">
+                  <input required maxLength={5} value={classFields.section} onChange={(event) => setClassFields({ ...classFields, section: event.target.value })} placeholder="e.g. A, B, North" style={{ ...s.input, marginTop: "8px", ...(classModalErrors.section ? s.inputError : {}) }} onFocus={focusStyle} onBlur={blurStyle} />
+                </Field>
+                <Field label="Capacity" required error={classModalErrors.capacity?.[0]}>
+                  <input required type="number" min="1" value={classFields.capacity} onChange={(event) => setClassFields({ ...classFields, capacity: event.target.value })} placeholder="e.g. 40" style={{ ...s.input, marginTop: "8px", ...(classModalErrors.capacity ? s.inputError : {}) }} onFocus={focusStyle} onBlur={blurStyle} />
+                </Field>
+              </div>
+
+              <div style={s.grid2} className="responsive-grid-2">
+                <Field label="Class Teacher" error={classModalErrors.class_teacher_id?.[0]}>
+                  <select value={classFields.class_teacher_id} onChange={(event) => setClassFields({ ...classFields, class_teacher_id: event.target.value })} style={{ ...s.select, marginTop: "8px" }} onFocus={focusStyle} onBlur={blurStyle}>
+                    <option value="">No teacher assigned</option>
+                    {teachers.map((teacher) => (
+                      <option key={teacher.id} value={teacher.id}>{teacher.user?.name ?? `Teacher #${teacher.id}`}</option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Room Location" error={classModalErrors.room?.[0]}>
+                  <input maxLength={50} value={classFields.room} onChange={(event) => setClassFields({ ...classFields, room: event.target.value })} placeholder="e.g. Lab 3 / Room 102" style={{ ...s.input, marginTop: "8px", ...(classModalErrors.room ? s.inputError : {}) }} onFocus={focusStyle} onBlur={blurStyle} />
+                </Field>
+              </div>
+
+              <fieldset style={{ border: "none", padding: 0, margin: 0 }}>
+                <legend style={{ ...s.label, marginBottom: "8px" }}>Assigned Subjects</legend>
+                {selectedClassSubjects.length > 0 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "10px" }}>
+                    {subjects.filter((subject) => selectedClassSubjects.includes(subject.id)).map((subject) => (
+                      <span key={subject.id} style={{ display: "inline-flex", alignItems: "center", gap: "8px", borderRadius: "999px", background: "#1e293b", border: "1px solid #334155", padding: "5px 10px", color: "#e2e8f0", fontSize: "12px" }}>
+                        {subject.name}
+                        <button type="button" aria-label={`Remove ${subject.name}`} onClick={() => toggleClassSubject(subject.id)} style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer", padding: 0 }}>×</button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div style={{ border: "1px solid #2a3350", borderRadius: "14px", background: "rgba(2,6,23,0.55)", padding: "14px" }}>
+                  {subjects.length === 0 ? (
+                    <p style={{ color: "#6b7a99", fontSize: "12px", textAlign: "center", padding: "20px 0", margin: 0 }}>No subjects available in the system.</p>
+                  ) : (
+                    <>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", flexWrap: "wrap", marginBottom: "12px" }}>
+                        <div>
+                          <p style={{ margin: 0, color: "#e2e8f0", fontSize: "13px", fontWeight: 600 }}>Pick subjects for this class</p>
+                          <p style={{ margin: "4px 0 0", color: "#6b7a99", fontSize: "11px" }}>Search, select, or remove subjects from the list below.</p>
+                        </div>
+                        <button type="button" onClick={toggleVisibleClassSubjects} style={{ border: "1px solid #334155", borderRadius: "10px", padding: "7px 10px", background: "#1e293b", color: "#cbd5e1", cursor: "pointer", fontSize: "12px" }}>
+                          {selectedClassSubjects.length} selected · {allVisibleClassSubjectsSelected ? "Deselect all" : "Select all"}
+                        </button>
+                      </div>
+                      <input value={classSubjectQuery} onChange={(event) => setClassSubjectQuery(event.target.value)} placeholder="Search subjects..." style={{ ...s.input, marginBottom: "12px" }} />
+                      <div style={{ maxHeight: "220px", overflowY: "auto" }}>
+                        <ul style={{ listStyle: "none", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "8px", padding: 0, margin: 0 }}>
+                          {filteredClassSubjects.map((subject) => (
+                            <li key={subject.id}>
+                              <label htmlFor={`new-class-subject-${subject.id}`} style={{ display: "flex", alignItems: "center", gap: "9px", minHeight: "44px", padding: "9px 10px", border: "1px solid #26324a", borderRadius: "10px", background: "rgba(15,23,42,0.65)", cursor: "pointer" }}>
+                                <input id={`new-class-subject-${subject.id}`} type="checkbox" checked={selectedClassSubjects.includes(subject.id)} onChange={() => toggleClassSubject(subject.id)} style={{ accentColor: "#4f8ef7", flexShrink: 0 }} />
+                                <span style={{ display: "grid", gap: "3px" }}>
+                                  <span style={{ color: "#e2e8f0", fontSize: "12px", fontWeight: 600 }}>{subject.name}</span>
+                                  {(subject.code || subject.type) && <span style={{ color: "#8391ad", fontSize: "10px" }}>{subject.code}{subject.code && subject.type ? " · " : ""}{subject.type}</span>}
+                                </span>
+                                {subject.exams_count ? <span style={{ marginLeft: "auto", color: "#6b7a99", fontSize: "10px", whiteSpace: "nowrap" }}>{subject.exams_count} exams</span> : null}
+                              </label>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </fieldset>
+
+              <div style={{ display: "flex", gap: "12px", paddingTop: "18px", borderTop: "1px solid #26324a", flexWrap: "wrap" }}>
+                <button type="button" disabled={classSaving} onClick={() => setShowClassModal(false)} style={{ ...s.btnCancel, flex: "1 1 140px", padding: "12px 18px" }}>Close</button>
+                <button type="submit" disabled={classSaving} style={{ ...s.btnSubmit, flex: "2 1 220px", padding: "12px 18px", opacity: classSaving ? 0.7 : 1 }}>
+                  {classSaving ? "Creating Class Room…" : "Create Class Room"}
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
