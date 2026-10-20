@@ -19,6 +19,7 @@ function money(value: number | string | null | undefined) {
 }
 
 function statusClass(status: InvoiceStatus) {
+  if (status === "draft") return "bg-violet-500/15 text-violet-300 border-violet-500/30";
   if (status === "paid") return "bg-emerald-500/15 text-emerald-400 border-emerald-500/25";
   if (status === "overdue" || status === "cancelled") return "bg-red-500/15 text-red-400 border-red-500/25";
   if (status === "partially_paid") return "bg-blue-500/15 text-blue-400 border-blue-500/25";
@@ -49,6 +50,7 @@ export default function FinanceInvoicesPage({ loaderData }: { loaderData: { invo
         <div className="flex flex-col sm:flex-row gap-2.5 sm:items-center">
           <select value={searchParams.get("status") ?? ""} onChange={(e) => setParam("status", e.target.value)} className="w-full sm:w-auto rounded-lg border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-slate-200">
             <option value="">All statuses</option>
+            <option value="draft">Draft</option>
             <option value="issued">Issued</option>
             <option value="partially_paid">Partially paid</option>
             <option value="paid">Paid</option>

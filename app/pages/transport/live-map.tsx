@@ -116,7 +116,7 @@ export default function FleetLiveMapPage() {
             <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">📡 Transport Live Map</h1>
           </div>
           <p className="text-slate-400 text-xs sm:text-sm mt-1 sm:ml-11">
-            Live route and vehicle tracking using Leaflet + OpenStreetMap.
+            Detailed street map centered on Kamakis, Ruiru. Bus and stop locations use recorded GPS data.
           </p>
         </div>
 
@@ -196,7 +196,7 @@ export default function FleetLiveMapPage() {
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-sm font-semibold text-slate-200">Map View</h2>
-                <p className="text-xs text-slate-400">Routes, stops, geofences, and active vehicle coordinates</p>
+                <p className="text-xs text-slate-400">Each bus has its own color and registration label. Green means moving; amber means stopped.</p>
               </div>
 
               {selectedVehicle ? (
@@ -207,11 +207,16 @@ export default function FleetLiveMapPage() {
               ) : null}
             </div>
 
-            <TransportMap vehicles={vehicles} routes={routes} height="520px" />
+            <TransportMap
+              vehicles={vehicles}
+              routes={routes}
+              height="520px"
+              selectedVehicleId={selectedVehicleId}
+              onVehicleSelect={setSelectedVehicleId}
+            />
           </div>
         </main>
       </div>
     </div>
   );
 }
-

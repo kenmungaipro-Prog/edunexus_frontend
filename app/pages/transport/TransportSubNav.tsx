@@ -1,9 +1,9 @@
 import { NavLink } from "react-router";
 import React from "react";
+import { useAuth } from "~/contexts/auth";
 
-const navItems = [
+const fleetNavItems = [
   { to: "/transport", label: "Overview" },
-  { to: "/transport/tracker", label: "Tracker" },
   { to: "/transport/live", label: "Live Map" },
   { to: "/transport/analytics", label: "Analytics" },
   { to: "/transport/playback", label: "Playback" },
@@ -11,6 +11,11 @@ const navItems = [
 ];
 
 export default function TransportSubNav() {
+  const { user } = useAuth();
+  const navItems = user?.role === "parent"
+    ? [{ to: "/transport/tracker", label: "My Child's Bus" }]
+    : fleetNavItems;
+
   return (
     <div className="border-b border-slate-800/80 bg-[#0f1424] px-4 py-3 sm:px-7 mb-6">
       <div className="flex min-w-0 overflow-x-auto pb-1">

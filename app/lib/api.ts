@@ -57,6 +57,7 @@ export interface ValidationError {
 export type UserRole =
   | "superadmin"
   | "admin"
+  | "driver"
   | "teacher"
   | "accountant"
   | "librarian"
@@ -452,7 +453,7 @@ export interface FeeCategory {
   name: string;
   code: string;
   description: string | null;
-  default_amount: number;
+  default_amount: number | string | null;
   is_active: boolean;
 }
 
@@ -537,6 +538,7 @@ export interface Invoice {
   status: InvoiceStatus;
   student?: Student;
   items?: InvoiceItem[];
+  invoice_items?: InvoiceItem[];
 }
 
 export type FinancePaymentStatus =
@@ -578,7 +580,7 @@ export interface FinancePayment {
   status: FinancePaymentStatus;
   student?: Student;
   receipt?: Receipt | null;
-  allocations?: Array<{ id: number; amount_allocated: number; invoice?: Invoice }>;
+  allocations?: Array<{ id: number; amount_allocated: number | string; invoice?: Invoice | null }>;
 }
 
 export interface PaymentGatewayStatusEntry {
@@ -610,6 +612,9 @@ export interface PaymentGatewayStatusEntry {
 
 export interface PaymentReconciliationItem {
   id: number;
+  payment_id?: number | null;
+  receipt_id?: number | null;
+  receipt_number?: string | null;
   amount: number | string;
   phone_number: string | null;
   mpesa_receipt_number: string | null;
@@ -705,6 +710,15 @@ export interface TransportRoute {
   vehicle_id: number;
   driver_id: number;
   stops: Array<{ name: string; pickup_time: string; drop_time: string }>;
+  geofences?: Array<{
+    id: number;
+    stop_name: string;
+    stop_type: string;
+    lat: number;
+    lng: number;
+    radius_meters: number;
+    active: boolean;
+  }>;
   monthly_fee: number;
   students_count?: number;
   vehicle?: Vehicle;
@@ -715,6 +729,7 @@ export interface TransportRoute {
 export interface Vehicle {
   id: number;
   registration_number: string;
+  imei: string | null;
   make: string | null;
   model: string | null;
   year: number | null;
@@ -760,18 +775,19 @@ export interface TransportAnalyticsOverview {
   route_name: string;
   vehicle: string | null;
   driver_name: string | null;
+  students_count: number;
   date: string;
   metrics: {
     telemetry_points: number;
-    average_speed: number;
+    average_speed: number | null;
     max_speed: number;
     distance_km: number;
     idle_minutes: number;
   };
-  efficiency_score: number;
+  efficiency_score: number | null;
   stop_count: number;
   completed_stops: number;
-  completion_pct: number;
+  completion_pct: number | null;
   geofence_events: number;
 }
 
@@ -782,13 +798,13 @@ export interface TransportDriverRankingEntry {
     route_name: string;
     vehicle: string | null;
     telemetry_points: number;
-    average_speed: number;
+    average_speed: number | null;
     distance_km: number;
     idle_minutes: number;
     efficiency_score: number;
   }>;
   route_count: number;
-  average_efficiency: number;
+  average_efficiency: number | null;
   total_distance_km: number;
 }
 
@@ -815,7 +831,7 @@ export interface TransportPrediction {
   status: string;
   confidence: number;
   basis: {
-    average_speed: number;
+    average_speed: number | null;
     idle_minutes: number;
     stop_delay: number;
   };
@@ -859,14 +875,20 @@ export interface Message {
   subject: string | null;
   body: string;
   read_at: string | null;
-  is_read: boolean;
-  sender?: User;
-  receiver?: User;
+  sender?: MessageContact;
+  receiver?: MessageContact;
   created_at: string;
 }
 
+export interface MessageContact {
+  id: number;
+  name: string;
+  role: UserRole;
+  profile_photo: string | null;
+}
+
 export interface MessageThread {
-  contact: User;
+  contact: MessageContact;
   last_message: Message;
   unread: number;
 }
@@ -1335,6 +1357,8 @@ export const students = {
   feeHistory: (id: number) =>
     get<ApiResponse<{
       fees: Fee[];
+      invoices: Invoice[];
+      payments: FinancePayment[];
       total_paid: number;
       total_pending: number;
       total_overdue: number;
@@ -1684,6 +1708,9 @@ export const finance = {
 
   payments: (filters?: { page?: number; per_page?: number; student_id?: number; method?: PaymentMethod; status?: FinancePaymentStatus; month?: number; year?: number }) =>
     get<PaginatedResponse<FinancePayment>>("/finance/payments", filters as Record<string, unknown>),
+
+  payment: (id: number) =>
+    get<ApiResponse<FinancePayment>>(`/finance/payments/${id}`),
 
   paymentGatewayStatus: () =>
     get<ApiResponse<PaymentGatewayStatusEntry[]>>("/finance/payments/mpesa-status"),
@@ -2046,14 +2073,14 @@ export const transport = {
     get<ApiResponse<VehicleTelemetry[]>>(`/transport/vehicles/${vehicleId}/telemetry/history`),
 
   analytics: {
-    overview: (params?: { date?: string }) =>
+    overview: (params?: { date?: string; route_id?: number }) =>
       get<ApiResponse<TransportAnalyticsOverview>>("/transport/analytics/overview", params),
     driverRanking: (params?: { date?: string }) =>
       get<ApiResponse<TransportDriverRankingEntry[]>>("/transport/analytics/driver-ranking", params),
-    heatMap: (params?: { date?: string }) =>
+    heatMap: (params?: { date?: string; route_id?: number }) =>
       get<ApiResponse<TransportHeatMapResponse>>("/transport/analytics/heatmap", params),
-    prediction: (params?: { date?: string }) =>
-      get<ApiResponse<TransportPrediction>>("/transport/analytics/prediction", params),
+    prediction: (params?: { date?: string; route_id?: number }) =>
+      get<ApiResponse<TransportPrediction | null>>("/transport/analytics/prediction", params),
   },
 
   geofenceEvents: () =>
@@ -2097,6 +2124,14 @@ export const events = {
     del<ApiResponse<null>>(`/events/${id}`),
 };
 
+export const notifications = {
+  eventUnreadCount: () =>
+    get<ApiResponse<{ event_count: number }>>("/notifications/event-unread-count"),
+
+  markEventNotificationsRead: () =>
+    post<ApiResponse<{ marked_read: number }>>("/notifications/events/read"),
+};
+
 // ============================================================
 // Â§ 21 â€” Messages
 // ============================================================
@@ -2104,6 +2139,12 @@ export const events = {
 export const messages = {
   threads: () =>
     get<ApiResponse<MessageThread[]>>("/messages"),
+
+  contacts: () =>
+    get<ApiResponse<MessageContact[]>>("/messages/contacts"),
+
+  unreadCount: () =>
+    get<ApiResponse<{ count: number }>>("/messages/unread-count"),
 
   thread: (userId: number) =>
     get<ApiResponse<Message[]>>(`/messages/${userId}`),
@@ -2197,6 +2238,7 @@ export const apiService = {
   library,
   transport,
   events,
+  notifications,
   messages,
   analytics,
   portal,

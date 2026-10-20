@@ -7,6 +7,8 @@ import { api, type ClassRoom as ApiClassRoom } from "~/lib/api";
 
 type ClassRoom = ApiClassRoom & {
   students_count: number;
+  active_students_count: number;
+  inactive_students_count: number;
 };
 
 interface LoaderData {
@@ -29,9 +31,10 @@ function occupancyColor(pct: number) {
 export default function ClassShowPage({ loaderData }: Route.ComponentProps) {
   const { classData } = loaderData as LoaderData;
   
-  const studentsCount = classData.students_count ?? 0;
+  const activeStudentsCount = classData.active_students_count ?? 0;
+  const inactiveStudentsCount = classData.inactive_students_count ?? 0;
   const capacity = classData.capacity ?? 0;
-  const pct = capacity > 0 ? Math.round((studentsCount / capacity) * 100) : 0;
+  const pct = capacity > 0 ? Math.round((activeStudentsCount / capacity) * 100) : 0;
   const colors = occupancyColor(pct);
 
   return (
@@ -76,14 +79,24 @@ export default function ClassShowPage({ loaderData }: Route.ComponentProps) {
         <div className="lg:col-span-2 space-y-6">
           
           {/* Quick Stats Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 flex items-center gap-4 shadow-xl">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="bg-slate-900/80 backdrop-blur-xl border border-emerald-500/20 rounded-2xl p-5 flex items-center gap-4 shadow-xl">
               <div className="w-12 h-12 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-2xl flex items-center justify-center text-xl flex-shrink-0 shadow-inner">
                 👥
               </div>
               <div className="min-w-0">
-                <div className="text-2xl font-extrabold text-slate-100 tracking-tight truncate">{studentsCount}</div>
-                <div className="text-xs font-medium text-slate-400 truncate mt-0.5">Enrolled Students</div>
+                <div className="text-2xl font-extrabold text-emerald-400 tracking-tight truncate">{activeStudentsCount}</div>
+                <div className="text-xs font-medium text-slate-400 truncate mt-0.5">Active Students</div>
+              </div>
+            </div>
+
+            <div className="bg-slate-900/80 backdrop-blur-xl border border-amber-500/20 rounded-2xl p-5 flex items-center gap-4 shadow-xl">
+              <div className="w-12 h-12 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-2xl flex items-center justify-center text-xl flex-shrink-0 shadow-inner">
+                ⏸️
+              </div>
+              <div className="min-w-0">
+                <div className="text-2xl font-extrabold text-amber-400 tracking-tight truncate">{inactiveStudentsCount}</div>
+                <div className="text-xs font-medium text-slate-400 truncate mt-0.5">Inactive Students</div>
               </div>
             </div>
 
@@ -107,7 +120,7 @@ export default function ClassShowPage({ loaderData }: Route.ComponentProps) {
             
             <div className="flex items-center justify-between mb-2 text-xs sm:text-sm">
               <span className="text-slate-400 font-medium">
-                <span className="text-slate-200 font-bold">{studentsCount}</span> of {capacity} seats utilized
+                <span className="text-slate-200 font-bold">{activeStudentsCount}</span> of {capacity} seats utilized
               </span>
             </div>
             

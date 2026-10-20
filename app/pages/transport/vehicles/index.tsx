@@ -25,6 +25,7 @@ export default function VehiclesManagementPage() {
 
   const filtered = vehicles.filter((v) =>
     v.registration_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (v.imei ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
     (v.make ?? "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -82,6 +83,7 @@ export default function VehiclesManagementPage() {
               <thead>
                 <tr className="border-b border-slate-700 bg-slate-900/50">
                   <th className="px-6 py-3 text-left text-xs font-semibold text-slate-300 uppercase">Registration</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-300 uppercase">Device IMEI</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-slate-300 uppercase">Make & Model</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-slate-300 uppercase">Capacity</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-slate-300 uppercase">Year</th>
@@ -95,6 +97,7 @@ export default function VehiclesManagementPage() {
                     <td className="px-6 py-4">
                       <span className="font-semibold text-white">{vehicle.registration_number}</span>
                     </td>
+                    <td className="px-6 py-4 font-mono text-sm text-slate-300">{vehicle.imei ?? "—"}</td>
                     <td className="px-6 py-4 text-slate-300">
                       {vehicle.make} {vehicle.model}
                     </td>

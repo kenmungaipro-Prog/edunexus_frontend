@@ -216,16 +216,24 @@ export default function FinancePaymentsPage({ loaderData }: { loaderData: { paym
                   return (
                     <tr key={payment.id} className="hover:bg-slate-800/30 transition-colors group">
                       {/* Payment Number */}
-                      <td className="py-3.5 px-4 font-mono font-bold text-blue-400">
-                        {payment.payment_number}
+                      <td className="py-3.5 px-4 font-mono font-bold">
+                        <Link
+                          to={`/finance/payments/${payment.id}`}
+                          className="text-blue-400 hover:text-blue-300 hover:underline"
+                        >
+                          {payment.payment_number}
+                        </Link>
                       </td>
 
                       {/* Receipt Number */}
                       <td className="py-3.5 px-4 font-mono text-slate-300">
                         {payment.receipt?.receipt_number ? (
-                          <span className="bg-slate-800 border border-slate-700/60 px-2 py-0.5 rounded text-[11px]">
+                          <Link
+                            to={`/finance/receipts/${payment.receipt.id}`}
+                            className="inline-block bg-slate-800 border border-slate-700/60 px-2 py-0.5 rounded text-[11px] hover:border-blue-500/50 hover:text-blue-300"
+                          >
                             {payment.receipt.receipt_number}
-                          </span>
+                          </Link>
                         ) : (
                           <span className="text-slate-600">-</span>
                         )}

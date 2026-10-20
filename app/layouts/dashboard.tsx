@@ -1,7 +1,7 @@
 // ============================================================
 // app/layouts/dashboard.tsx — Final Merged Version
 // ============================================================
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { NavLink, Outlet, Link, redirect, useLocation, useOutletContext } from "react-router";
 import type { Route } from "./+types/dashboard";
 import { api } from "~/lib/api";
@@ -57,7 +57,6 @@ const NAV: { group: string; items: NavItem[] }[] = [
         label: "Transport",
         children: [
           { to: "/transport", icon: "🚌", label: "Overview" },
-          { to: "/transport/tracker", icon: "👪", label: "Parent Tracker" },
           { to: "/transport/live", icon: "📡", label: "Live Map" },
           { to: "/transport/analytics", icon: "📊", label: "Analytics" },
           { to: "/transport/playback", icon: "▶️", label: "Playback" },
@@ -68,15 +67,21 @@ const NAV: { group: string; items: NavItem[] }[] = [
           { to: "/transport/routes", icon: "🗺️", label: "Routes" },
         ],
       },
-      { to: "/events",     icon: "🎉", label: "Events",   badge: 3 },
+      { to: "/events",     icon: "🎉", label: "Events" },
       { to: "/parents/bulk-sms", icon: "📣", label: "Bulk SMS" },
       { to: "/parents/sms-logs", icon: "🗂️", label: "SMS Logs" },
-      { to: "/messages",   icon: "💬", label: "Messages", badge: 7 },
+    ],
+  },
+  {
+    group: "Communication",
+    items: [
+      { to: "/messages", icon: "💬", label: "Messages" },
     ],
   },
   {
     group: "Parent Portal",
     items: [
+      { to: "/transport/tracker", icon: "🚌", label: "My Child's Bus" },
       { to: "/portal/analytics", icon: "📊", label: "Child Analytics" },
       { to: "/portal/payments",  icon: "💳", label: "Pay Fees"        },
     ],
@@ -122,8 +127,28 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
   const [isMobile, setIsMobile] = useState(() => (typeof window !== "undefined" ? window.innerWidth < 768 : false));
   const [mobileExpanded, setMobileExpanded] = useState(false);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+  const [unreadEventCount, setUnreadEventCount] = useState(0);
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
   const location = useLocation();
   const isTransportSection = location.pathname.startsWith("/transport");
+
+  const refreshUnreadEventCount = useCallback(async () => {
+    try {
+      const response = await api.notifications.eventUnreadCount();
+      setUnreadEventCount(response.data.event_count);
+    } catch (error) {
+      console.error("Failed to load unread event notification count:", error);
+    }
+  }, []);
+
+  const refreshUnreadMessageCount = useCallback(async () => {
+    try {
+      const response = await api.messages.unreadCount();
+      setUnreadMessageCount(response.data.count);
+    } catch (error) {
+      console.error("Failed to load unread message count:", error);
+    }
+  }, []);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 767px)");
@@ -134,6 +159,29 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
 
     return () => mediaQuery.removeEventListener("change", handleChange);
   }, []);
+
+  useEffect(() => {
+    void refreshUnreadEventCount();
+    const interval = window.setInterval(() => {
+      void refreshUnreadEventCount();
+    }, 15000);
+
+    return () => window.clearInterval(interval);
+  }, [refreshUnreadEventCount]);
+
+  useEffect(() => {
+    void refreshUnreadMessageCount();
+    const interval = window.setInterval(() => {
+      void refreshUnreadMessageCount();
+    }, 15000);
+
+    return () => window.clearInterval(interval);
+  }, [refreshUnreadMessageCount]);
+
+  useEffect(() => {
+    void refreshUnreadEventCount();
+    void refreshUnreadMessageCount();
+  }, [location.pathname, refreshUnreadEventCount, refreshUnreadMessageCount]);
 
   const sidebarWidth = isMobile ? (mobileExpanded ? "150px" : "70px") : collapsed ? "70px" : "260px";
   const isCollapsed = isMobile ? !mobileExpanded : collapsed;
@@ -241,6 +289,11 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
                       }}
                       onClick={() => {
                         if (isCollapsed) setActiveTooltip(item.label);
+                        if (item.to === "/events" && unreadEventCount > 0) {
+                          void api.notifications.markEventNotificationsRead()
+                            .then(() => setUnreadEventCount(0))
+                            .catch(error => console.error("Failed to mark event notifications as read:", error));
+                        }
                       }}
                       style={({ isActive }) => ({
                         display: "flex",
@@ -263,14 +316,17 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
                       })}
                     >
                       <span style={{ width: "20px", flexShrink: 0, textAlign: "center", fontSize: "16px" }}>{item.icon}</span>
+                      {isCollapsed && ((item.to === "/events" && unreadEventCount > 0) || (item.to === "/messages" && unreadMessageCount > 0)) && (
+                        <span style={{ position: "absolute", top: "4px", right: "4px", minWidth: "8px", height: "8px", borderRadius: "999px", background: "#ef4444", border: "2px solid #0f1424" }} />
+                      )}
                       {!isCollapsed && (
                         <div style={{ display: "flex", flexDirection: showLabelsBelowIcon ? "column" : "row", alignItems: "center", justifyContent: "flex-start", gap: showLabelsBelowIcon ? "2px" : "8px", flex: showLabelsBelowIcon ? "none" : 1 }}>
                           <span style={{ fontSize: showLabelsBelowIcon ? "11px" : "13.5px", lineHeight: 1.2 }}>{item.label}</span>
-                          {item.badge && (
+                          {(item.to === "/events" ? unreadEventCount : item.to === "/messages" ? unreadMessageCount : item.badge) ? (
                             <span style={{ background: "#ef4444", color: "#fff", fontSize: "10px", fontWeight: 700, padding: "2px 6px", borderRadius: "10px" }}>
-                              {item.badge}
+                              {item.to === "/events" ? unreadEventCount : item.to === "/messages" ? unreadMessageCount : item.badge}
                             </span>
-                          )}
+                          ) : null}
                         </div>
                       )}
                       {isCollapsed && activeTooltip === item.label && (
@@ -376,9 +432,8 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
             <span className="hidden sm:inline-flex" style={{ background: "linear-gradient(135deg,#10b981,#059669)", color: "#fff", fontSize: "11px", fontWeight: 600, padding: "4px 12px", borderRadius: "20px" }}>
               2024–25
             </span>
-            <div style={{ width: "38px", height: "38px", background: "#1a2035", border: "1px solid #2a3350", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: "16px", position: "relative" }}>
+            <div style={{ width: "38px", height: "38px", background: "#1a2035", border: "1px solid #2a3350", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "16px", position: "relative" }}>
               🔔
-              <div style={{ position: "absolute", top: "6px", right: "6px", width: "8px", height: "8px", background: "#ef4444", borderRadius: "50%", border: "2px solid #0f1424" }} />
             </div>
             <Link to="/students/new" style={{ width: "38px", height: "38px", background: "linear-gradient(135deg,#4f8ef7,#6366f1)", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: "18px", textDecoration: "none", color: "#fff" }}>
               ＋

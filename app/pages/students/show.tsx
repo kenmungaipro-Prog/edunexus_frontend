@@ -9,6 +9,8 @@ import {
   type Student,
   type Grade,
   type Fee,
+  type FinancePayment,
+  type Invoice,
   type Attendance,
   type AttendanceStatus,
   type User,
@@ -32,6 +34,7 @@ export async function clientLoader({ params }: Route.LoaderArgs) {
     student,
     reportCard:  reportCardRes.status === "fulfilled"  ? reportCardRes.value.data  : null,
     feeHistory:  feeHistoryRes.status === "fulfilled"  ? feeHistoryRes.value.data  : null,
+    feeHistoryError: feeHistoryRes.status === "rejected" ? "Fee history could not be loaded. Please try again." : null,
     attendance:  attendanceHistoryRes.status === "fulfilled" ? attendanceHistoryRes.value.data : null,
   };
 }
@@ -142,10 +145,11 @@ function TH({ children }: { children: React.ReactNode }) {
 type TabId = "overview" | "grades" | "fees" | "attendance";
 
 export default function StudentShowPage({ loaderData }: Route.ComponentProps) {
-  const { student, reportCard, feeHistory, attendance } = loaderData as {
+  const { student, reportCard, feeHistory, feeHistoryError, attendance } = loaderData as {
     student:    Student;
     reportCard: { grades: Record<string, Grade[]>; attendance_percentage: number; rank: number | null; total_students: number } | null;
-    feeHistory: { fees: Fee[]; total_paid: number; total_pending: number; total_overdue: number } | null;
+    feeHistory: { fees: Fee[]; invoices: Invoice[]; payments: FinancePayment[]; total_paid: number; total_pending: number; total_overdue: number } | null;
+    feeHistoryError: string | null;
     attendance: { records: Attendance[]; percentage: number; summary: Record<AttendanceStatus, number> } | null;
   };
 
@@ -162,6 +166,8 @@ export default function StudentShowPage({ loaderData }: Route.ComponentProps) {
     : (student.grades ?? []);
 
   const allFees: Fee[] = feeHistory?.fees ?? (student.fees ?? []);
+  const financeInvoices = feeHistory?.invoices ?? [];
+  const financePayments = feeHistory?.payments ?? [];
   const allAttendance: Attendance[] = attendance?.records ?? [];
   const studentParents = [
     { label: "Primary Parent / Guardian", parent: student.parent },
@@ -433,6 +439,12 @@ export default function StudentShowPage({ loaderData }: Route.ComponentProps) {
             )}
           </div>
 
+          {feeHistoryError && (
+            <div role="alert" style={{ marginBottom: "16px", padding: "12px 14px", borderRadius: "8px", border: "1px solid rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.08)", color: "#fca5a5", fontSize: "13px" }}>
+              {feeHistoryError}
+            </div>
+          )}
+
           {allFees.length > 0 ? (
             <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px", minWidth: "700px" }}>
@@ -471,7 +483,92 @@ export default function StudentShowPage({ loaderData }: Route.ComponentProps) {
                 </tbody>
               </table>
             </div>
-          ) : <EmptyState icon="💳" message="No fee records found." />}
+          ) : null}
+
+          {financeInvoices.length > 0 && (
+            <div style={{ marginTop: "24px" }}>
+              <SectionHeading>📄 Finance Invoices</SectionHeading>
+              <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px", minWidth: "650px" }}>
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid #1e2640" }}>
+                      {["Invoice", "Issue Date", "Due Date", "Total", "Balance", "Status"].map((heading) => <TH key={heading}>{heading}</TH>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {financeInvoices.map((invoice) => (
+                      <tr key={invoice.id} style={{ borderBottom: "1px solid rgba(30,38,64,0.7)" }}>
+                        <td style={{ padding: "11px 12px", fontFamily: "'JetBrains Mono', monospace", fontSize: "12px" }}>
+                          <Link to={`/finance/invoices/${invoice.id}`} style={{ color: "#4f8ef7", textDecoration: "none" }}>
+                            {invoice.invoice_number}
+                          </Link>
+                        </td>
+                        <td style={{ padding: "11px 12px", color: "#6b7a99", whiteSpace: "nowrap" }}>{fmtDate(invoice.issue_date)}</td>
+                        <td style={{ padding: "11px 12px", color: "#6b7a99", whiteSpace: "nowrap" }}>{fmtDate(invoice.due_date)}</td>
+                        <td style={{ padding: "11px 12px", fontFamily: "'JetBrains Mono', monospace", whiteSpace: "nowrap" }}>{fmtKES(Number(invoice.total))}</td>
+                        <td style={{ padding: "11px 12px", fontFamily: "'JetBrains Mono', monospace", whiteSpace: "nowrap" }}>{fmtKES(Number(invoice.balance))}</td>
+                        <td style={{ padding: "11px 12px", color: "#a0aec0", textTransform: "capitalize" }}>{invoice.status.replaceAll("_", " ")}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {financePayments.length > 0 && (
+            <div style={{ marginTop: "24px" }}>
+              <SectionHeading>💳 Finance Payments</SectionHeading>
+              <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px", minWidth: "700px" }}>
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid #1e2640" }}>
+                      {["Payment", "Receipt", "Allocated Invoice(s)", "Amount", "Method", "Date", "Status"].map((heading) => <TH key={heading}>{heading}</TH>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {financePayments.map((payment) => (
+                      <tr key={payment.id} style={{ borderBottom: "1px solid rgba(30,38,64,0.7)" }}>
+                        <td style={{ padding: "11px 12px", fontFamily: "'JetBrains Mono', monospace", fontSize: "12px" }}>
+                          <Link to={`/finance/payments/${payment.id}`} style={{ color: "#4f8ef7", textDecoration: "none" }}>
+                            {payment.payment_number}
+                          </Link>
+                        </td>
+                        <td style={{ padding: "11px 12px", fontFamily: "'JetBrains Mono', monospace", fontSize: "12px" }}>
+                          {payment.receipt ? (
+                            <Link to={`/finance/receipts/${payment.receipt.id}`} style={{ color: "#4f8ef7", textDecoration: "none" }}>
+                              {payment.receipt.receipt_number}
+                            </Link>
+                          ) : "—"}
+                        </td>
+                        <td style={{ padding: "11px 12px", color: "#a0aec0" }}>
+                          {payment.allocations?.length ? payment.allocations.map((allocation) => allocation.invoice ? (
+                            <Link
+                              key={allocation.id}
+                              to={`/finance/invoices/${allocation.invoice.id}`}
+                              style={{ display: "block", color: "#4f8ef7", textDecoration: "none", marginBottom: "3px" }}
+                            >
+                              {allocation.invoice.invoice_number}
+                            </Link>
+                          ) : (
+                            <span key={allocation.id} style={{ display: "block" }}>Invoice unavailable</span>
+                          )) : "Unallocated"}
+                        </td>
+                        <td style={{ padding: "11px 12px", fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, whiteSpace: "nowrap" }}>{fmtKES(Number(payment.amount))}</td>
+                        <td style={{ padding: "11px 12px", color: "#6b7a99", textTransform: "capitalize" }}>{payment.payment_method.replaceAll("_", " ")}</td>
+                        <td style={{ padding: "11px 12px", color: "#4b5a7a", whiteSpace: "nowrap" }}>{fmtDate(payment.payment_date)}</td>
+                        <td style={{ padding: "11px 12px", color: "#a0aec0", textTransform: "capitalize" }}>{payment.status.replaceAll("_", " ")}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {allFees.length === 0 && financeInvoices.length === 0 && financePayments.length === 0 && !feeHistoryError && (
+            <EmptyState icon="💳" message="No fee or finance records found." />
+          )}
         </Card>
       )}
 

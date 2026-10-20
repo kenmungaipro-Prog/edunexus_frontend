@@ -1,56 +1,119 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useLoaderData } from "react-router";
-import { api, type TransportAnalyticsOverview, type TransportDriverRankingEntry, type TransportHeatMapResponse, type TransportPrediction } from "~/lib/api";
+import { api } from "~/lib/api";
 import TransportSubNav from "./TransportSubNav";
+import { useAuth } from "~/contexts/auth";
+
+function localDateString() {
+  const today = new Date();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${today.getFullYear()}-${month}-${day}`;
+}
 
 export async function clientLoader() {
+  const date = localDateString();
   try {
-    const [overviewRes, rankingRes, heatMapRes, predictionRes] = await Promise.all([
-      api.transport.analytics.overview(),
-      api.transport.analytics.driverRanking(),
-      api.transport.analytics.heatMap(),
-      api.transport.analytics.prediction(),
+    const [routesRes, overviewRes, rankingRes, heatMapRes, predictionRes] = await Promise.all([
+      api.transport.list(),
+      api.transport.analytics.overview({ date }),
+      api.transport.analytics.driverRanking({ date }),
+      api.transport.analytics.heatMap({ date }),
+      api.transport.analytics.prediction({ date }),
     ]);
 
     return {
+      routes: routesRes.data,
       overview: overviewRes.data,
       ranking: rankingRes.data,
       heatMap: heatMapRes.data,
       prediction: predictionRes.data,
-      date: new Date().toISOString().slice(0, 10),
+      date,
     };
   } catch (error: any) {
     console.error("Transport analytics loader failed:", error);
     return {
+      routes: [],
       overview: null,
       ranking: [],
       heatMap: null,
       prediction: null,
-      error: error.response?.message || "Unable to load transport analytics.",
-      date: new Date().toISOString().slice(0, 10),
+      error: error.response?.data?.message || "Unable to load transport analytics.",
+      date,
     };
   }
 }
 
 export default function TransportAnalyticsPage() {
-  const { overview, ranking, heatMap, prediction, error, date } = useLoaderData<typeof clientLoader>();
+  const { routes, overview: initialOverview, ranking: initialRanking, heatMap: initialHeatMap, prediction: initialPrediction, error: initialError, date: initialDate } = useLoaderData<typeof clientLoader>();
+  const { user } = useAuth();
+  const [overview, setOverview] = useState(initialOverview);
+  const [ranking, setRanking] = useState(initialRanking);
+  const [heatMap, setHeatMap] = useState(initialHeatMap);
+  const [prediction, setPrediction] = useState(initialPrediction);
+  const [date, setDate] = useState(initialDate);
+  const [selectedRouteId, setSelectedRouteId] = useState<number | null>(initialOverview?.route_id ?? null);
+  const [error, setError] = useState<string | undefined>(initialError);
+  const [isLoading, setIsLoading] = useState(false);
+  const canSelectRoute = user?.role === "admin" || user?.role === "superadmin";
+
+  useEffect(() => {
+    let cancelled = false;
+    const filters = {
+      date,
+      ...(selectedRouteId ? { route_id: selectedRouteId } : {}),
+    };
+
+    setIsLoading(true);
+    setError(undefined);
+
+    Promise.all([
+      api.transport.analytics.overview(filters),
+      api.transport.analytics.driverRanking({ date }),
+      api.transport.analytics.heatMap(filters),
+      api.transport.analytics.prediction(filters),
+    ])
+      .then(([overviewRes, rankingRes, heatMapRes, predictionRes]) => {
+        if (cancelled) return;
+        setOverview(overviewRes.data);
+        setRanking(rankingRes.data);
+        setHeatMap(heatMapRes.data);
+        setPrediction(predictionRes.data);
+      })
+      .catch((requestError: any) => {
+        if (cancelled) return;
+        console.error("Failed to refresh transport analytics:", requestError);
+        setOverview(null);
+        setRanking([]);
+        setHeatMap(null);
+        setPrediction(null);
+        setError(requestError.response?.data?.message || "Unable to load analytics for this route and date.");
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [date, selectedRouteId]);
 
   const routeSummary = overview ? (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5">
         <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Efficiency</p>
-        <p className="text-3xl font-bold text-emerald-400 mt-3">{overview.efficiency_score}%</p>
-        <p className="text-sm text-slate-400 mt-2">Route performance score for today</p>
+        <p className="text-3xl font-bold text-emerald-400 mt-3">{overview.efficiency_score === null ? "—" : `${overview.efficiency_score}%`}</p>
+        <p className="text-sm text-slate-400 mt-2">Heuristic score for {overview.date}; not a calibrated KPI</p>
       </div>
       <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5">
         <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Completion</p>
-        <p className="text-3xl font-bold text-sky-400 mt-3">{overview.completed_stops} / {overview.stop_count}</p>
-        <p className="text-sm text-slate-400 mt-2">Stops completed by route</p>
+        <p className="text-3xl font-bold text-sky-400 mt-3">{overview.stop_count > 0 ? `${overview.completed_stops} / ${overview.stop_count}` : "—"}</p>
+        <p className="text-sm text-slate-400 mt-2">{overview.stop_count > 0 ? `${overview.completion_pct}% active geofences reached` : "No active geofences configured"}</p>
       </div>
       <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5">
         <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Average speed</p>
-        <p className="text-3xl font-bold text-amber-400 mt-3">{overview.metrics.average_speed} km/h</p>
-        <p className="text-sm text-slate-400 mt-2">Based on today's telemetry</p>
+        <p className="text-3xl font-bold text-amber-400 mt-3">{overview.metrics.average_speed === null ? "—" : `${overview.metrics.average_speed} km/h`}</p>
+        <p className="text-sm text-slate-400 mt-2">Time-weighted GPS speed for this date</p>
       </div>
       <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5">
         <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Telemetries</p>
@@ -66,7 +129,7 @@ export default function TransportAnalyticsPage() {
         <div>
           <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Delay prediction</p>
           <h2 className="text-2xl font-bold text-white mt-2">{prediction.predicted_delay_minutes} min</h2>
-          <p className="text-sm text-slate-400 mt-1">{prediction.status} • {prediction.confidence}% confidence</p>
+          <p className="text-sm text-slate-400 mt-1">{prediction.status} • indicative data coverage: {prediction.confidence}%</p>
         </div>
         <div className="rounded-2xl bg-slate-900/80 px-4 py-3 text-sm text-slate-200">
           <div className="font-semibold text-slate-100">Route</div>
@@ -76,7 +139,7 @@ export default function TransportAnalyticsPage() {
       <div className="mt-6 grid gap-3 sm:grid-cols-3">
         <div className="rounded-2xl bg-slate-900/80 p-4">
           <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">Avg speed</p>
-          <p className="mt-2 text-lg font-semibold text-emerald-300">{prediction.basis.average_speed} km/h</p>
+          <p className="mt-2 text-lg font-semibold text-emerald-300">{prediction.basis.average_speed === null ? "—" : `${prediction.basis.average_speed} km/h`}</p>
         </div>
         <div className="rounded-2xl bg-slate-900/80 p-4">
           <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">Idle minutes</p>
@@ -105,9 +168,44 @@ export default function TransportAnalyticsPage() {
       </div>
       <TransportSubNav />
 
+      <div className="my-6 flex flex-wrap items-end gap-4 rounded-2xl border border-slate-700 bg-slate-800 p-4">
+        {canSelectRoute && (
+          <label className="min-w-56 flex-1 text-sm text-slate-300">
+            Route
+            <select
+              value={selectedRouteId ?? ""}
+              onChange={(event) => setSelectedRouteId(Number(event.target.value) || null)}
+              className="mt-2 block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white"
+            >
+              {routes.map((route) => (
+                <option key={route.id} value={route.id}>{route.name}</option>
+              ))}
+            </select>
+          </label>
+        )}
+        <label className="text-sm text-slate-300">
+          Analytics date
+          <input
+            type="date"
+            value={date}
+            onChange={(event) => setDate(event.target.value)}
+            className="mt-2 block rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-white"
+          />
+        </label>
+        <span className="text-sm text-slate-400" aria-live="polite">
+          {isLoading ? "Refreshing analytics…" : "Metrics reflect the selected route and date."}
+        </span>
+      </div>
+
       {error && (
         <div className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
           {error}
+        </div>
+      )}
+
+      {!overview && !error && (
+        <div className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
+          No analytics route is available for this account. Assign a vehicle and driver to a route, then select a date with GPS activity.
         </div>
       )}
 
@@ -115,6 +213,11 @@ export default function TransportAnalyticsPage() {
         <div className="space-y-6">
           {routeSummary}
           {predictionCard}
+          {overview && !prediction && (
+            <div className="rounded-2xl border border-slate-700 bg-slate-800 p-5 text-sm text-slate-300">
+              Delay estimate unavailable: at least three GPS samples are needed for this route and date.
+            </div>
+          )}
           <div className="bg-slate-800 border border-slate-700 rounded-3xl p-6">
             <div className="flex items-center justify-between mb-4 gap-3">
               <div>
@@ -129,8 +232,8 @@ export default function TransportAnalyticsPage() {
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-2xl bg-slate-900/80 p-4">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">Student count</p>
-                <p className="mt-2 text-xl font-semibold text-slate-100">{overview?.route_id ? overview?.stop_count : "—"}</p>
+                <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">Assigned students</p>
+                <p className="mt-2 text-xl font-semibold text-slate-100">{overview?.students_count ?? "—"}</p>
               </div>
               <div className="rounded-2xl bg-slate-900/80 p-4">
                 <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">Route driver</p>
@@ -153,7 +256,7 @@ export default function TransportAnalyticsPage() {
                         <p className="text-xs uppercase tracking-[0.2em] text-slate-500">{driver.route_count} route(s)</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-xl font-semibold text-emerald-300">{driver.average_efficiency}%</p>
+                        <p className="text-xl font-semibold text-emerald-300">{driver.average_efficiency === null ? "—" : `${driver.average_efficiency}%`}</p>
                         <p className="text-xs text-slate-500">Efficiency</p>
                       </div>
                     </div>
@@ -181,7 +284,7 @@ export default function TransportAnalyticsPage() {
         <div className="space-y-6">
           <div className="bg-slate-800 border border-slate-700 rounded-3xl p-6">
             <h2 className="text-lg font-semibold text-white mb-4">Route heat map summary</h2>
-            {heatMap ? (
+            {heatMap && heatMap.points.length > 0 ? (
               <div className="space-y-4 text-sm text-slate-300">
                 <p>Points recorded: <span className="font-semibold text-slate-100">{heatMap.points.length}</span></p>
                 <p>Vehicle: <span className="font-semibold text-slate-100">{heatMap.vehicle ?? "Unknown"}</span></p>
@@ -198,7 +301,7 @@ export default function TransportAnalyticsPage() {
                 </div>
               </div>
             ) : (
-              <p className="text-slate-400 text-sm">No heat map available for today.</p>
+              <p className="text-slate-400 text-sm">No GPS points were recorded for this route on {date}.</p>
             )}
           </div>
 
@@ -206,16 +309,16 @@ export default function TransportAnalyticsPage() {
             <h2 className="text-lg font-semibold text-white mb-4">Insights & actions</h2>
             <ul className="space-y-3 text-sm text-slate-300">
               <li className="rounded-2xl bg-slate-900/80 p-4">
-                <p className="font-semibold text-slate-100">Keep the driver route stable</p>
-                <p className="mt-2 text-slate-400">Use the transport dashboard to verify the same vehicle and driver assignments are retained across trips.</p>
+                <p className="font-semibold text-slate-100">Interpret estimates cautiously</p>
+                <p className="mt-2 text-slate-400">Delay and efficiency are indicative heuristics, not calibrated operational KPIs. Confidence reflects GPS sample count only.</p>
               </li>
               <li className="rounded-2xl bg-slate-900/80 p-4">
-                <p className="font-semibold text-slate-100">Monitor stop punctuality</p>
-                <p className="mt-2 text-slate-400">A higher stop delay indicates you should review the pickup sequence or traffic impact on the route.</p>
+                <p className="font-semibold text-slate-100">GPS data quality</p>
+                <p className="mt-2 text-slate-400">Distance and idle time ignore gaps over five minutes, jumps over 160 km/h, and movements under 10 metres.</p>
               </li>
               <li className="rounded-2xl bg-slate-900/80 p-4">
-                <p className="font-semibold text-slate-100">Act on alerts</p>
-                <p className="mt-2 text-slate-400">Use the Notifications page to confirm emergency alerts and recent geofence events.</p>
+                <p className="font-semibold text-slate-100">Stop completion</p>
+                <p className="mt-2 text-slate-400">A stop counts once per date after an entry event for its active geofence. Without active geofences, completion is unavailable.</p>
               </li>
             </ul>
           </div>

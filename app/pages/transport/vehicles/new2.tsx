@@ -9,6 +9,7 @@ export async function clientAction({ request }: { request: Request }) {
   const formData = await request.formData();
   const payload = {
         registration_number: String(formData.get("registration_number") ?? "").trim().toUpperCase(),
+        imei: String(formData.get("imei") ?? "").trim() || null,
         make: String(formData.get("make") ?? "").trim() || null,
         model: String(formData.get("model") ?? "").trim() || null,
         capacity: Number(formData.get("capacity")),
@@ -63,6 +64,22 @@ export default function NewVehiclePage() {
           {actionData?.fieldErrors?.registration_number && (
             <p className="text-red-400 text-xs mt-1">{actionData.fieldErrors.registration_number[0]}</p>
           )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-2">GPS Device IMEI <span className="text-slate-500">(optional)</span></label>
+          <input
+            name="imei"
+            maxLength={32}
+            inputMode="numeric"
+            autoComplete="off"
+            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500 outline-none transition font-mono text-sm"
+            placeholder="Enter the IMEI printed on the Protrack device"
+          />
+          {actionData?.fieldErrors?.imei && (
+            <p className="text-red-400 text-xs mt-1">{actionData.fieldErrors.imei[0]}</p>
+          )}
+          <p className="text-slate-500 text-xs mt-1">Link this vehicle to its Protrack tracking device.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

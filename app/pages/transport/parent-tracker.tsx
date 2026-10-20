@@ -6,7 +6,6 @@ import { Link, useLoaderData } from "react-router";
 import { api, type LiveVehicle, type TransportRoute } from "~/lib/api";
 import TransportMap from "~/components/transport/TransportMap";
 import StudentTripTracker from "~/components/transport/StudentTripTracker";
-import TransportSubNav from "./TransportSubNav";
 
 function formatLastUpdate(value: string | null) {
   if (!value) {
@@ -116,14 +115,12 @@ export default function ParentTransportTrackerPage() {
         </div>
 
         <Link
-          to="/transport"
+          to="/"
           className="self-start rounded-lg bg-slate-800 px-4 py-2 text-slate-200 text-sm font-medium hover:bg-slate-700 transition"
         >
-          ← Back to Transport
+          ← Back to Dashboard
         </Link>
       </div>
-
-      <TransportSubNav />
 
       {/* My Children Selector */}
       {children.length > 0 && (

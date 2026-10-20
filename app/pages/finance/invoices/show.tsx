@@ -47,6 +47,7 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 export default function InvoiceShowPage({ loaderData }: Route.ComponentProps) {
   const { invoice } = loaderData as { invoice?: Invoice | null };
   const navigation = useNavigation();
+  const lineItems = invoice?.items ?? invoice?.invoice_items ?? [];
 
   if (!invoice) {
     return (
@@ -117,7 +118,7 @@ export default function InvoiceShowPage({ loaderData }: Route.ComponentProps) {
 
       {/* Invoice Items */}
       <Card title="Line Items">
-        {(invoice.items?.length ?? 0) === 0 ? (
+        {lineItems.length === 0 ? (
           <p style={{ color: "#64748b", fontSize: "14px" }}>No items</p>
         ) : (
           <div className="overflow-x-auto">
@@ -132,7 +133,7 @@ export default function InvoiceShowPage({ loaderData }: Route.ComponentProps) {
                 </tr>
               </thead>
               <tbody>
-                {(invoice.items as InvoiceItem[]).map((item) => (
+                {lineItems.map((item: InvoiceItem) => (
                   <tr key={item.id} style={{ borderBottom: "1px solid #1e293b" }}>
                     <td style={{ padding: "12px 0", fontSize: "14px", color: "#e2e8f0" }}>
                       {item.description}

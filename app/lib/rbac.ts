@@ -15,15 +15,15 @@ interface RolePermissions {
  * Returns groups that should be visible to this role
  */
 export const ROLE_MENU_ACCESS: Record<UserRole, string[]> = {
-  superadmin: ["Overview", "Academic", "Administration", "Finance", "Accounting", "System"],
-  admin: ["Overview", "Academic", "Administration", "Finance", "Accounting", "System"],
-  accountant: ["Overview", "Finance", "Accounting"],
-  teacher: ["Overview", "Academic", "Messages"],
-  librarian: ["Overview", "Administration"],
-  receptionist: ["Overview", "Academic", "Administration", "Messages"],
-  student: ["Overview", "Messages"],
-  parent: ["Overview", "Messages", "Parent Portal"],
-  driver: ["Overview", "Administration"],
+  superadmin: ["Overview", "Academic", "Administration", "Finance", "Accounting", "System", "Communication"],
+  admin: ["Overview", "Academic", "Administration", "Finance", "Accounting", "System", "Communication"],
+  accountant: ["Overview", "Finance", "Accounting", "Communication"],
+  teacher: ["Overview", "Academic", "Communication"],
+  librarian: ["Overview", "Administration", "Communication"],
+  receptionist: ["Overview", "Academic", "Administration", "Communication"],
+  student: ["Overview", "Communication"],
+  parent: ["Overview", "Parent Portal", "Communication"],
+  driver: ["Overview", "Administration", "Communication"],
 };
 
 /**
@@ -156,7 +156,7 @@ function hasMenuItemAccess(role: UserRole, route: string): boolean {
     "/transport": ["superadmin", "admin", "driver"],
     "/transport/driver": ["driver"],
     "/events": ["superadmin", "admin"],
-    "/messages": ["superadmin", "admin", "accountant", "teacher", "librarian", "student", "parent"],
+    "/messages": ["superadmin", "admin", "accountant", "teacher", "librarian", "receptionist", "student", "parent", "driver"],
 
     // Finance
     "/finance/dashboard": ["superadmin", "admin", "accountant"],
@@ -176,6 +176,7 @@ function hasMenuItemAccess(role: UserRole, route: string): boolean {
     "/accounting/reports/cash-flow": ["superadmin", "admin", "accountant"],
     "/portal/analytics": ["parent"],
     "/portal/payments": ["parent"],
+    "/transport/tracker": ["parent"],
 
     // System
     "/settings": ["superadmin", "admin"],

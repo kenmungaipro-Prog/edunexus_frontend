@@ -11,8 +11,13 @@ export async function clientLoader() {
   return { categories: response.data.data };
 }
 
+function amountValue(value: number | string | null | undefined): number {
+  const amount = Number(value ?? 0);
+  return Number.isFinite(amount) ? amount : 0;
+}
+
 function money(value: number | string | null | undefined) {
-  return `KES ${Number(value ?? 0).toLocaleString("en-KE", { maximumFractionDigits: 0 })}`;
+  return `KES ${amountValue(value).toLocaleString("en-KE", { maximumFractionDigits: 0 })}`;
 }
 
 export default function FeeCategoriesPage({
@@ -82,7 +87,7 @@ export default function FeeCategoriesPage({
         <div className="rounded-xl border border-slate-700 bg-slate-800/60 px-4 py-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Default</p>
           <p className="text-xl sm:text-2xl font-bold text-white truncate">
-            {money(categories.reduce((sum, c) => sum + c.default_amount, 0))}
+            {money(categories.reduce((sum, category) => sum + amountValue(category.default_amount), 0))}
           </p>
           <p className="text-xs text-slate-500 mt-0.5">total value</p>
         </div>
@@ -209,7 +214,7 @@ function FeeCategoryModal({ category, onClose, onSaved }: FeeCategoryModalProps)
     code: category?.code ?? "",
     name: category?.name ?? "",
     description: category?.description ?? "",
-    default_amount: category?.default_amount ?? 0,
+    default_amount: amountValue(category?.default_amount),
     is_active: category?.is_active ?? true,
   });
 

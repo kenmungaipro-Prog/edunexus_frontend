@@ -74,7 +74,14 @@ export default function StudentStatementPage({ loaderData }: { loaderData: { stu
               <tbody className="divide-y divide-slate-700/60">
                 {invoices.length > 0 ? invoices.map((invoice) => (
                   <tr key={invoice.id} className="text-slate-300">
-                    <td className="py-3 pr-3 font-mono text-xs text-blue-400">{invoice.invoice_number}</td>
+                    <td className="py-3 pr-3 font-mono text-xs">
+                      <Link
+                        to={`/finance/invoices/${invoice.id}`}
+                        className="text-blue-400 hover:text-blue-300 hover:underline"
+                      >
+                        {invoice.invoice_number}
+                      </Link>
+                    </td>
                     <td className="py-3 pr-3">{money(invoice.total)}</td>
                     <td className="py-3 pr-3">{money(invoice.amount_paid)}</td>
                     <td className="py-3 pr-3 font-semibold text-white">{money(invoice.balance)}</td>
@@ -91,11 +98,12 @@ export default function StudentStatementPage({ loaderData }: { loaderData: { stu
         <div className="rounded-xl border border-slate-700 bg-slate-800 p-4 sm:p-5 shadow-sm">
           <h2 className="mb-4 text-sm font-semibold text-white">Payments</h2>
           <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
-            <table className="w-full min-w-[620px] text-sm">
+            <table className="w-full min-w-[720px] text-sm">
               <thead>
                 <tr className="border-b border-slate-700 text-left text-xs uppercase tracking-wide text-slate-500">
                   <th className="py-2.5 pr-3">Payment</th>
                   <th className="py-2.5 pr-3">Receipt</th>
+                  <th className="py-2.5 pr-3">Invoice(s)</th>
                   <th className="py-2.5 pr-3">Method</th>
                   <th className="py-2.5 pr-3">Amount</th>
                   <th className="py-2.5 pr-3">Date</th>
@@ -104,14 +112,57 @@ export default function StudentStatementPage({ loaderData }: { loaderData: { stu
               <tbody className="divide-y divide-slate-700/60">
                 {payments.length > 0 ? payments.map((payment) => (
                   <tr key={payment.id} className="text-slate-300">
-                    <td className="py-3 pr-3 font-mono text-xs text-blue-400">{payment.payment_number}</td>
-                    <td className="py-3 pr-3 font-mono text-xs">{payment.receipt?.receipt_number ?? "-"}</td>
+                    <td className="py-3 pr-3 font-mono text-xs">
+                      <Link
+                        to={`/finance/payments/${payment.id}`}
+                        className="text-blue-400 hover:text-blue-300 hover:underline"
+                      >
+                        {payment.payment_number}
+                      </Link>
+                    </td>
+                    <td className="py-3 pr-3 font-mono text-xs">
+                      {payment.receipt ? (
+                        <Link
+                          to={`/finance/receipts/${payment.receipt.id}`}
+                          className="text-blue-400 hover:text-blue-300 hover:underline"
+                        >
+                          {payment.receipt.receipt_number}
+                        </Link>
+                      ) : (
+                        "-"
+                      )}
+                    </td>
+                    <td className="py-3 pr-3">
+                      {payment.allocations?.length ? (
+                        <div className="space-y-1">
+                          {payment.allocations.map((allocation) => allocation.invoice ? (
+                            <div key={allocation.id}>
+                              <Link
+                                to={`/finance/invoices/${allocation.invoice.id}`}
+                                className="font-mono text-xs text-blue-400 hover:text-blue-300 hover:underline"
+                              >
+                                {allocation.invoice.invoice_number}
+                              </Link>
+                              <span className="ml-2 text-xs text-slate-400">
+                                {money(allocation.amount_allocated)}
+                              </span>
+                            </div>
+                          ) : (
+                            <div key={allocation.id} className="text-xs text-slate-500">
+                              Invoice unavailable
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-500">Unallocated</span>
+                      )}
+                    </td>
                     <td className="py-3 pr-3 capitalize">{payment.payment_method.replace("_", " ")}</td>
                     <td className="py-3 pr-3 font-semibold text-white">{money(payment.amount)}</td>
                     <td className="py-3 pr-3 text-slate-400">{date(payment.payment_date)}</td>
                   </tr>
                 )) : (
-                  <tr><td colSpan={5} className="py-8 text-center text-slate-500">No payments yet.</td></tr>
+                  <tr><td colSpan={6} className="py-8 text-center text-slate-500">No payments yet.</td></tr>
                 )}
               </tbody>
             </table>

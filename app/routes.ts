@@ -85,7 +85,9 @@ export default [
     route("finance/payments", "pages/finance/payments/index.tsx"),
     route("finance/payments/mpesa-status", "pages/finance/payments/mpesa-status.tsx"),
     route("finance/payments/collect", "pages/finance/payments/collect.tsx"),
+    route("finance/payments/:id", "pages/finance/payments/show.tsx"),
     route("finance/receipts", "pages/finance/receipts/index.tsx"),
+    route("finance/receipts/:id", "pages/finance/receipts/show.tsx"),
     route("finance/reconciliation", "pages/finance/reconciliation/index.tsx"),
     route("finance/students/:id/statement", "pages/finance/students/statement.tsx"),
 
@@ -137,10 +139,7 @@ export default [
     route("events/:id", "pages/events/$id.tsx"),
 
     // ── Messages ──────────────────────────────────────────────
-    // Flattened: "thread/:id" must be a sibling, not a child,
-    // so the messages list doesn't try to render an outlet.
     route("messages", "pages/messages/index.tsx"),
-    route("messages/thread/:id", "pages/messages/thread.tsx"),
 
     // ── Settings ──────────────────────────────────────────────
     route("settings", "pages/settings/index.tsx"),

@@ -155,7 +155,7 @@ export default function NewEventPage({ actionData }: Route.ComponentProps) {
               />
               <span className="text-slate-300 text-sm sm:text-base font-medium">Notify all users about this event</span>
             </label>
-            <p className="text-slate-500 text-xs sm:text-sm mt-2">An email notification will be sent to all staff and parents</p>
+            <p className="text-slate-500 text-xs sm:text-sm mt-2">An in-app notification will be sent to all active users at this school. If unchecked, only you will be notified.</p>
           </div>
         </div>
 

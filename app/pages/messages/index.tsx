@@ -3,68 +3,106 @@
 // ============================================================
 import { useState, useEffect, useRef } from "react";
 import type { Route as MsgRoute } from "./+types/index";
-import { apiService, type MessageThread, type Message } from "~/lib/api";
+import { apiService, type MessageThread, type Message, type MessageContact } from "~/lib/api";
 
 export async function clientLoader() {
   try {
     const response = await apiService.messages.threads();
-    return { initialThreads: response.data || [] };
+    return { initialThreads: response.data || [], initialThreadsError: "" };
   } catch (error) {
     console.error("Failed to load threads:", error);
-    return { initialThreads: [] };
+    return { initialThreads: [], initialThreadsError: "Unable to load conversations. Please try again." };
   }
 }
 
 export default function MessagesPage({ loaderData }: MsgRoute.ComponentProps) {
-  const { initialThreads } = loaderData as { initialThreads: MessageThread[] };
+  const { initialThreads, initialThreadsError } = loaderData as {
+    initialThreads: MessageThread[];
+    initialThreadsError: string;
+  };
   
   const [threads, setThreads] = useState<MessageThread[]>(initialThreads);
-  const [activeIdx, setActiveIdx] = useState<number>(0);
+  const [activeContact, setActiveContact] = useState<MessageContact | null>(() => initialThreads[0]?.contact ?? null);
   const [chat, setChat] = useState<Message[]>([]);
   const [msg, setMsg] = useState("");
   const [isLoadingChat, setIsLoadingChat] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [chatError, setChatError] = useState("");
+  const [threadsError, setThreadsError] = useState(initialThreadsError);
+  const [showNewConversation, setShowNewConversation] = useState(false);
+  const [contacts, setContacts] = useState<MessageContact[]>([]);
+  const [isLoadingContacts, setIsLoadingContacts] = useState(false);
+  const [contactsError, setContactsError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileShowChat, setMobileShowChat] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Derived state
-  const filteredThreads = threads.filter(t => 
+  const filteredThreads = threads.filter(t =>
     t.contact.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
-  const activeThread = filteredThreads[activeIdx] || threads[activeIdx];
-  const activeContact = activeThread?.contact;
 
-  // 1. Fetch chat history when the active thread changes
   useEffect(() => {
     if (!activeContact) return;
 
+    let cancelled = false;
+    const loadConversation = async () => {
+      try {
+        const [conversation, latestThreads] = await Promise.all([
+          apiService.messages.thread(activeContact.id),
+          apiService.messages.threads(),
+        ]);
+        if (cancelled) return;
+        setChat(conversation.data);
+        setThreads(latestThreads.data.map(thread => (
+          thread.contact.id === activeContact.id ? { ...thread, unread: 0 } : thread
+        )));
+        setThreadsError("");
+        setChatError("");
+      } catch (error) {
+        if (!cancelled) {
+          console.error("Failed to load chat:", error);
+          setThreadsError("Unable to refresh your conversation list.");
+          setChatError("Unable to load this conversation. Please try again.");
+        }
+      } finally {
+        if (!cancelled) setIsLoadingChat(false);
+      }
+    };
+
     setIsLoadingChat(true);
-    apiService.messages.thread(activeContact.id)
-      .then(res => {
-        setChat(res.data);
-        // Optimistically clear unread count for this thread locally
-        setThreads(prev => 
-          prev.map(t => t.contact.id === activeContact.id ? { ...t, unread: 0 } : t)
-        );
-      })
-      .catch(err => console.error("Failed to load chat:", err))
-      .finally(() => setIsLoadingChat(false));
+    void loadConversation();
+    const interval = window.setInterval(() => void loadConversation(), 10000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
   }, [activeContact?.id]);
 
-  // 2. Auto-scroll to the bottom of the chat
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chat]);
 
-  // 3. Handle sending a new message
+  useEffect(() => {
+    if (!showNewConversation) return;
+
+    setIsLoadingContacts(true);
+    setContactsError("");
+    apiService.messages.contacts()
+      .then(response => setContacts(response.data))
+      .catch(error => {
+        console.error("Failed to load message contacts:", error);
+        setContactsError("Unable to load school users. Please try again.");
+      })
+      .finally(() => setIsLoadingContacts(false));
+  }, [showNewConversation]);
+
   const sendMessage = async () => {
     if (!msg.trim() || !activeContact || isSending) return;
     
     const textToSend = msg.trim();
-    setMsg(""); // Clear input immediately for better UX
     setIsSending(true);
+    setChatError("");
 
     try {
       const res = await apiService.messages.send({
@@ -72,26 +110,22 @@ export default function MessagesPage({ loaderData }: MsgRoute.ComponentProps) {
         body: textToSend,
       });
 
-      // Append new message to chat
       setChat(prev => [...prev, res.data]);
-
-      // Update the thread list to show the new last message
-      setThreads(prev => 
-        prev.map(t => 
-          t.contact.id === activeContact.id 
-            ? { ...t, last_message: res.data } 
-            : t
-        )
-      );
+      setMsg("");
+      const updatedThread: MessageThread = {
+        contact: activeContact,
+        last_message: res.data,
+        unread: 0,
+      };
+      setThreads(prev => [updatedThread, ...prev.filter(thread => thread.contact.id !== activeContact.id)]);
     } catch (error) {
       console.error("Failed to send message:", error);
-      setMsg(textToSend); // Restore message on failure
+      setChatError("Message could not be sent. Your text is still here; please retry.");
     } finally {
       setIsSending(false);
     }
   };
 
-  // Utility to format timestamps
   const formatTime = (isoString: string) => {
     return new Date(isoString).toLocaleTimeString("en-US", {
       hour: "2-digit",
@@ -101,12 +135,12 @@ export default function MessagesPage({ loaderData }: MsgRoute.ComponentProps) {
   };
 
   return (
-    <div className="h-[calc(100vh-110px)] sm:h-[calc(100vh-130px)] flex gap-4 font-sans">
+    <div className="relative h-[calc(100vh-110px)] sm:h-[calc(100vh-130px)] flex gap-4 font-sans">
       {/* Sidebar: Threads */}
       <div className={`w-full md:w-80 flex-shrink-0 bg-slate-800 border border-slate-700 rounded-2xl flex flex-col overflow-hidden shadow-lg shadow-slate-900/20 ${mobileShowChat ? 'hidden md:flex' : 'flex'}`}>
         <div className="p-4 sm:p-5 border-b border-slate-700/80 flex items-center justify-between bg-slate-800">
           <h3 className="font-semibold text-slate-100 text-lg tracking-tight">Messages</h3>
-          <button className="px-3 py-1.5 bg-blue-500/10 text-blue-400 text-xs font-medium rounded-lg hover:bg-blue-500/20 hover:text-blue-300 transition-all flex items-center gap-1.5">
+          <button onClick={() => setShowNewConversation(true)} className="px-3 py-1.5 bg-blue-500/10 text-blue-400 text-xs font-medium rounded-lg hover:bg-blue-500/20 hover:text-blue-300 transition-all flex items-center gap-1.5">
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
             New
           </button>
@@ -125,23 +159,28 @@ export default function MessagesPage({ loaderData }: MsgRoute.ComponentProps) {
         </div>
 
         <div className="flex-1 overflow-y-auto py-2 custom-scrollbar">
-          {filteredThreads.length === 0 ? (
+          {threadsError ? (
+            <div role="alert" className="p-5 text-center text-sm text-red-300">{threadsError}</div>
+          ) : filteredThreads.length === 0 ? (
             <div className="p-8 text-center text-slate-500 text-sm">
               {searchQuery ? "No matches found." : "No messages yet."}
             </div>
           ) : (
-            filteredThreads.map((t, i) => {
+            filteredThreads.map(t => {
               const isSelected = activeContact?.id === t.contact.id;
               return (
-                <div 
+                <button
                   key={t.contact.id}
+                  type="button"
                   className={`flex items-center gap-3 px-4 py-3.5 mx-2 rounded-xl cursor-pointer transition-all duration-200 ${
                     isSelected 
                       ? "bg-blue-500/10 border border-blue-500/20" 
                       : "border border-transparent hover:bg-slate-700/30"
                   }`}
                   onClick={() => {
-                    setActiveIdx(i);
+                    setActiveContact(t.contact);
+                    if (activeContact?.id !== t.contact.id) setChat([]);
+                    setChatError("");
                     setMobileShowChat(true);
                   }}
                 >
@@ -168,7 +207,7 @@ export default function MessagesPage({ loaderData }: MsgRoute.ComponentProps) {
                       {t.unread}
                     </div>
                   )}
-                </div>
+                </button>
               );
             })
           )}
@@ -193,20 +232,17 @@ export default function MessagesPage({ loaderData }: MsgRoute.ComponentProps) {
                   <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-500 text-white flex items-center justify-center text-sm font-bold shadow-md shadow-blue-500/20">
                     {activeContact.name.split(" ").map(n => n[0]).join("").substring(0, 2)}
                   </div>
-                  <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-slate-800 rounded-full"></div>
                 </div>
                 <div>
                   <p className="font-semibold text-slate-100 text-sm sm:text-base">{activeContact.name}</p>
                   <p className="text-xs text-slate-400 capitalize">{activeContact.role}</p>
                 </div>
               </div>
-              <button className="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 rounded-lg transition-colors">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path></svg>
-              </button>
             </div>
 
             {/* Messages Body */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-slate-900/20 custom-scrollbar">
+              {chatError && <p role="alert" className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-300">{chatError}</p>}
               {isLoadingChat ? (
                 <div className="h-full flex items-center justify-center text-slate-500 flex-col gap-3">
                   <svg className="animate-spin h-6 w-6 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -258,9 +294,6 @@ export default function MessagesPage({ loaderData }: MsgRoute.ComponentProps) {
             {/* Message Input Form */}
             <div className="p-3 sm:p-4 border-t border-slate-700/80 bg-slate-800">
               <div className="flex gap-2 items-end">
-                <button className="p-3 text-slate-400 hover:text-slate-200 hover:bg-slate-700 rounded-xl transition-colors flex-shrink-0 hidden sm:block">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
-                </button>
                 <textarea
                   value={msg}
                   onChange={e => setMsg(e.target.value)}
@@ -299,10 +332,52 @@ export default function MessagesPage({ loaderData }: MsgRoute.ComponentProps) {
               <svg className="w-10 h-10 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"></path></svg>
             </div>
             <h3 className="text-lg font-medium text-slate-300 mb-1">Your Messages</h3>
-            <p className="text-sm">Select a conversation from the sidebar to start chatting.</p>
+            <p className="text-sm">Select a conversation or start a new message with someone at your school.</p>
           </div>
         )}
       </div>
+
+      {showNewConversation && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/70 p-4" role="dialog" aria-modal="true" aria-labelledby="new-message-title">
+          <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-800 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-700 px-5 py-4">
+              <h2 id="new-message-title" className="font-semibold text-slate-100">New message</h2>
+              <button type="button" onClick={() => setShowNewConversation(false)} className="text-slate-400 hover:text-white" aria-label="Close">✕</button>
+            </div>
+            <div className="max-h-[60vh] overflow-y-auto p-3">
+              {isLoadingContacts ? (
+                <p className="p-5 text-center text-sm text-slate-400">Loading school users...</p>
+              ) : contactsError ? (
+                <p role="alert" className="p-5 text-center text-sm text-red-300">{contactsError}</p>
+              ) : contacts.length === 0 ? (
+                <p className="p-5 text-center text-sm text-slate-400">There are no other active users in your school.</p>
+              ) : contacts.map(contact => (
+                <button
+                  key={contact.id}
+                  type="button"
+                  onClick={() => {
+                    setActiveContact(contact);
+                    if (activeContact?.id !== contact.id) setChat([]);
+                    setMsg("");
+                    setChatError("");
+                    setShowNewConversation(false);
+                    setMobileShowChat(true);
+                  }}
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left hover:bg-slate-700/60"
+                >
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-700 text-sm font-semibold text-slate-200">
+                    {contact.name.split(" ").map(part => part[0]).join("").substring(0, 2)}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium text-slate-100">{contact.name}</span>
+                    <span className="block text-xs capitalize text-slate-400">{contact.role}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Global styles for custom scrollbar to match the dark aesthetic */}
       <style>{`

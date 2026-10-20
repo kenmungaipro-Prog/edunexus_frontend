@@ -26,6 +26,7 @@ export async function clientAction({ request, params }: Route.ActionArgs) {
 
   const payload = {
     registration_number: String(formData.get("registration_number") || ""),
+    imei: String(formData.get("imei") || "").trim() || null,
     make: String(formData.get("make") || ""),
     model: String(formData.get("model") || ""),
     capacity: Number(formData.get("capacity")),
@@ -71,6 +72,22 @@ export default function EditVehiclePage({ loaderData, actionData }: Route.Compon
               defaultValue={vehicle.registration_number}
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500 outline-none"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">GPS Device IMEI <span className="text-slate-500">(optional)</span></label>
+            <input
+              type="text"
+              name="imei"
+              maxLength={32}
+              inputMode="numeric"
+              autoComplete="off"
+              defaultValue={vehicle.imei ?? ""}
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500 outline-none font-mono"
+            />
+            {actionData?.fieldErrors?.imei && (
+              <p className="text-red-400 text-xs mt-1">{actionData.fieldErrors.imei[0]}</p>
+            )}
           </div>
 
           <div>
