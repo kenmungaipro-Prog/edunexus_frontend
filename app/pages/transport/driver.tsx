@@ -50,6 +50,29 @@ export default function DriverDashboard() {
     return () => { mounted = false; };
   }, []);
 
+  useEffect(() => {
+    let mounted = true;
+    let inFlight = false;
+    const refreshLiveVehicles = async () => {
+      if (inFlight) return;
+      inFlight = true;
+      try {
+        const response = await api.transport.live();
+        if (mounted) setVehicles(response.data);
+      } catch (error) {
+        console.error("Failed refreshing driver live transport data:", error);
+      } finally {
+        inFlight = false;
+      }
+    };
+
+    const interval = window.setInterval(() => void refreshLiveVehicles(), 5000);
+    return () => {
+      mounted = false;
+      window.clearInterval(interval);
+    };
+  }, []);
+
   const selectedVehicle = vehicles.find((v) => v.vehicle_id === selectedVehicleId) ?? null;
   const selectedRoute = routes.find((r) => r.vehicle_id === selectedVehicle?.vehicle_id);
 
@@ -73,14 +96,21 @@ export default function DriverDashboard() {
     const reverbPort = import.meta.env.VITE_REVERB_PORT ?? "8080";
     const reverbScheme = import.meta.env.VITE_REVERB_SCHEME ?? "https";
     const schoolId = sessionStorage.getItem('school_id') || localStorage.getItem('school_id');
+    const authToken = localStorage.getItem("edunexus_token");
 
-    if (!reverbAppKey || !reverbHost || !schoolId) return;
+    if (!reverbAppKey || !reverbHost || !schoolId || !authToken) return;
 
     window.Pusher = Pusher;
 
     const echo = new Echo({
       broadcaster: "reverb",
       key: reverbAppKey,
+      authEndpoint: "/broadcasting/auth",
+      auth: {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      },
       wsHost: reverbHost,
       wsPort: Number(reverbPort),
       wssPort: Number(reverbPort),
@@ -205,15 +235,29 @@ export default function DriverDashboard() {
             <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
               <div className="mb-3 text-sm text-slate-400">Select vehicle</div>
               <div className="space-y-2">
-                {vehicles.map((v) => (
+                {vehicles.map((v) => {
+                  const demo = v.demo && new Date(v.demo.expires_at).getTime() > Date.now() ? v.demo : null;
+                  const position = demo ?? v;
+
+                  return (
                   <button key={v.vehicle_id} onClick={() => setSelectedVehicleId(v.vehicle_id)} className={`w-full text-left p-3 rounded-lg ${v.vehicle_id === selectedVehicleId ? "bg-slate-800 border border-blue-500" : "bg-slate-950/50 border border-slate-800"}`}>
                     <div className="flex items-center justify-between">
-                      <div className="font-semibold text-white">{v.number}</div>
-                      <div className="text-xs text-slate-400">{v.speed !== null ? `${v.speed} km/h` : "—"}</div>
+                      <div>
+                        <div className="font-semibold text-white">{v.number}</div>
+                        {demo
+                          ? <div className="mt-1 inline-flex rounded bg-red-600 px-2 py-0.5 text-[10px] font-bold text-white">DEMO GPS</div>
+                          : null}
+                      </div>
+                      <div className="text-xs text-slate-400">
+                        {position.speed !== null
+                          ? `${position.speed} km/h`
+                          : "—"}
+                      </div>
                     </div>
                     <div className="text-xs text-slate-500">{v.route ?? "Unassigned"}</div>
                   </button>
-                ))}
+                  );
+                })}
               </div>
             </div>
 

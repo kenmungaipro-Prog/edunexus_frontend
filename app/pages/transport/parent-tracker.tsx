@@ -29,7 +29,20 @@ function formatLastUpdate(value: string | null) {
 }
 
 function getFriendlyVehicleStatus(vehicle: LiveVehicle) {
-  if (vehicle.lat === null || vehicle.lng === null) {
+  const demo = vehicle.demo && new Date(vehicle.demo.expires_at).getTime() > Date.now()
+    ? vehicle.demo
+    : null;
+  const position = demo ?? vehicle;
+
+  if (demo) {
+    return {
+      label: "DEMO GPS",
+      detail: "Temporary phone position — not genuine tracking",
+      tone: "bg-red-500/10 text-red-300",
+    };
+  }
+
+  if (position.lat === null || position.lng === null) {
     return {
       label: "Location unavailable",
       detail: "GPS signal missing",
@@ -83,6 +96,8 @@ export async function clientLoader() {
 
 export default function ParentTransportTrackerPage() {
   const { vehicles, routes, children } = useLoaderData<typeof clientLoader>();
+  const [liveVehicles, setLiveVehicles] = useState<LiveVehicle[]>(vehicles);
+  const [clock, setClock] = useState(() => Date.now());
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(
     vehicles.length > 0 ? vehicles[0].vehicle_id : null,
   );
@@ -90,7 +105,7 @@ export default function ParentTransportTrackerPage() {
     children.length > 0 ? children[0].id : null,
   );
 
-  const selectedVehicle = vehicles.find((vehicle) => vehicle.vehicle_id === selectedVehicleId) ?? null;
+  const selectedVehicle = liveVehicles.find((vehicle) => vehicle.vehicle_id === selectedVehicleId) ?? null;
   const selectedRoute = useMemo<TransportRoute | undefined>(() => {
     if (!selectedVehicle) {
       return undefined;
@@ -103,6 +118,31 @@ export default function ParentTransportTrackerPage() {
 
   const nextStop = selectedRoute?.stops?.[0]?.name ?? "Stop schedule pending";
   const status = selectedVehicle ? getFriendlyVehicleStatus(selectedVehicle) : null;
+  const displayPosition = selectedVehicle?.demo && new Date(selectedVehicle.demo.expires_at).getTime() > clock
+    ? selectedVehicle.demo
+    : selectedVehicle;
+
+  useEffect(() => {
+    let mounted = true;
+    const refresh = async () => {
+      try {
+        const response = await api.transport.live();
+        if (mounted) setLiveVehicles(response.data);
+      } catch (error) {
+        console.error("Failed refreshing parent live transport data:", error);
+      }
+    };
+
+    void refresh();
+    const poll = window.setInterval(() => void refresh(), 5000);
+    const tick = window.setInterval(() => setClock(Date.now()), 1000);
+
+    return () => {
+      mounted = false;
+      window.clearInterval(poll);
+      window.clearInterval(tick);
+    };
+  }, []);
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
@@ -161,7 +201,7 @@ export default function ParentTransportTrackerPage() {
               ) : null}
             </div>
 
-            <TransportMap vehicles={vehicles} routes={routes} height="500px" />
+            <TransportMap vehicles={liveVehicles} routes={routes} height="500px" />
           </div>
         </div>
 
@@ -179,13 +219,13 @@ export default function ParentTransportTrackerPage() {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">School transport</h2>
               <span className="rounded-full bg-slate-800 px-2 py-1 text-[10px] font-semibold text-slate-300">
-                {vehicles.length} buses
+                {liveVehicles.length} buses
               </span>
             </div>
 
             <div className="space-y-2">
-              {vehicles.length > 0 ? (
-                vehicles.map((vehicle) => {
+              {liveVehicles.length > 0 ? (
+                liveVehicles.map((vehicle) => {
                   const isSelected = vehicle.vehicle_id === selectedVehicleId;
                   const statusInfo = getFriendlyVehicleStatus(vehicle);
 
@@ -248,14 +288,17 @@ export default function ParentTransportTrackerPage() {
                   <div className="rounded-xl bg-slate-800/60 p-3">
                     <div className="text-[10px] uppercase tracking-wider text-slate-500">Speed</div>
                     <div className="mt-1 font-semibold text-white">
-                      {selectedVehicle.speed !== null ? `${selectedVehicle.speed} km/h` : "N/A"}
+                      {displayPosition?.speed !== null && displayPosition?.speed !== undefined ? `${displayPosition.speed} km/h` : "N/A"}
                     </div>
                   </div>
 
                   <div className="rounded-xl bg-slate-800/60 p-3">
                     <div className="text-[10px] uppercase tracking-wider text-slate-500">GPS</div>
                     <div className="mt-1 font-semibold text-white">
-                      {selectedVehicle.lat !== null && selectedVehicle.lng !== null ? "Active" : "Unavailable"}
+                      {displayPosition?.lat !== null && displayPosition?.lat !== undefined
+                        && displayPosition?.lng !== null && displayPosition?.lng !== undefined
+                        ? selectedVehicle.demo && new Date(selectedVehicle.demo.expires_at).getTime() > clock ? "DEMO GPS" : "Active"
+                        : "Unavailable"}
                     </div>
                   </div>
                 </div>
@@ -267,7 +310,7 @@ export default function ParentTransportTrackerPage() {
 
                 <div className="rounded-xl bg-slate-800/60 p-3">
                   <div className="text-[10px] uppercase tracking-wider text-slate-500">Last update</div>
-                  <div className="mt-1 font-semibold text-white">{formatLastUpdate(selectedVehicle.updated_at)}</div>
+                  <div className="mt-1 font-semibold text-white">{formatLastUpdate(displayPosition?.updated_at ?? null)}</div>
                 </div>
               </div>
             </div>

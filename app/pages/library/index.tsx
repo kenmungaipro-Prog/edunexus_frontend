@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // app/pages/library/index.tsx
 // ============================================================
 
@@ -45,7 +45,7 @@ export async function clientLoader({ request }: LibRoute.LoaderArgs): Promise<Lo
       books: [],
       meta: null,
       overdueCount: 0,
-      stats: { total_titles: 0, total_books: 0, issued: 0, returned_today: 0 },
+      stats: { total_titles: 0, total_books: 0, issued: 0, returned_today: 0, overdue: 0 },
       error: "Failed to load library data. Please try again later."
     };
   }
@@ -71,7 +71,7 @@ export default function LibraryPage({ loaderData }: LibRoute.ComponentProps) {
   const analyticsItems = [
     { label: "Book Titles", value: stats.total_titles, icon: "📚", color: "text-blue-400", bg: "bg-blue-500/10" },
     { label: "Physical Copies", value: stats.total_books, icon: "📖", color: "text-cyan-400", bg: "bg-cyan-500/10" },
-    { label: "Issued Books", value: stats.issued, icon: "📖", color: "text-amber-400", bg: "bg-amber-500/10" },
+    { label: "Issued Books", value: stats.issued, icon: "📤", color: "text-amber-400", bg: "bg-amber-500/10" },
     { label: "Overdue", value: overdueCount, icon: "⚠️", color: "text-red-400", bg: "bg-red-500/10" },
     { label: "Returned Today", value: stats.returned_today, icon: "🔄", color: "text-emerald-400", bg: "bg-emerald-500/10" },
   ];
@@ -80,11 +80,13 @@ export default function LibraryPage({ loaderData }: LibRoute.ComponentProps) {
     <div className="p-4 sm:p-6 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white">📚 Library Management</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-white">
+            📚 Library Management
+          </h1>
           <p className="text-slate-400 text-xs sm:text-sm">Monitor book inventory and circulation</p>
         </div>
         <Link to="/library/new" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg transition font-medium flex items-center justify-center gap-2 text-sm">
-          <span>+</span> Add Book
+          ➕ Add Book
         </Link>
       </div>
 
@@ -92,8 +94,8 @@ export default function LibraryPage({ loaderData }: LibRoute.ComponentProps) {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 mb-8">
         {analyticsItems.map((item) => (
           <div key={item.label} className="bg-slate-800 border border-slate-700 p-4 rounded-xl flex items-center gap-4">
-            <div className={`w-12 h-12 rounded-lg ${item.bg} flex items-center justify-center text-2xl flex-shrink-0`}>
-              {item.icon}
+            <div className={`w-12 h-12 rounded-lg ${item.bg} ${item.color} flex items-center justify-center flex-shrink-0`}>
+              <span className="text-xl" aria-hidden="true">{item.icon}</span>
             </div>
             <div>
               <p className="text-slate-400 text-xs font-medium uppercase tracking-wider">{item.label}</p>
@@ -106,20 +108,26 @@ export default function LibraryPage({ loaderData }: LibRoute.ComponentProps) {
       <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-sm">
         {/* Search Bar */}
         <div className="p-4 border-b border-slate-700 flex gap-3">
-          <input 
-            type="text"
-            placeholder="Search books..."
-            className="bg-slate-900 border border-slate-700 text-white rounded-lg px-4 py-2 text-sm w-full sm:w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            onChange={(e) => setSearchParams(prev => {
-              prev.set("search", e.target.value);
-              return prev;
-            })}
-          />
+          <label htmlFor="library-search" className="sr-only">Search books</label>
+          <div className="relative w-full sm:w-64">
+            <span aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm">🔍</span>
+            <input
+              id="library-search"
+              type="text"
+              placeholder="Search books..."
+              className="bg-slate-900 border border-slate-700 text-white rounded-lg pl-9 pr-4 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={(e) => setSearchParams(prev => {
+                prev.set("search", e.target.value);
+                return prev;
+              })}
+            />
+          </div>
         </div>
 
         <div className={`transition-opacity duration-200 ${isSearching ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
           {books.length === 0 ? (
              <div className="p-12 text-center text-slate-400">
+               <span aria-hidden="true" className="mb-3 block text-3xl">📚</span>
                <p>No books found.</p>
              </div>
           ) : (
@@ -152,11 +160,11 @@ export default function LibraryPage({ loaderData }: LibRoute.ComponentProps) {
                         </span>
                       </td>
                       <td className="p-4 text-right">
-                        <Link 
-                          to={`/library/books/${book.id}`} 
+                        <Link
+                          to={`/library/books/${book.id}`}
                           className="text-blue-400 hover:text-blue-300 hover:underline text-sm font-medium transition-colors inline-block"
                         >
-                          Manage &rarr;
+                          Manage →
                         </Link>
                       </td>
                     </tr>

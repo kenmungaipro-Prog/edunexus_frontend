@@ -14,6 +14,10 @@ export default function DriverControlPanel({
   onMarkStop: (stopIndex: number) => void;
 }) {
   const nextStop = route?.stops?.[0]?.name ?? "No stops configured";
+  const demo = vehicle?.demo && new Date(vehicle.demo.expires_at).getTime() > Date.now()
+    ? vehicle.demo
+    : null;
+  const position = demo ?? vehicle;
 
   return (
     <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4 space-y-4">
@@ -22,7 +26,9 @@ export default function DriverControlPanel({
           <div className="text-xs text-slate-400 uppercase">Driver Console</div>
           <div className="text-lg font-semibold text-white">{vehicle ? vehicle.number : "No vehicle"}</div>
         </div>
-        <div className="text-right text-xs text-slate-400">GPS: {vehicle && vehicle.lat !== null && vehicle.lng !== null ? "Active" : "Unavailable"}</div>
+        <div className={`text-right text-xs ${demo ? "font-bold text-red-300" : "text-slate-400"}`}>
+          GPS: {demo ? "DEMO — NOT REAL" : vehicle && vehicle.lat !== null && vehicle.lng !== null ? "Active" : "Unavailable"}
+        </div>
       </div>
 
       <div className="space-y-2 text-sm text-slate-300">
@@ -39,7 +45,7 @@ export default function DriverControlPanel({
 
           <div className="rounded-xl bg-slate-800/60 p-3">
             <div className="text-[10px] uppercase tracking-wider text-slate-500">Speed</div>
-            <div className="mt-1 font-semibold text-white">{vehicle?.speed !== null && vehicle?.speed !== undefined ? `${vehicle?.speed} km/h` : "N/A"}</div>
+            <div className="mt-1 font-semibold text-white">{position?.speed !== null && position?.speed !== undefined ? `${position.speed} km/h` : "N/A"}</div>
           </div>
         </div>
 

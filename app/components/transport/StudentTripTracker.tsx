@@ -63,14 +63,21 @@ export default function StudentTripTracker({ studentId, studentName }: StudentTr
     const reverbPort = import.meta.env.VITE_REVERB_PORT ?? "8080";
     const reverbScheme = import.meta.env.VITE_REVERB_SCHEME ?? "https";
     const schoolId = sessionStorage.getItem('school_id') || localStorage.getItem('school_id');
+    const authToken = localStorage.getItem("edunexus_token");
 
-    if (!reverbAppKey || !reverbHost || !schoolId) return;
+    if (!reverbAppKey || !reverbHost || !schoolId || !authToken) return;
 
     window.Pusher = Pusher;
 
     const echo = new Echo({
       broadcaster: "reverb",
       key: reverbAppKey,
+      authEndpoint: "/broadcasting/auth",
+      auth: {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      },
       wsHost: reverbHost,
       wsPort: Number(reverbPort),
       wssPort: Number(reverbPort),

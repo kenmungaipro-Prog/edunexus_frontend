@@ -760,6 +760,33 @@ export interface LiveVehicle {
   lng: number | null;
   speed: number | null;
   updated_at: string | null;
+  demo: DemoPosition | null;
+}
+
+export interface DemoPosition {
+  lat: number;
+  lng: number;
+  speed: number | null;
+  updated_at: string | null;
+  expires_at: string;
+}
+
+export interface DemoSession {
+  vehicle_id: number;
+  lat: number | null;
+  lng: number | null;
+  speed: number | null;
+  updated_at: string | null;
+  expires_at: string;
+  heading: number | null;
+  accuracy: number | null;
+  hard_expires_at: string;
+  session_id: string;
+}
+
+export interface DemoTarget {
+  vehicle_id: number;
+  number: string;
 }
 
 export interface VehicleTelemetry {
@@ -2068,6 +2095,31 @@ export const transport = {
 
   live: () =>
     get<ApiResponse<LiveVehicle[]>>("/transport/live"),
+
+  demoTarget: () =>
+    get<ApiResponse<DemoTarget>>("/transport/demo-target"),
+
+  activeDemoSession: () =>
+    get<ApiResponse<DemoSession | null>>("/transport/demo-session"),
+
+  startDemoSession: (vehicleId: number) =>
+    post<ApiResponse<DemoSession>>(`/transport/vehicles/${vehicleId}/demo-session/start`, {}),
+
+  updateDemoPosition: (
+    vehicleId: number,
+    payload: Pick<DemoSession, "session_id"> & {
+      lat: number;
+      lng: number;
+      speed: number | null;
+      heading: number | null;
+      accuracy: number | null;
+      timestamp: string;
+    },
+  ) =>
+    post<ApiResponse<DemoPosition>>(`/transport/vehicles/${vehicleId}/demo-session/position`, payload),
+
+  stopDemoSession: (vehicleId: number, sessionId: string) =>
+    post<ApiResponse<null>>(`/transport/vehicles/${vehicleId}/demo-session/stop`, { session_id: sessionId }),
 
   vehicleTelemetryHistory: (vehicleId: number) =>
     get<ApiResponse<VehicleTelemetry[]>>(`/transport/vehicles/${vehicleId}/telemetry/history`),
