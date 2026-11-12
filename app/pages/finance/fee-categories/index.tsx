@@ -5,6 +5,7 @@
 import { Link, useNavigate } from "react-router";
 import { useState } from "react";
 import { api, type FeeCategory } from "~/lib/api";
+import { fetchAllPages, PrintListButton } from "~/components/PrintListButton";
 
 export async function clientLoader() {
   const response = await api.finance.feeCategories({ per_page: 100 });
@@ -62,7 +63,26 @@ export default function FeeCategoriesPage({
             Define chargeable items like tuition, boarding, books, transport
           </p>
         </div>
-        <div className="flex gap-2 shrink-0">
+        <div className="flex flex-wrap gap-2 shrink-0">
+          <PrintListButton
+            title="Fee Category Register"
+            filterSummary={search ? `Search: ${search}` : "All fee categories"}
+            loadRows={async () => {
+              const rows = await fetchAllPages((page, per_page) => api.finance.feeCategories({ page, per_page }));
+              return rows.filter((category) =>
+                !search ||
+                category.name.toLowerCase().includes(search.toLowerCase()) ||
+                category.code.toLowerCase().includes(search.toLowerCase())
+              );
+            }}
+            columns={[
+              { label: "Code", value: (category) => category.code },
+              { label: "Name", value: (category) => category.name },
+              { label: "Default Amount", value: (category) => money(category.default_amount) },
+              { label: "Description", value: (category) => category.description },
+              { label: "Status", value: (category) => category.is_active ? "Active" : "Inactive" },
+            ]}
+          />
           <button
             onClick={() => { setEditingCategory(null); setShowModal(true); }}
             className="w-full sm:w-auto rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-600 transition-colors"

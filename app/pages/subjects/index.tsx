@@ -3,6 +3,7 @@
 // ============================================================
 import { Link, Form } from "react-router";
 import { api, type Subject } from "~/lib/api";
+import { PrintListButton } from "~/components/PrintListButton";
 
 export async function clientLoader() {
   const res = await api.subjects.list();
@@ -56,12 +57,25 @@ export default function SubjectsIndex({ loaderData, actionData }: any) {
           <h1 className="text-2xl font-bold tracking-tight text-slate-100">Subjects</h1>
           <p className="text-sm text-slate-400 mt-1">Manage academic subjects, track associated exams, and teaching staff.</p>
         </div>
-        <Link 
-          to="/subjects/new" 
-          className="inline-flex items-center justify-center rounded-xl bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 text-sm font-semibold shadow-lg shadow-blue-600/20 transition-all"
-        >
-          + New Subject
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <PrintListButton
+            title="Subject Register"
+            loadRows={() => api.subjects.list().then((response) => response.data ?? [])}
+            columns={[
+              { label: "Name", value: (subject) => subject.name },
+              { label: "Code", value: (subject) => subject.code },
+              { label: "Type", value: (subject) => subject.type },
+              { label: "Exams", value: (subject) => subject.exams_count ?? 0 },
+              { label: "Teachers", value: (subject) => subject.teachers_count ?? 0 },
+            ]}
+          />
+          <Link
+            to="/subjects/new"
+            className="inline-flex items-center justify-center rounded-xl bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 text-sm font-semibold shadow-lg shadow-blue-600/20 transition-all"
+          >
+            + New Subject
+          </Link>
+        </div>
       </div>
 
       {/* Stats Overview */}

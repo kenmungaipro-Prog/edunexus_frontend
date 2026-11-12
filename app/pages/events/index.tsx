@@ -4,6 +4,7 @@
 import { Form, useNavigation, Link } from "react-router";
 import type { Route as EventsRoute } from "./+types/index";
 import { apiService, type SchoolEvent } from "~/lib/api";
+import { fetchAllPages, PrintListButton } from "~/components/PrintListButton";
 
 export async function clientLoader() {
   try {
@@ -55,12 +56,26 @@ export default function EventsPage({ loaderData }: EventsRoute.ComponentProps) {
           <h1 className="text-2xl sm:text-3xl font-bold text-white">School Events</h1>
           <p className="text-slate-400 text-xs sm:text-sm mt-1">Manage and view upcoming academic activities</p>
         </div>
-        <Link 
-          to="/events/new" 
-          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-semibold transition-all shadow-lg shadow-indigo-500/20 text-sm w-full sm:w-auto"
-        >
-          <span className="text-lg">＋</span> Create New Event
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <PrintListButton
+            title="School Events Register"
+            loadRows={() => fetchAllPages((page, per_page) => apiService.events.list({ page, per_page }))}
+            columns={[
+              { label: "Title", value: (event) => event.title },
+              { label: "Type", value: (event) => event.type },
+              { label: "Start Date", value: (event) => event.event_date },
+              { label: "End Date", value: (event) => event.end_date },
+              { label: "Venue", value: (event) => event.venue },
+              { label: "Description", value: (event) => event.description },
+            ]}
+          />
+          <Link
+            to="/events/new"
+            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-semibold transition-all shadow-lg shadow-indigo-500/20 text-sm w-full sm:w-auto"
+          >
+            <span className="text-lg">＋</span> Create New Event
+          </Link>
+        </div>
       </div>
 
       {/* Content Grid */}

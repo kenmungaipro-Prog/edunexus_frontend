@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import type { Route } from "./+types/show";
 import { api, type Exam, type Grade, type Student } from "~/lib/api";
+import { PrintListButton } from "~/components/PrintListButton";
 
 interface ExamDetails extends Exam {
   class_room?: Exam["class_room"] & { students?: Student[] };
@@ -161,9 +162,28 @@ export default function ExamShowPage({ loaderData }: Route.ComponentProps) {
               Scores are out of {exam.total_marks}. Existing marks can be updated.
             </p>
           </div>
-          <span className="text-sm text-slate-400">
-            {enteredCount} of {students.length} students entered
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <PrintListButton
+              title={`${exam.title} Marks Entry Register`}
+              filterSummary={`${exam.class_room?.name ?? "Class"} · ${exam.subject?.name ?? "Subject"}`}
+              loadRows={() => Promise.resolve(students.map((student) => ({
+                student,
+                marks: entries[student.id]?.marks ?? "",
+                remarks: entries[student.id]?.remarks ?? "",
+                savedGrade: existingGrades.get(student.id),
+              })))}
+              columns={[
+                { label: "Student", value: ({ student }) => studentName(student) },
+                { label: "Admission No.", value: ({ student }) => student.admission_no },
+                { label: "Marks Entered", value: ({ marks }) => marks || "Not entered" },
+                { label: "Saved Result", value: ({ savedGrade }) => resultFor(savedGrade) ?? "Not saved" },
+                { label: "Remarks", value: ({ remarks }) => remarks },
+              ]}
+            />
+            <span className="text-sm text-slate-400">
+              {enteredCount} of {students.length} students entered
+            </span>
+          </div>
         </div>
 
         {error && <div role="alert" className="m-4 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300">{error}</div>}

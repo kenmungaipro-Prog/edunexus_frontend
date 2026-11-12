@@ -13,6 +13,7 @@ import {
   type PaymentMethod,
   type PaginationMeta,
 } from "~/lib/api";
+import { fetchAllPages, PrintListButton } from "~/components/PrintListButton";
 
 interface LoaderData {
   payments: FinancePayment[];
@@ -134,6 +135,32 @@ export default function FeesPage({ loaderData }: Route.ComponentProps) {
         </div>
         
         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+          <PrintListButton
+            title="Fee Payment Register"
+            filterSummary={[
+              searchParams.get("status") && `Status: ${searchParams.get("status")}`,
+              searchParams.get("method") && `Method: ${searchParams.get("method")}`,
+              searchParams.get("month") && `Month: ${searchParams.get("month")}`,
+              searchParams.get("year") && `Year: ${searchParams.get("year")}`,
+            ].filter(Boolean).join(" · ") || "All payments"}
+            loadRows={() => fetchAllPages((page, per_page) => api.finance.payments({
+              page,
+              per_page,
+              status: (searchParams.get("status") as FinancePaymentStatus | null) ?? undefined,
+              method: (searchParams.get("method") as PaymentMethod | null) ?? undefined,
+              month: searchParams.get("month") ? Number(searchParams.get("month")) : undefined,
+              year: searchParams.get("year") ? Number(searchParams.get("year")) : undefined,
+            }))}
+            columns={[
+              { label: "Payment #", value: (payment) => payment.payment_number },
+              { label: "Student", value: (payment) => payment.student?.full_name },
+              { label: "Class", value: (payment) => payment.student?.class_room?.name },
+              { label: "Amount", value: (payment) => formatKES(payment.amount) },
+              { label: "Method", value: (payment) => payment.payment_method.replaceAll("_", " ") },
+              { label: "Date", value: (payment) => formatDate(payment.payment_date) },
+              { label: "Status", value: (payment) => payment.status.replaceAll("_", " ") },
+            ]}
+          />
           <Link
             to="/fees/defaulters"
             className="flex-1 lg:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-lg text-sm font-medium transition-colors"

@@ -5,9 +5,13 @@
 import { Form, Link, redirect, useActionData } from "react-router";
 import { api, type Student } from "~/lib/api";
 
-export async function clientLoader() {
+export async function clientLoader({ request }: { request: Request }) {
   const students = await api.students.list({ per_page: 300, status: "active" });
-  return { students: students.data.data };
+  const studentId = new URL(request.url).searchParams.get("student_id");
+  return {
+    students: students.data.data,
+    initialStudentId: studentId && Number.isInteger(Number(studentId)) ? studentId : "",
+  };
 }
 
 export async function clientAction({ request }: { request: Request }) {
@@ -35,7 +39,7 @@ export async function clientAction({ request }: { request: Request }) {
   }
 }
 
-export default function FinanceCollectPaymentPage({ loaderData }: { loaderData: { students: Student[] } }) {
+export default function FinanceCollectPaymentPage({ loaderData }: { loaderData: { students: Student[]; initialStudentId: string } }) {
   const actionData = useActionData() as { error?: string } | undefined;
 
   return (
@@ -54,7 +58,7 @@ export default function FinanceCollectPaymentPage({ loaderData }: { loaderData: 
         <Form method="post" className="grid gap-5">
           <div>
             <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">Student</label>
-            <select name="student_id" required className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-slate-200 outline-none focus:border-blue-500">
+            <select name="student_id" required defaultValue={loaderData.initialStudentId} className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-slate-200 outline-none focus:border-blue-500">
               <option value="">Select student</option>
               {loaderData.students.map((student) => (
                 <option key={student.id} value={student.id}>{student.full_name} ({student.admission_no})</option>

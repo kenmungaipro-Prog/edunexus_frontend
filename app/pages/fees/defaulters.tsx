@@ -1,6 +1,7 @@
 // app/pages/fees/defaulters.tsx
 import { Link, useNavigation, useSearchParams } from "react-router";
 import { api, type PaginationMeta, type Student } from "~/lib/api";
+import { fetchAllPages, PrintListButton } from "~/components/PrintListButton";
 
 export async function clientLoader({ request }: { request: Request }) {
   const url = new URL(request.url);
@@ -43,12 +44,24 @@ export default function FeeDefaultersPage({
             Students with overdue fee balances
           </p>
         </div>
-        <Link
-          to="/fees"
-          className="text-sm text-slate-300 hover:text-white rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 transition-colors"
-        >
-          ← Back to Fees Dashboard
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <PrintListButton
+            title="Fee Defaulters Register"
+            loadRows={() => fetchAllPages((page, per_page) => api.fees.defaulters({ page, per_page }))}
+            columns={[
+              { label: "Student", value: (student) => student.full_name },
+              { label: "Class", value: (student) => student.class_room?.name },
+              { label: "Phone", value: (student) => student.parent?.phone },
+              { label: "Overdue Amount", value: (student) => formatMoney(student.overdue_amount) },
+            ]}
+          />
+          <Link
+            to="/fees"
+            className="text-sm text-slate-300 hover:text-white rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 transition-colors"
+          >
+            ← Back to Fees Dashboard
+          </Link>
+        </div>
       </div>
 
       {/* Table Card */}

@@ -1,7 +1,7 @@
 // ============================================================
 // app/pages/teachers/new.tsx  — Mobile Responsive
 // ============================================================
-import { useState, useEffect } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { Link, Form, redirect, useNavigation, useActionData } from "react-router";
 import type { Route } from "./+types/new";
 import { api } from "~/lib/api";
@@ -195,6 +195,12 @@ export default function NewTeacherPage() {
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<number[]>([]);
   const [selectedClassIds, setSelectedClassIds]     = useState<number[]>([]);
   const [stepErrors, setStepErrors] = useState<Record<string, string>>({});
+  const [isSubjectModalOpen, setIsSubjectModalOpen] = useState(false);
+  const [isCreatingSubject, setIsCreatingSubject] = useState(false);
+  const [subjectCreateError, setSubjectCreateError] = useState("");
+  const [newSubjectName, setNewSubjectName] = useState("");
+  const [newSubjectCode, setNewSubjectCode] = useState("");
+  const [newSubjectType, setNewSubjectType] = useState<"core" | "elective" | "activity">("core");
 
   const [name,     setName]     = useState("");
   const [email,    setEmail]    = useState("");
@@ -256,6 +262,46 @@ export default function NewTeacherPage() {
 
   function toggleClass(id: number) {
     setSelectedClassIds(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
+  }
+
+  async function createSubject(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIsCreatingSubject(true);
+    setSubjectCreateError("");
+
+    try {
+      const response = await api.subjects.create({
+        name: newSubjectName.trim(),
+        code: newSubjectCode.trim() || undefined,
+        type: newSubjectType,
+      });
+      const createdSubject = response.data;
+
+      setSubjects(current => [...current, createdSubject]);
+      setSelectedSubjectIds(current =>
+        current.includes(createdSubject.id) ? current : [...current, createdSubject.id],
+      );
+      setIsSubjectModalOpen(false);
+      setNewSubjectName("");
+      setNewSubjectCode("");
+      setNewSubjectType("core");
+    } catch (err: unknown) {
+      const apiError = err as {
+        message?: string;
+        response?: { data?: { message?: string; errors?: Record<string, string[]> } };
+      };
+      const validationMessage = Object.values(apiError.response?.data?.errors ?? {})
+        .flat()
+        .find(Boolean);
+      setSubjectCreateError(
+        validationMessage ??
+          apiError.response?.data?.message ??
+          apiError.message ??
+          "Failed to create subject. Please try again.",
+      );
+    } finally {
+      setIsCreatingSubject(false);
+    }
   }
 
   const inputCls = (hasError?: boolean) =>
@@ -468,6 +514,17 @@ export default function NewTeacherPage() {
               )}
             </div>
 
+            <button
+              type="button"
+              onClick={() => {
+                setSubjectCreateError("");
+                setIsSubjectModalOpen(true);
+              }}
+              className="mb-3 text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors"
+            >
+              + Add a subject
+            </button>
+
             {loadingData ? (
               <p className="text-xs text-slate-600">Loading subjects...</p>
             ) : subjects.length === 0 ? (
@@ -641,6 +698,107 @@ export default function NewTeacherPage() {
           </div>
         </div>
       </Form>
+
+      {isSubjectModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+          role="presentation"
+          onMouseDown={event => {
+            if (event.target === event.currentTarget && !isCreatingSubject) {
+              setIsSubjectModalOpen(false);
+            }
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="create-subject-title"
+            className="w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl"
+          >
+            <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
+              <div>
+                <h2 id="create-subject-title" className="text-base font-semibold text-slate-100">
+                  Create New Subject
+                </h2>
+                <p className="mt-1 text-xs text-slate-500">Add a subject to the curriculum.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsSubjectModalOpen(false)}
+                disabled={isCreatingSubject}
+                aria-label="Close subject form"
+                className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white disabled:opacity-50"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={createSubject} className="space-y-4 p-5">
+              {subjectCreateError && (
+                <div role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+                  {subjectCreateError}
+                </div>
+              )}
+
+              <label className="block text-xs font-semibold text-slate-400">
+                Subject Name <span className="text-red-400">*</span>
+                <input
+                  autoFocus
+                  required
+                  value={newSubjectName}
+                  onChange={event => setNewSubjectName(event.target.value)}
+                  placeholder="e.g. Advanced Mathematics"
+                  className={`${inputCls()} mt-2`}
+                />
+              </label>
+
+              <label className="block text-xs font-semibold text-slate-400">
+                Subject Code
+                <input
+                  value={newSubjectCode}
+                  onChange={event => setNewSubjectCode(event.target.value)}
+                  placeholder="e.g. MAT-301"
+                  className={`${inputCls()} mt-2`}
+                />
+              </label>
+
+              <label className="block text-xs font-semibold text-slate-400">
+                Subject Type <span className="text-red-400">*</span>
+                <select
+                  required
+                  value={newSubjectType}
+                  onChange={event => setNewSubjectType(event.target.value as typeof newSubjectType)}
+                  className={`${selectCls} mt-2`}
+                >
+                  <option value="core">Core</option>
+                  <option value="elective">Elective</option>
+                  <option value="activity">Activity</option>
+                </select>
+              </label>
+
+              <div className="flex justify-end gap-3 border-t border-slate-800 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsSubjectModalOpen(false)}
+                  disabled={isCreatingSubject}
+                  className="rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm font-semibold text-slate-300 hover:bg-slate-700 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isCreatingSubject}
+                  className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
+                >
+                  {isCreatingSubject ? "Creating…" : "Create Subject"}
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

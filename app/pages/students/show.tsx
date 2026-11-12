@@ -15,6 +15,7 @@ import {
   type AttendanceStatus,
   type User,
 } from "~/lib/api";
+import { PrintTools } from "~/components/PrintTools";
 
 export async function clientLoader({ params }: Route.LoaderArgs) {
   const id = Number(params.id);
@@ -43,7 +44,9 @@ export async function clientAction({ request, params }: Route.ActionArgs) {
   const form   = await request.formData();
   const intent = form.get("intent");
   if (intent === "delete") {
-    await api.students.delete(Number(params.id));
+    await api.students.delete(Number(params.id), {
+      remove_orphaned_parents: form.get("remove_orphaned_parents") === "true",
+    });
     return redirect("/students");
   }
   return null;
@@ -155,6 +158,8 @@ export default function StudentShowPage({ loaderData }: Route.ComponentProps) {
 
   const [tab, setTab] = useState<TabId>("overview");
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [downloadingFeeId, setDownloadingFeeId] = useState<number | null>(null);
+  const [receiptDownloadError, setReceiptDownloadError] = useState("");
   const navigation = useNavigation();
   const deleting   = navigation.state === "submitting";
 
@@ -174,6 +179,31 @@ export default function StudentShowPage({ loaderData }: Route.ComponentProps) {
     { label: "Second Parent / Guardian", parent: student.secondary_parent },
   ].filter((entry): entry is { label: string; parent: User } => Boolean(entry.parent));
 
+  async function downloadFeeReceipt(fee: Fee) {
+    setDownloadingFeeId(fee.id);
+    setReceiptDownloadError("");
+    try {
+      const pdf = await api.fees.receiptPdf(fee.id);
+      const url = URL.createObjectURL(pdf);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `receipt-${fee.receipt_no}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error: unknown) {
+      console.error("Failed to download fee receipt:", error);
+      setReceiptDownloadError(
+        error && typeof error === "object" && "message" in error && typeof error.message === "string"
+          ? error.message
+          : "Could not download the receipt. Please try again.",
+      );
+    } finally {
+      setDownloadingFeeId(null);
+    }
+  }
+
   const TABS: { id: TabId; label: string; count?: number }[] = [
     { id: "overview",   label: "Overview" },
     { id: "grades",     label: "Grades",     count: allGrades.length },
@@ -183,6 +213,7 @@ export default function StudentShowPage({ loaderData }: Route.ComponentProps) {
 
   return (
     <div style={{ fontFamily: "'Sora', sans-serif", color: "#e2e8f0", maxWidth: "960px", margin: "0 auto", boxSizing: "border-box" }} className="responsive-container">
+      <PrintTools title={`Student Profile — ${student.full_name}`} />
 
       {/* Breadcrumb */}
       <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "20px", fontSize: "13px", flexWrap: "wrap" }}>
@@ -250,8 +281,18 @@ export default function StudentShowPage({ loaderData }: Route.ComponentProps) {
             ) : (
               <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
                 <span style={{ fontSize: "11px", color: "#f87171", fontWeight: 600 }}>Confirm?</span>
-                <Form method="post">
+                <Form
+                  method="post"
+                  onSubmit={(event) => {
+                    const removeOrphanedParents = Boolean(student.parent_id || student.secondary_parent_id) && confirm(
+                      "Also deactivate linked parent accounts that have no other active students? Shared parent accounts will be kept."
+                    );
+                    const input = event.currentTarget.elements.namedItem("remove_orphaned_parents") as HTMLInputElement | null;
+                    if (input) input.value = String(removeOrphanedParents);
+                  }}
+                >
                   <input type="hidden" name="intent" value="delete" />
+                  <input type="hidden" name="remove_orphaned_parents" value="false" />
                   <button type="submit" disabled={deleting} style={{ padding: "6px 12px", borderRadius: "7px", background: "#ef4444", border: "none", color: "#fff", fontSize: "12px", fontWeight: 700, cursor: "pointer", fontFamily: "'Sora', sans-serif", opacity: deleting ? 0.6 : 1 }}>
                     {deleting ? "Removing…" : "Yes, remove"}
                   </button>
@@ -439,9 +480,29 @@ export default function StudentShowPage({ loaderData }: Route.ComponentProps) {
             )}
           </div>
 
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "16px" }}>
+            <Link
+              to={`/fees/generate?student_id=${student.id}`}
+              style={{ display: "inline-flex", alignItems: "center", padding: "8px 12px", borderRadius: "8px", background: "rgba(79,142,247,0.12)", color: "#7db0ff", fontSize: "12px", fontWeight: 700, textDecoration: "none", border: "1px solid rgba(79,142,247,0.25)" }}
+            >
+              Generate Finance Invoice
+            </Link>
+            <Link
+              to={`/finance/payments/collect?student_id=${student.id}`}
+              style={{ display: "inline-flex", alignItems: "center", padding: "8px 12px", borderRadius: "8px", background: "rgba(16,185,129,0.1)", color: "#34d399", fontSize: "12px", fontWeight: 700, textDecoration: "none", border: "1px solid rgba(16,185,129,0.25)" }}
+            >
+              Record Finance Payment
+            </Link>
+          </div>
+
           {feeHistoryError && (
             <div role="alert" style={{ marginBottom: "16px", padding: "12px 14px", borderRadius: "8px", border: "1px solid rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.08)", color: "#fca5a5", fontSize: "13px" }}>
               {feeHistoryError}
+            </div>
+          )}
+          {receiptDownloadError && (
+            <div role="alert" style={{ marginBottom: "16px", padding: "12px 14px", borderRadius: "8px", border: "1px solid rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.08)", color: "#fca5a5", fontSize: "13px" }}>
+              {receiptDownloadError}
             </div>
           )}
 
@@ -467,15 +528,15 @@ export default function StudentShowPage({ loaderData }: Route.ComponentProps) {
                         <td style={{ padding: "11px 12px", color: "#4b5a7a", fontSize: "12px", fontFamily: "'JetBrains Mono', monospace", whiteSpace: "nowrap" }}>{f.paid_at ? f.paid_at.split("T")[0] : "—"}</td>
                         <td style={{ padding: "11px 12px" }}><Pill bg={fc.bg} color={fc.color} label={fc.label} /></td>
                         <td style={{ padding: "11px 12px" }}>
-                          <a
-                            href={api.fees.receiptUrl(f.id)}
-                            target="_blank"
-                            rel="noreferrer"
+                          <button
+                            type="button"
+                            onClick={() => void downloadFeeReceipt(f)}
+                            disabled={downloadingFeeId === f.id}
                             title="Download receipt"
-                            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "6px 10px", borderRadius: "8px", background: "rgba(79,142,247,0.1)", color: "#4f8ef7", fontSize: "12px", fontWeight: 700, textDecoration: "none", border: "1px solid rgba(79,142,247,0.2)" }}
+                            style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "6px 10px", borderRadius: "8px", background: "rgba(79,142,247,0.1)", color: "#4f8ef7", fontSize: "12px", fontWeight: 700, border: "1px solid rgba(79,142,247,0.2)", cursor: downloadingFeeId === f.id ? "wait" : "pointer", opacity: downloadingFeeId === f.id ? 0.6 : 1 }}
                           >
-                            🖨 Download
-                          </a>
+                            {downloadingFeeId === f.id ? "Preparing…" : "🖨 Download"}
+                          </button>
                         </td>
                       </tr>
                     );

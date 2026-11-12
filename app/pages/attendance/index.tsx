@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigation, useSearchParams } from "react-router";
 import type { Route } from "./+types/index";
 import { api, type AttendanceReport, type AttendanceReportDay } from "~/lib/api";
+import { PrintTools } from "~/components/PrintTools";
+import { PrintListButton } from "~/components/PrintListButton";
 
 type Period = "week" | "month" | "year" | "custom";
 type DayStatus = "present" | "absent" | "late" | "holiday" | "unmarked";
@@ -340,22 +342,41 @@ export default function AttendancePage({ loaderData }: Route.ComponentProps) {
 
   return (
     <div className={isLoading ? "opacity-60 pointer-events-none transition-opacity" : ""}>
+      <PrintTools title="Attendance Report" />
       <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
           <h1 className="text-xl font-bold">Attendance Tracker</h1>
           <p className="text-slate-400 text-sm mt-1">Review class and student attendance across a selected period.</p>
         </div>
-        <Link
-          to={`/attendance/mark${classId ? `?class_id=${classId}` : ""}`}
-          className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg text-sm font-semibold hover:opacity-90 transition text-center"
-        >
-          Mark Attendance
-        </Link>
-        {period === "month" && (
-          <button type="button" onClick={exportMonth} className="px-3 py-2 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg text-sm hover:bg-slate-700 transition">
-            Export month
-          </button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          <PrintListButton
+            title="Student Attendance Register"
+            filterSummary={`${classes.find((item) => item.id === classId)?.name ?? "Selected class"} · ${label}`}
+            loadRows={() => Promise.resolve(report?.students ?? [])}
+            columns={[
+              { label: "Roll No.", value: (student) => student.roll_number },
+              { label: "Student", value: (student) => student.name },
+              { label: "Present", value: (student) => student.present },
+              { label: "Late", value: (student) => student.late },
+              { label: "Absent", value: (student) => student.absent },
+              { label: "Holiday", value: (student) => student.holiday },
+              { label: "Excused", value: (student) => student.excused },
+              { label: "Recorded", value: (student) => student.recorded_days },
+              { label: "Attendance", value: (student) => student.attendance_rate === null ? "No records" : `${student.attendance_rate}%` },
+            ]}
+          />
+          <Link
+            to={`/attendance/mark${classId ? `?class_id=${classId}` : ""}`}
+            className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg text-sm font-semibold hover:opacity-90 transition text-center"
+          >
+            Mark Attendance
+          </Link>
+          {period === "month" && (
+            <button type="button" onClick={exportMonth} className="px-3 py-2 bg-slate-800 border border-slate-700 text-slate-300 rounded-lg text-sm hover:bg-slate-700 transition">
+              Export month
+            </button>
+          )}
+        </div>
       </header>
       {exportError && <p role="alert" className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">{exportError}</p>}
 

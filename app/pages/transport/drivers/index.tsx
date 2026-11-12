@@ -4,6 +4,7 @@
 import { useState } from "react";
 import { Link, useLoaderData } from "react-router";
 import { api } from "~/lib/api";
+import { PrintListButton } from "~/components/PrintListButton";
 
 interface Driver {
   id: number;
@@ -70,12 +71,26 @@ export default function DriversManagementPage() {
           <h1 className="text-2xl font-bold text-white">👨‍✈️ Manage Drivers</h1>
           <p className="text-slate-400 text-sm mt-0.5">View, edit, or remove registered drivers</p>
         </div>
-        <Link
-          to="/transport/drivers/new"
-          className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg text-sm font-semibold hover:opacity-90 transition self-start"
-        >
-          ➕ Add New Driver
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <PrintListButton
+            title="Driver Register"
+            filterSummary={searchTerm ? `Search: ${searchTerm}` : "All drivers"}
+            loadRows={() => Promise.resolve(filtered)}
+            columns={[
+              { label: "Name", value: (driver) => driver.name },
+              { label: "Phone", value: (driver) => driver.phone },
+              { label: "License", value: (driver) => driver.license_no },
+              { label: "License Expiry", value: (driver) => driver.license_expiry },
+              { label: "Status", value: (driver) => driver.status },
+            ]}
+          />
+          <Link
+            to="/transport/drivers/new"
+            className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg text-sm font-semibold hover:opacity-90 transition self-start"
+          >
+            ➕ Add New Driver
+          </Link>
+        </div>
       </div>
 
       {/* Search Bar */}

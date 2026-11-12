@@ -4,6 +4,7 @@
 
 import { Link } from "react-router";
 import { api, type FinanceDashboardSummary, type FinancePayment } from "~/lib/api";
+import { fetchAllPages, PrintListButton } from "~/components/PrintListButton";
 
 export async function clientLoader() {
   const [summary, recent] = await Promise.all([
@@ -88,7 +89,21 @@ export default function FinanceDashboardPage({ loaderData }: { loaderData: { sum
       <div className="rounded-xl border border-slate-700 bg-slate-800 p-4 sm:p-5">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-white">Recent Payments</h2>
-          <Link to="/finance/payments" className="text-xs font-semibold text-blue-400 hover:text-blue-300">View all</Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <PrintListButton
+              title="Payment Register"
+              loadRows={() => fetchAllPages((page, per_page) => api.finance.payments({ page, per_page }))}
+              columns={[
+                { label: "Payment", value: (payment) => payment.payment_number },
+                { label: "Student", value: (payment) => payment.student?.full_name },
+                { label: "Method", value: (payment) => payment.payment_method.replaceAll("_", " ") },
+                { label: "Amount", value: (payment) => money(payment.amount) },
+                { label: "Date", value: (payment) => date(payment.payment_date) },
+                { label: "Status", value: (payment) => payment.status },
+              ]}
+            />
+            <Link to="/finance/payments" className="text-xs font-semibold text-blue-400 hover:text-blue-300">View all</Link>
+          </div>
         </div>
         <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
           <table className="w-full min-w-[720px] text-sm">

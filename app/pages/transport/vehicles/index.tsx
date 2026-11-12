@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Link, useLoaderData } from "react-router";
 import { api } from "~/lib/api";
 import type { Vehicle } from "~/lib/api";
+import { PrintListButton } from "~/components/PrintListButton";
 
 
 
@@ -52,12 +53,28 @@ export default function VehiclesManagementPage() {
           <h1 className="text-2xl font-bold text-white">🚌 Manage Buses</h1>
           <p className="text-slate-400 text-sm mt-0.5">View, edit, or remove registered vehicles</p>
         </div>
-        <Link
-          to="/transport/vehicles/new"
-          className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg text-sm font-semibold hover:opacity-90 transition self-start"
-        >
-          ➕ Add New Bus
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <PrintListButton
+            title="Vehicle Register"
+            filterSummary={searchTerm ? `Search: ${searchTerm}` : "All vehicles"}
+            loadRows={() => Promise.resolve(filtered)}
+            columns={[
+              { label: "Registration", value: (vehicle) => vehicle.registration_number },
+              { label: "Device IMEI", value: (vehicle) => vehicle.imei },
+              { label: "Make / Model", value: (vehicle) => [vehicle.make, vehicle.model].filter(Boolean).join(" ") },
+              { label: "Capacity", value: (vehicle) => `${vehicle.capacity} seats` },
+              { label: "Year", value: (vehicle) => vehicle.year },
+              { label: "Status", value: (vehicle) => vehicle.status },
+              { label: "Last Updated", value: (vehicle) => vehicle.location_updated_at ? new Date(vehicle.location_updated_at).toLocaleDateString() : "—" },
+            ]}
+          />
+          <Link
+            to="/transport/vehicles/new"
+            className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg text-sm font-semibold hover:opacity-90 transition self-start"
+          >
+            ➕ Add New Bus
+          </Link>
+        </div>
       </div>
 
       {/* Search Bar */}

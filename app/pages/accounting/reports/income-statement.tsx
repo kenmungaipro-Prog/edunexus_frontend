@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { api, type IncomeStatementData, type IncomeStatementAccount } from "~/lib/api";
+import { PrintTools } from "~/components/PrintTools";
 
 export async function clientLoader() {
   try {
@@ -15,12 +16,34 @@ function money(value: number | string | null | undefined) {
   return `KES ${Number(value ?? 0).toLocaleString("en-KE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+function accountNameStyle(depth: number) {
+  if (depth === 0) return "font-semibold text-white";
+  if (depth === 1) return "font-medium text-blue-300";
+  if (depth === 2) return "font-medium text-violet-300";
+  return "font-medium text-slate-300";
+}
+
 export default function IncomeStatementPage({ loaderData }: { loaderData: { report: IncomeStatementData } }) {
   const navigate = useNavigate();
   const [report, setReport] = useState<IncomeStatementData>(loaderData.report);
   const [loading, setLoading] = useState(false);
   const [fromDate, setFromDate] = useState(report.from_date);
   const [toDate, setToDate] = useState(report.to_date);
+
+  const accountDepth = (account: IncomeStatementAccount, accounts: IncomeStatementAccount[]) => {
+    const accountsById = new Map(accounts.map((item) => [item.id, item]));
+    const visited = new Set([account.id]);
+    let depth = 0;
+    let parentId = account.parent_account_id;
+
+    while (parentId !== null && accountsById.has(parentId) && !visited.has(parentId)) {
+      visited.add(parentId);
+      depth += 1;
+      parentId = accountsById.get(parentId)?.parent_account_id ?? null;
+    }
+
+    return depth;
+  };
 
   const fetchReport = async () => {
     setLoading(true);
@@ -37,6 +60,7 @@ export default function IncomeStatementPage({ loaderData }: { loaderData: { repo
 
   return (
     <div className="space-y-6 p-4 sm:p-6 max-w-5xl mx-auto">
+      <PrintTools title="Income Statement" />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-white">Income Statement</h1>
@@ -57,10 +81,16 @@ export default function IncomeStatementPage({ loaderData }: { loaderData: { repo
         <div className="grid grid-cols-1 gap-6">
           <div className="rounded-lg border border-slate-700 bg-slate-900 p-4">
             <h3 className="font-semibold text-white mb-2">Revenues</h3>
+            <p className="mb-2 text-xs text-slate-400">Parent account amounts include their sub-accounts.</p>
             <div className="divide-y divide-slate-700/30 text-sm">
               {report.revenues.map((r: IncomeStatementAccount) => (
                 <div key={r.id} className="py-2 flex justify-between">
-                  <div className="text-slate-200">{r.account_name}</div>
+                  <div
+                    className={accountNameStyle(accountDepth(r, report.revenues))}
+                    style={{ paddingLeft: `${accountDepth(r, report.revenues) * 16}px` }}
+                  >
+                    {accountDepth(r, report.revenues) > 0 ? "↳ " : ""}{r.account_name}
+                  </div>
                   <div className="font-semibold text-white">{money(r.amount)}</div>
                 </div>
               ))}
@@ -70,10 +100,16 @@ export default function IncomeStatementPage({ loaderData }: { loaderData: { repo
 
           <div className="rounded-lg border border-slate-700 bg-slate-900 p-4">
             <h3 className="font-semibold text-white mb-2">Expenses</h3>
+            <p className="mb-2 text-xs text-slate-400">Parent account amounts include their sub-accounts.</p>
             <div className="divide-y divide-slate-700/30 text-sm">
               {report.expenses.map((e: IncomeStatementAccount) => (
                 <div key={e.id} className="py-2 flex justify-between">
-                  <div className="text-slate-200">{e.account_name}</div>
+                  <div
+                    className={accountNameStyle(accountDepth(e, report.expenses))}
+                    style={{ paddingLeft: `${accountDepth(e, report.expenses) * 16}px` }}
+                  >
+                    {accountDepth(e, report.expenses) > 0 ? "↳ " : ""}{e.account_name}
+                  </div>
                   <div className="font-semibold text-white">{money(e.amount)}</div>
                 </div>
               ))}

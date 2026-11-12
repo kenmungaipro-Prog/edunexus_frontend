@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { api, type PaymentReconciliationItem, type Student } from "~/lib/api";
+import { fetchAllPages, PrintListButton } from "~/components/PrintListButton";
 
 export async function clientLoader() {
 	const [itemsResponse, studentsResponse] = await Promise.all([
@@ -50,10 +51,23 @@ export default function ReconciliationPage({ loaderData }: { loaderData: { items
 
 	return (
 		<div className="space-y-5">
+		<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 			<div>
 				<h1 className="text-xl sm:text-2xl font-bold text-white">Payment Reconciliation</h1>
 				<p className="mt-1 text-sm text-slate-400">Review gateway payments and match unmatched payments to the correct student account.</p>
 			</div>
+			<PrintListButton
+				title="Payment Reconciliation Register"
+				loadRows={() => fetchAllPages((page, per_page) => api.finance.reconciliation({ page, per_page }))}
+				columns={[
+					{ label: "Receipt", value: (item) => item.receipt_number ?? item.mpesa_receipt_number },
+					{ label: "Phone", value: (item) => item.phone_number },
+					{ label: "Amount", value: (item) => `KES ${Number(item.amount).toLocaleString("en-KE")}` },
+					{ label: "Received", value: (item) => new Date(item.created_at).toLocaleString("en-KE") },
+					{ label: "Status", value: (item) => item.status.replaceAll("_", " ") },
+				]}
+			/>
+		</div>
 
 			{error && <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-300">{error}</p>}
 

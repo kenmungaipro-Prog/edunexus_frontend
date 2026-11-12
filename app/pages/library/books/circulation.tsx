@@ -1,6 +1,7 @@
 import { Form, Link, redirect } from "react-router";
 import type { Route } from "./+types/circulation";
 import { api, type Book, type BookIssue } from "~/lib/api";
+import { PrintListButton } from "~/components/PrintListButton";
 
 interface LoadedCirculation {
   book: Book;
@@ -86,12 +87,25 @@ export default function CirculationPage({ loaderData, actionData }: Route.Compon
           <h1 className="text-xl font-bold text-white sm:text-2xl">Book circulation</h1>
           <p className="mt-1 text-sm text-slate-400">{book.title} · {book.available_copies} of {book.total_copies} copies available</p>
         </div>
-        <Link
-          to={`/library/books/${book.id}`}
-          className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-center text-sm text-slate-300 hover:bg-slate-700"
-        >
-          ← Back to book
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <PrintListButton
+            title={`${book.title} Circulation Register`}
+            loadRows={() => Promise.resolve(issues)}
+            columns={[
+              { label: "Borrower", value: (issue) => issue.member?.name ?? `Member #${issue.member_id}` },
+              { label: "Role", value: (issue) => issue.member?.role },
+              { label: "Issued", value: (issue) => formatDate(issue.issued_at) },
+              { label: "Due", value: (issue) => formatDate(issue.due_date) },
+              { label: "Status", value: (issue) => new Date(`${issue.due_date.slice(0, 10)}T00:00:00`) < new Date(new Date().setHours(0, 0, 0, 0)) ? "Overdue" : "Checked out" },
+            ]}
+          />
+          <Link
+            to={`/library/books/${book.id}`}
+            className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-center text-sm text-slate-300 hover:bg-slate-700"
+          >
+            ← Back to book
+          </Link>
+        </div>
       </header>
 
       {actionData?.error && (

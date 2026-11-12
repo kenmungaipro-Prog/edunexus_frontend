@@ -5,6 +5,7 @@
 import { Link, Form, redirect, useNavigation } from "react-router";
 import type { Route } from "./+types/$id";
 import { api } from "~/lib/api";
+import { PrintTools } from "~/components/PrintTools";
 
 export async function clientLoader({ params }: Route.LoaderArgs) {
   try {
@@ -63,6 +64,7 @@ export default function EventDetailPage({ loaderData, actionData }: Route.Compon
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto space-y-6">
+      <PrintTools title={`School Event — ${event.title}`} />
       {/* Top Navigation */}
       <div className="flex items-center justify-between">
         <Link 

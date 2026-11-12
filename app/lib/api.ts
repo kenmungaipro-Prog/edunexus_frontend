@@ -23,8 +23,30 @@ export interface PaginatedResponse<T> {
   success: boolean;
   data: {
     data: T[];
-    meta: PaginationMeta;
-    links: PaginationLinks;
+    meta?: PaginationMeta;
+    links?: PaginationLinks;
+    current_page?: number;
+    last_page?: number;
+    per_page?: number;
+    total?: number;
+    from?: number | null;
+    to?: number | null;
+  };
+}
+
+export function getPaginationMeta<T>(pagination: PaginatedResponse<T>["data"]): PaginationMeta {
+  const currentPage = pagination.current_page ?? pagination.meta?.current_page ?? 1;
+  const perPage = pagination.per_page ?? pagination.meta?.per_page ?? Math.max(pagination.data.length, 1);
+  const total = pagination.total ?? pagination.meta?.total ?? pagination.data.length;
+  const from = pagination.from ?? pagination.meta?.from ?? (total > 0 ? (currentPage - 1) * perPage + 1 : 0);
+
+  return {
+    current_page: currentPage,
+    last_page: pagination.last_page ?? pagination.meta?.last_page ?? Math.max(1, Math.ceil(total / perPage)),
+    per_page: perPage,
+    total,
+    from,
+    to: pagination.to ?? pagination.meta?.to ?? (total > 0 ? from + pagination.data.length - 1 : 0),
   };
 }
 
@@ -91,6 +113,7 @@ export interface School {
   board: string | null;
   affiliation_no: string | null;
   school_code: string | null;
+  admission_prefix: string;
 }
 
 export interface AcademicSession {
@@ -723,7 +746,7 @@ export interface TransportRoute {
   students_count?: number;
   vehicle?: Vehicle;
   driver?: Driver;
-  students?: Student[];
+  students?: Array<Student & { pivot?: { stop?: string } }>;
 }
 
 export interface Vehicle {
@@ -924,15 +947,21 @@ export interface DashboardStats {
   students: number;
   teachers: number;
   fee_collected: number;
-  avg_attendance: number;
+  avg_attendance: number | null;
   upcoming_events: number;
   pending_fees: number;
   low_attendance: number;
-
-  classes_count?: number;
-  my_students_count?: number;
-  total_books?: number;
-  borrowed_books?: number;
+  classes_count: number;
+  my_students_count: number;
+  total_books: number;
+  borrowed_books: number;
+  class_distribution: Array<{ grade: string; students: number; classes: number }>;
+  top_performers: Array<{
+    id: number;
+    name: string;
+    grade_name: string | null;
+    percentage: number;
+  }>;
 }
 
 export interface ActivityItem {
@@ -946,14 +975,13 @@ export interface ActivityItem {
 export interface DashboardCharts {
   enrollment: Record<string, number>;
   fees: Record<string, number>;
-  attendance: Record<string, number>;
+  attendance: Record<string, number | null>;
 }
 
 export interface AnalyticsOverview {
-  avg_attendance: number;
-  pass_rate: number;
-  fee_collection: number;
-  teacher_rating: number;
+  avg_attendance: number | null;
+  pass_rate: number | null;
+  fee_collection: number | null;
 }
 
 // ============================================================
@@ -986,6 +1014,8 @@ export interface CreateStudentPayload {
   profile_photo?: File | string;
   status?: "active" | "inactive" | "alumni";
   admission_date?: string;
+  admission_no?: string;
+  existing_student?: boolean;
   religion?: string;
   category?: "General" | "OBC" | "SC" | "ST" | "EWS";
   parent_name?: string;
@@ -994,6 +1024,19 @@ export interface CreateStudentPayload {
   secondary_parent_name?: string;
   secondary_parent_email?: string;
   secondary_parent_phone?: string;
+}
+
+export interface AdmissionNumberCheckResult {
+  exists: boolean;
+  student: {
+    id: number;
+    full_name: string;
+    admission_no: string;
+    admission_date: string | null;
+    class_name: string | null;
+    status: "active" | "inactive" | "alumni" | "deleted";
+  } | null;
+  message?: string;
 }
 
 export type UpdateStudentPayload = Partial<CreateStudentPayload>;
@@ -1103,7 +1146,7 @@ export interface CreateClassPayload {
   grade: number;
   section: string;
   class_teacher_id?: number;
-  capacity: number;
+  capacity?: number;
   room?: string;
   subjects?: number[];
 }
@@ -1186,12 +1229,14 @@ export interface ExamFilters {
   class_id?: number;
   status?: ExamStatus;
   upcoming?: 1 | 0;
+  page?: number;
   per_page?: number;
 }
 
 export interface BookFilters {
   search?: string;
   category?: string;
+  page?: number;
   per_page?: number;
 }
 
@@ -1206,6 +1251,14 @@ const determineBaseURL = () => {
     return "/api/v1";
   }
   return `${envUrl}/api/v1`;
+};
+
+export const publicStorageUrl = (path: string | null | undefined) => {
+  if (!path) return null;
+  if (/^https?:\/\//i.test(path)) return path;
+  const apiUrl = import.meta.env.VITE_API_URL?.replace(/\/+$/, "") ?? "";
+  const storagePath = path.replace(/^\/+/, "").replace(/^storage\//, "");
+  return `${apiUrl}/storage/${storagePath}`;
 };
 
 const http: AxiosInstance = axios.create({
@@ -1253,8 +1306,8 @@ const put  = <T>(url: string, data?: unknown) =>
 const patch = <T>(url: string, data?: unknown) =>
   http.patch<never, T>(url, data);
 
-const del  = <T>(url: string) =>
-  http.delete<never, T>(url);
+const del  = <T>(url: string, params?: Record<string, unknown>) =>
+  http.delete<never, T>(url, { params });
 
 // Multipart helper for file uploads
 const upload = <T>(url: string, formData: FormData) =>
@@ -1272,6 +1325,9 @@ export const auth = {
 
   logout: () =>
     post<ApiResponse<null>>("/auth/logout"),
+
+  logoutAllDevices: () =>
+    post<ApiResponse<null>>("/auth/logout-all-devices"),
 
   me: () =>
     get<ApiResponse<User>>("/auth/me"),
@@ -1336,6 +1392,9 @@ export const students = {
   list: (filters?: StudentFilters) =>
     get<PaginatedResponse<Student>>("/students", filters as Record<string, unknown>),
 
+  checkAdmissionNumber: (admission_no: string) =>
+    get<ApiResponse<AdmissionNumberCheckResult>>("/students/admission-number-check", { admission_no }),
+
   stats: () =>
     get<ApiResponse<StudentStats>>("/students/stats"),
 
@@ -1356,8 +1415,10 @@ export const students = {
   update: (id: number, payload: UpdateStudentPayload) =>
     put<ApiResponse<Student>>(`/students/${id}`, payload),
 
-  delete: (id: number) =>
-    del<ApiResponse<null>>(`/students/${id}`),
+  delete: (id: number, options?: { remove_orphaned_parents?: boolean }) =>
+    del<ApiResponse<null>>(`/students/${id}`, options ? {
+      remove_orphaned_parents: options.remove_orphaned_parents ? 1 : 0,
+    } : undefined),
 
   import: (file: File) => {
     const fd = new FormData();
@@ -1397,7 +1458,7 @@ export const students = {
 // ============================================================
 
 export const parents = {
-  list: (params?: { page?: number; per_page?: number; search?: string }) =>
+  list: (params?: { page?: number; per_page?: number; search?: string; status?: string; has_children?: string }) =>
     get<PaginatedResponse<ParentProfile>>("/parents", params as Record<string, unknown>),
 
   stats: () =>
@@ -1415,8 +1476,11 @@ export const parents = {
   update: (id: number, payload: UpdateParentPayload) =>
     put<ApiResponse<ParentProfile>>(`/parents/${id}`, payload),
 
-  delete: (id: number) =>
-    del<ApiResponse<null>>(`/parents/${id}`),
+  delete: (id: number, options?: { delete_linked_students?: boolean; delete_other_parents?: boolean }) =>
+    del<ApiResponse<null>>(`/parents/${id}`, options ? {
+      delete_linked_students: options.delete_linked_students ? 1 : 0,
+      delete_other_parents: options.delete_other_parents ? 1 : 0,
+    } : undefined),
   
   bulkSms: (payload: { message: string; parent_ids?: number[]; send_to_all?: boolean }) =>
     post<ApiResponse<{ results: Array<Record<string, unknown>> }>>("/sms/bulk", payload),
@@ -1494,7 +1558,7 @@ export const teachers = {
 // ============================================================
 
 export const classes = {
-  list: (params?: { per_page?: number }) =>
+  list: (params?: { search?: string; grade?: string; sort?: string; per_page?: number }) =>
     get<ApiResponse<ClassRoom[]>>("/classes", params as Record<string, unknown>),
 
   get: (id: number) =>
@@ -1655,6 +1719,9 @@ export const fees = {
       ? `${import.meta.env.VITE_API_URL}/api/v1/fees/${id}/receipt`
       : `/api/v1/fees/${id}/receipt`,
 
+  receiptPdf: (id: number) =>
+    get<Blob>(`/fees/${id}/receipt`, undefined, { responseType: "blob" }),
+
   export: (filters?: FeeFilters) =>
     get<Blob>("/fees/export", filters as Record<string, unknown>, { responseType: "blob" }),
 };
@@ -1809,6 +1876,7 @@ export interface ChartOfAccount {
   id: number;
   school_id: number;
   parent_account_id: number | null;
+  sort_order: number;
   account_code: string;
   account_name: string;
   account_type: AccountType;
@@ -1818,6 +1886,7 @@ export interface ChartOfAccount {
   is_bank_account: boolean;
   is_system: boolean;
   is_active: boolean;
+  children_count?: number;
   parent?: ChartOfAccount;
   children?: ChartOfAccount[];
 }
@@ -1848,6 +1917,7 @@ export interface JournalEntry {
 
 export interface TrialBalanceAccount {
   id: number;
+  parent_account_id: number | null;
   account_code: string;
   account_name: string;
   account_type: AccountType;
@@ -1868,6 +1938,7 @@ export interface TrialBalanceData {
 
 export interface IncomeStatementAccount {
   id: number;
+  parent_account_id: number | null;
   account_code: string;
   account_name: string;
   account_type: AccountType;
@@ -1887,6 +1958,7 @@ export interface IncomeStatementData {
 
 export interface BalanceSheetAccount {
   id: number;
+  parent_account_id: number | null;
   account_code: string;
   account_name: string;
   account_type: AccountType;
@@ -1910,6 +1982,8 @@ export interface BalanceSheetData {
 
 export interface CashFlowAccount {
   id: number;
+  parent_account_id: number | null;
+  account_depth: number;
   account_code: string;
   account_name: string;
   account_type: AccountType;
@@ -1949,11 +2023,17 @@ export const accounting = {
   accountsByType: (type: AccountType) =>
     get<ApiResponse<ChartOfAccount[]>>(`/accounting/accounts/by-type/${type}`),
 
-  createAccount: (payload: Omit<ChartOfAccount, "id" | "school_id" | "is_system">) =>
+  createAccount: (payload: Omit<ChartOfAccount, "id" | "school_id" | "is_system" | "sort_order">) =>
     post<ApiResponse<ChartOfAccount>>("/accounting/accounts", payload),
 
   updateAccount: (id: number, payload: Partial<ChartOfAccount>) =>
     put<ApiResponse<ChartOfAccount>>(`/accounting/accounts/${id}`, payload),
+
+  reorderAccounts: (payload: {
+    parent_account_id: number | null;
+    account_type: AccountType;
+    account_ids: number[];
+  }) => post<ApiResponse<null>>("/accounting/accounts/reorder", payload),
 
   deleteAccount: (id: number) =>
     del<ApiResponse<null>>(`/accounting/accounts/${id}`),
@@ -2160,7 +2240,7 @@ export const transport = {
 // ============================================================
 
 export const events = {
-  list: (params?: { type?: EventType; upcoming?: 1 | 0; per_page?: number }) =>
+  list: (params?: { type?: EventType; upcoming?: 1 | 0; page?: number; per_page?: number }) =>
     get<PaginatedResponse<SchoolEvent>>("/events", params as Record<string, unknown>),
 
   get: (id: number) =>
@@ -2214,7 +2294,7 @@ export const analytics = {
     get<ApiResponse<AnalyticsOverview>>("/analytics/overview"),
 
   gradePerformance: () =>
-    get<ApiResponse<Array<{ class: string; students: number; avg: number }>>>("/analytics/grades"),
+    get<ApiResponse<Array<{ class: string; students: number; avg: number | null }>>>("/analytics/grades"),
 
   examPerformance: () => get<ApiResponse<any>>("/analytics/exams"),
 
@@ -2225,9 +2305,7 @@ export const analytics = {
     get<ApiResponse<{
       total_budget?: number;
       total_collected?: number;
-      paid?: number;
-      pending?: number;
-      overdue?: number;
+      totals: { paid: number; pending: number; overdue: number };
       by_type: Array<{ name: string; amount?: number; collected: number; rate?: number; }>;
       by_month: Array<{ month: string; collected: number }>;
     }>>("/analytics/fees"),
@@ -2260,6 +2338,9 @@ export const settings = {
 
   school: () =>
     get<ApiResponse<School>>("/settings/school"),
+
+  branding: () =>
+    get<ApiResponse<Pick<School, "name" | "address" | "phone" | "email" | "logo">>>("/settings/school/branding"),
 
   updateSchool: (payload: UpdateSchoolPayload | FormData) =>
     payload instanceof FormData

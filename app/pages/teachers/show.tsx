@@ -4,6 +4,7 @@
 import { Link } from "react-router";
 import type { Route as ShowRoute } from "./+types/show";
 import { api } from "~/lib/api";
+import { PrintTools } from "~/components/PrintTools";
 
 export async function clientLoader({ params }: ShowRoute.LoaderArgs) {
   const [teacher, perf] = await Promise.all([
@@ -82,6 +83,7 @@ export default function TeacherShowPage({ loaderData }: ShowRoute.ComponentProps
 
   return (
     <div className="text-slate-200 px-3 sm:px-6 pb-12">
+      <PrintTools title={`Teacher Profile — ${teacher.user?.name ?? "Teacher"}`} />
 
       <div className="flex items-center gap-2 mb-6 text-sm">
         <Link to="/teachers" className="text-slate-500 hover:text-slate-300 transition-colors flex items-center gap-1.5">

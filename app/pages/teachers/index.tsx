@@ -12,6 +12,7 @@ import {
 } from "react-router";
 import type { Route } from "./+types/index";
 import { api, type Teacher, type TeacherFilters, type PaginationMeta, type ValidationError } from "~/lib/api";
+import { fetchAllPages, PrintListButton } from "~/components/PrintListButton";
 
 const DEPARTMENTS = [
   "Mathematics", "Science", "English", "Social Studies",
@@ -185,13 +186,33 @@ export default function TeachersPage({ loaderData, actionData }: Route.Component
           </div>
           <p className="text-slate-500 text-xs sm:text-sm sm:ml-12">Staff profiles, assignments and performance</p>
         </div>
-        <Link
-          to="/teachers/new"
-          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl text-sm font-semibold hover:from-blue-400 hover:to-indigo-400 transition-all shadow-lg shadow-blue-500/20"
-        >
-          <span className="text-base leading-none">+</span>
-          Add Teacher
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <PrintListButton
+            title="Teacher Register"
+            filterSummary={[
+              filters.search && `Search: ${filters.search}`,
+              filters.department && `Department: ${filters.department}`,
+              filters.status && `Status: ${filters.status}`,
+            ].filter(Boolean).join(" · ") || "All teachers"}
+            loadRows={() => fetchAllPages((page, per_page) => api.teachers.list({ ...filters, page, per_page }))}
+            columns={[
+              { label: "Employee ID", value: (teacher) => teacher.employee_id },
+              { label: "Teacher", value: (teacher) => teacher.user?.name },
+              { label: "Email", value: (teacher) => teacher.user?.email },
+              { label: "Phone", value: (teacher) => teacher.phone },
+              { label: "Department", value: (teacher) => teacher.department },
+              { label: "Qualification", value: (teacher) => teacher.qualification },
+              { label: "Status", value: (teacher) => teacher.status },
+            ]}
+          />
+          <Link
+            to="/teachers/new"
+            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl text-sm font-semibold hover:from-blue-400 hover:to-indigo-400 transition-all shadow-lg shadow-blue-500/20"
+          >
+            <span className="text-base leading-none">+</span>
+            Add Teacher
+          </Link>
+        </div>
       </div>
 
       {/* ── Stats row ──────────────────────────────────── */}

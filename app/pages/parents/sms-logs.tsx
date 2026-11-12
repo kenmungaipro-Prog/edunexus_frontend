@@ -4,6 +4,47 @@
 // ============================================================
 import { useEffect, useState } from 'react';
 import { api, type ApiResponse } from "~/lib/api";
+import { PrintListButton } from "~/components/PrintListButton";
+
+interface SmsLog {
+  id: number;
+  phone: string;
+  message: string;
+  status: string;
+  created_at: string;
+}
+
+async function fetchAllSmsLogs(status: string, phone: string): Promise<SmsLog[]> {
+  const perPage = 100;
+  const loadPage = async (page: number) => api.smsAdmin.logs({
+    page,
+    per_page: perPage,
+    status: status || undefined,
+    phone: phone || undefined,
+  });
+  const firstResponse = await loadPage(1);
+  const paginator = firstResponse.data?.data;
+  if (!paginator || !Array.isArray(paginator.data) || !Number.isInteger(paginator.last_page)) {
+    throw new Error("The SMS log response did not include complete pagination data.");
+  }
+
+  const rows = [...paginator.data] as SmsLog[];
+  for (let firstPage = 2; firstPage <= paginator.last_page; firstPage += 4) {
+    const pageNumbers = Array.from(
+      { length: Math.min(4, paginator.last_page - firstPage + 1) },
+      (_, index) => firstPage + index,
+    );
+    const pages = await Promise.all(pageNumbers.map(loadPage));
+    for (const response of pages) {
+      const pageData = response.data?.data;
+      if (!pageData || !Array.isArray(pageData.data)) {
+        throw new Error("An SMS log page could not be loaded completely.");
+      }
+      rows.push(...pageData.data as SmsLog[]);
+    }
+  }
+  return rows;
+}
 
 export async function clientLoader() {
   return {};
@@ -13,12 +54,14 @@ export default function SmsLogsPage() {
   const [logs, setLogs] = useState<any[]>([]);
   const [page, setPage] = useState(1);
   const [perPage] = useState(25);
+  const [status, setStatus] = useState("");
+  const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
 
   const fetch = async () => {
     setLoading(true);
     try {
-      const res = await api.smsAdmin.logs({ page, per_page: perPage });
+      const res = await api.smsAdmin.logs({ page, per_page: perPage, status: status || undefined, phone: phone || undefined });
       
       const fetchedLogs = res?.data?.logs 
                        || res?.data?.data?.data 
@@ -39,7 +82,7 @@ export default function SmsLogsPage() {
     }
   };
 
-  useEffect(() => { fetch(); }, [page]);
+  useEffect(() => { fetch(); }, [page, status, phone]);
 
   const retry = async (id: number) => {
     try {
@@ -54,6 +97,40 @@ export default function SmsLogsPage() {
     <div style={{ color: "#f8fafc", fontFamily: "'Sora', sans-serif", padding: "12px", maxWidth: "1200px", margin: "0 auto", boxSizing: "border-box" }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: "16px", flexWrap: 'wrap', gap: 12 }}>
         <h1 style={{ fontSize: "clamp(22px, 4vw, 26px)", margin: 0 }}>SMS Logs</h1>
+        <PrintListButton
+          title="SMS Log Register"
+          filterSummary={[status && `Status: ${status}`, phone && `Phone: ${phone}`].filter(Boolean).join(" · ") || "All SMS logs"}
+          loadRows={() => fetchAllSmsLogs(status, phone)}
+          columns={[
+            { label: "ID", value: (log) => log.id },
+            { label: "Phone", value: (log) => log.phone },
+            { label: "Message", value: (log) => log.message },
+            { label: "Status", value: (log) => log.status },
+            { label: "Created", value: (log) => log.created_at },
+          ]}
+        />
+      </div>
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+        <input
+          type="search"
+          aria-label="Filter by phone number"
+          placeholder="Filter by phone..."
+          value={phone}
+          onChange={(event) => { setPhone(event.target.value); setPage(1); }}
+          style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid #334155", background: "#0f172a", color: "#f8fafc" }}
+        />
+        <select
+          aria-label="Filter by SMS status"
+          value={status}
+          onChange={(event) => { setStatus(event.target.value); setPage(1); }}
+          style={{ padding: "8px 10px", borderRadius: 6, border: "1px solid #334155", background: "#0f172a", color: "#f8fafc" }}
+        >
+          <option value="">All statuses</option>
+          <option value="sent">Sent</option>
+          <option value="failed">Failed</option>
+          <option value="pending">Pending</option>
+        </select>
       </div>
 
       <div style={{ marginTop: 12, overflowX: 'auto', borderRadius: '12px', border: '1px solid #1e293b', background: '#0f172a', WebkitOverflowScrolling: 'touch' }}>

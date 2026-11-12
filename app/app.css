@@ -121,6 +121,322 @@ textarea {
   margin: 12px 14px;
 }
 
+@media print {
+  @page {
+    margin: 14mm;
+  }
+
+  html,
+  body {
+    min-height: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: #fff !important;
+    color: #111 !important;
+    color-scheme: light;
+  }
+
+  body * {
+    color: #111 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  .print\:hidden,
+  .print-hidden,
+  .dashboard-print-hidden {
+    display: none !important;
+  }
+
+  .print-branding {
+    display: flex !important;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    margin: 0 0 20px;
+    padding: 0 0 14px;
+    border-bottom: 2px solid #222 !important;
+    break-inside: avoid;
+  }
+
+  .print-branding img {
+    display: block;
+    width: auto;
+    max-width: 88px;
+    max-height: 72px;
+    object-fit: contain;
+  }
+
+  .print-branding-school {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 3px;
+    font-size: 10px;
+  }
+
+  .print-branding-school strong,
+  .print-branding-title {
+    font-size: 15px;
+  }
+
+  .print-tools-message {
+    display: none !important;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    display: none !important;
+  }
+
+  [class*="bg-"],
+  [style*="background"] {
+    background: #fff !important;
+  }
+
+  [class*="border-"],
+  [style*="border"] {
+    border-color: #d1d5db !important;
+  }
+
+  main,
+  #root,
+  #root > div,
+  #root > div > div {
+    display: block !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  table {
+    break-inside: auto;
+  }
+
+  tr,
+  img {
+    break-inside: avoid;
+  }
+
+  .overflow-x-auto,
+  .overflow-y-auto {
+    overflow: visible !important;
+  }
+
+  [class*="min-w-"] {
+    min-width: 0 !important;
+  }
+
+  body.print-list-mode * {
+    visibility: hidden !important;
+  }
+
+  body.print-list-mode .print-list-document,
+  body.print-list-mode .print-list-document * {
+    visibility: visible !important;
+  }
+
+  body.print-list-mode .print-list-document {
+    display: block !important;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    padding: 0;
+    background: #fff !important;
+  }
+
+  .print-list-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #222 !important;
+    break-inside: avoid;
+  }
+
+  .print-list-header img {
+    display: block;
+    width: auto;
+    max-width: 76px;
+    max-height: 64px;
+    object-fit: contain;
+  }
+
+  .print-list-school {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 3px;
+    font-size: 9px;
+  }
+
+  .print-list-school strong {
+    font-size: 14px;
+  }
+
+  .print-list-heading {
+    text-align: right;
+  }
+
+  .print-list-heading h1 {
+    margin: 0 0 4px;
+    font-size: 15px;
+  }
+
+  .print-list-heading span {
+    font-size: 9px;
+  }
+
+  .print-list-document table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9px;
+  }
+
+  .print-list-document th,
+  .print-list-document td {
+    padding: 5px 6px;
+    border: 1px solid #9ca3af !important;
+    text-align: left;
+    vertical-align: top;
+    overflow-wrap: anywhere;
+  }
+
+  .print-list-document th {
+    background: #e5e7eb !important;
+    font-weight: 700;
+  }
+
+  .print-list-document tr {
+    break-inside: avoid;
+  }
+}
+
+.print-tools {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.print-branding {
+  display: none;
+}
+
+.print-tools-button,
+.print-list-actions > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  border: 0;
+  border-radius: 12px;
+  background: #2563eb;
+  padding: 10px 16px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  transition: background-color 150ms ease, box-shadow 150ms ease;
+}
+
+.print-tools-button,
+.print-list-actions > button {
+  width: 40px;
+  flex: 0 0 auto;
+  gap: 0;
+  overflow: hidden;
+  padding-right: 12px;
+  padding-left: 12px;
+  white-space: nowrap;
+}
+
+.print-button-label {
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-width 180ms ease, opacity 120ms ease;
+}
+
+.print-tools-button:hover:not(:disabled),
+.print-tools-button:focus-visible,
+.print-list-actions > button:hover:not(:disabled),
+.print-list-actions > button:focus-visible {
+  width: auto;
+  gap: 8px;
+  padding-right: 14px;
+  padding-left: 14px;
+}
+
+.print-tools-button:hover:not(:disabled) .print-button-label,
+.print-tools-button:focus-visible .print-button-label,
+.print-list-actions > button:hover:not(:disabled) .print-button-label,
+.print-list-actions > button:focus-visible .print-button-label {
+  max-width: 240px;
+  opacity: 1;
+}
+
+.print-tools-button:hover:not(:disabled),
+.print-list-actions > button:hover:not(:disabled) {
+  background: #3b82f6;
+}
+
+.print-tools-button:focus-visible,
+.print-list-actions > button:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 2px;
+}
+
+.print-tools-button:disabled,
+.print-list-actions > button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.print-tools-message {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.print-tools-message a,
+.print-tools-message button {
+  color: #60a5fa;
+  text-decoration: underline;
+}
+
+.print-list-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.print-button-icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.print-list-actions > span {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.print-list-actions a {
+  color: #60a5fa;
+  text-decoration: underline;
+}
+
+.print-list-document {
+  display: none;
+}
+
 @media (max-width: 768px) {
   h1 {
     font-size: clamp(1.35rem, 4vw, 1.85rem);

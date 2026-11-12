@@ -4,6 +4,7 @@
 import { Link, Form, useSearchParams, useNavigation } from "react-router";
 import type { Route } from "./+types/index";
 import { api, type ValidationError, type ClassRoom as ApiClassRoom } from "~/lib/api";
+import { PrintListButton } from "~/components/PrintListButton";
 
 interface ClassRoom extends Omit<ApiClassRoom, "class_teacher"> {
   students_count: number;
@@ -21,12 +22,7 @@ interface LoaderData {
 }
 
 export async function clientLoader({ request }: Route.LoaderArgs) {
-  const url    = new URL(request.url);
-  const search = url.searchParams.get("search") ?? undefined;
-  const grade  = url.searchParams.get("grade")  ?? undefined;
-  const sort   = url.searchParams.get("sort")   ?? "grade";
-
-  const res = await api.classes.list({ search, grade, sort, per_page: 100 } as any);
+  const res = await api.classes.list({ per_page: 100 });
   const classes = (res.data ?? []) as unknown as ClassRoom[];
 
   const total        = classes.length;
@@ -94,6 +90,25 @@ export default function ClassesPage({ loaderData }: Route.ComponentProps) {
   const search = searchParams.get("search") ?? "";
   const grade  = searchParams.get("grade")  ?? "";
   const sort   = searchParams.get("sort")   ?? "grade";
+  const filteredClasses = classes
+    .filter((classRoom) => {
+      const query = search.toLowerCase();
+      const matchesSearch = !query || [
+        classRoom.name,
+        classRoom.section,
+        classRoom.room ?? "",
+        classRoom.class_teacher?.user?.name ?? "",
+      ].some((value) => value.toLowerCase().includes(query));
+      return matchesSearch && (!grade || String(classRoom.grade) === grade);
+    })
+    .sort((a, b) => {
+      if (sort === "name") return a.name.localeCompare(b.name);
+      if (sort === "occupancy") {
+        return (b.students_count / Math.max(b.capacity, 1)) - (a.students_count / Math.max(a.capacity, 1));
+      }
+      if (sort === "students_count") return b.students_count - a.students_count;
+      return a.grade - b.grade || a.section.localeCompare(b.section);
+    });
 
   return (
     <div className={`p-4 sm:p-8 max-w-7xl mx-auto transition-opacity ${isLoading ? "opacity-60 pointer-events-none" : ""}`}>
@@ -107,15 +122,30 @@ export default function ClassesPage({ loaderData }: Route.ComponentProps) {
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-100">Class Management</h1>
           <p className="text-slate-400 text-xs sm:text-sm mt-1">Monitor all active sections, capacities, and group configurations.</p>
         </div>
-        <Link
-          to="/classes/new"
-          className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:from-blue-500 hover:to-indigo-500 transition-all text-center shadow-lg shadow-blue-600/25 flex items-center justify-center gap-2 self-start sm:self-auto"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-          Add New Class
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <PrintListButton
+            title="Class Register"
+            filterSummary={[search && `Search: ${search}`, grade && `Grade: ${grade}`, `Sort: ${sort}`].filter(Boolean).join(" · ") || "All classes"}
+            loadRows={() => Promise.resolve(filteredClasses)}
+            columns={[
+              { label: "Class", value: (row) => row.name },
+              { label: "Grade", value: (row) => row.grade },
+              { label: "Section", value: (row) => row.section },
+              { label: "Teacher", value: (row) => row.class_teacher?.user?.name },
+              { label: "Students", value: (row) => row.students_count },
+              { label: "Capacity", value: (row) => row.capacity },
+            ]}
+          />
+          <Link
+            to="/classes/new"
+            className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:from-blue-500 hover:to-indigo-500 transition-all text-center shadow-lg shadow-blue-600/25 flex items-center justify-center gap-2 self-start sm:self-auto"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            Add New Class
+          </Link>
+        </div>
       </div>
 
       {/* ── Stats ───────────────────────────────────────── */}
@@ -174,7 +204,7 @@ export default function ClassesPage({ loaderData }: Route.ComponentProps) {
       </div>
 
       {/* ── Empty state ─────────────────────────────────── */}
-      {classes.length === 0 && (
+      {filteredClasses.length === 0 && (
         <div className="bg-slate-900/60 backdrop-blur-xl border border-slate-800 rounded-3xl py-20 text-center px-4 shadow-2xl">
           <div className="w-16 h-16 bg-slate-800 border border-slate-700/80 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 shadow-inner">
             🏫
@@ -186,7 +216,7 @@ export default function ClassesPage({ loaderData }: Route.ComponentProps) {
 
       {/* ── Grid ────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {classes.map((c, i) => {
+        {filteredClasses.map((c, i) => {
           const pct    = c.capacity > 0 ? Math.round((c.students_count / c.capacity) * 100) : 0;
           const colors = occupancyColor(pct);
           const accent = GRADE_ACCENT[i % GRADE_ACCENT.length];

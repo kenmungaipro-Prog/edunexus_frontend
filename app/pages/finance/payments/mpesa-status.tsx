@@ -5,6 +5,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { api, type PaymentGatewayStatusEntry } from "~/lib/api";
+import { PrintListButton } from "~/components/PrintListButton";
 
 function money(value: number | string | null | undefined) {
   const numeric = Number(value ?? 0);
@@ -74,6 +75,23 @@ export default function MpesaStatusPage() {
           <p className="mt-1 text-xs sm:text-sm text-slate-400">Recent payment gateway activity, callbacks, and processing state across M-Pesa and bank integrations.</p>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <PrintListButton
+            title="Payment Gateway Activity Register"
+            filterSummary={selectedGateway === "all" ? "All gateways" : `Gateway: ${gatewayLabel(selectedGateway)}`}
+            loadRows={() => api.finance.paymentGatewayStatus().then((response) =>
+              (response.data ?? []).filter((entry) => selectedGateway === "all" || entry.gateway_name === selectedGateway)
+            )}
+            columns={[
+              { label: "Gateway", value: (entry) => gatewayLabel(entry.gateway_name) },
+              { label: "Status", value: (entry) => entry.status },
+              { label: "Merchant Request", value: (entry) => entry.merchant_request_id },
+              { label: "Checkout Request", value: (entry) => entry.checkout_request_id },
+              { label: "Reference", value: (entry) => entry.account_reference },
+              { label: "Amount", value: (entry) => money(entry.gateway_amount) },
+              { label: "Receipt", value: (entry) => entry.mpesa_receipt_number },
+              { label: "Updated", value: (entry) => formatDate(entry.gateway_updated_at ?? entry.callback_updated_at) },
+            ]}
+          />
           <select value={selectedGateway} onChange={(e) => setSelectedGateway(e.target.value)} className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-slate-200">
             <option value="all">All Gateways</option>
             <option value="mpesa">M-Pesa</option>

@@ -3,6 +3,7 @@
 // ============================================================
 import { Link } from "react-router";
 import { api } from "~/lib/api";
+import { PrintListButton } from "~/components/PrintListButton";
 
 export async function clientLoader() {
   const response = await api.portal.analytics();
@@ -67,12 +68,24 @@ export default function ParentAnalyticsPage({ loaderData }: { loaderData: Loader
             <h2 className="text-lg font-semibold text-slate-100">Children summary</h2>
             <p className="text-slate-500 text-sm">View each linked child and their current fee balance.</p>
           </div>
-          <Link
-            to="/portal/payments"
-            className="inline-flex items-center justify-center rounded-full bg-blue-500 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-600 transition w-full sm:w-auto text-center"
-          >
-            Go to Payments
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <PrintListButton
+              title="Children Fee Balance Register"
+              loadRows={() => Promise.resolve(analytics.children)}
+              columns={[
+                { label: "Child", value: (child) => child.full_name },
+                { label: "Admission No.", value: (child) => child.admission_no },
+                { label: "Class", value: (child) => child.class_name },
+                { label: "Balance", value: (child) => formatKES(child.balance) },
+              ]}
+            />
+            <Link
+              to="/portal/payments"
+              className="inline-flex items-center justify-center rounded-full bg-blue-500 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-600 transition w-full sm:w-auto text-center"
+            >
+              Go to Payments
+            </Link>
+          </div>
         </div>
 
         <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">

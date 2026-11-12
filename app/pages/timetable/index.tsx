@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { Form, useSubmit, useActionData, useNavigation } from "react-router";
 import type { Route as TTRoute } from "./+types/index";
 import { apiService, type TimetableSlot, type ClassRoom, type Subject, type Teacher } from "~/lib/api";
+import { PrintTools } from "~/components/PrintTools";
+import { PrintListButton } from "~/components/PrintListButton";
 
 
 // --- Constants & Styling ---
@@ -289,6 +291,16 @@ export default function TimetablePage({ loaderData }: TTRoute.ComponentProps) {
     }
   }, [selectedClass, viewAll, filterTeacherId, filterSubjectId, filterDayOfWeek]);
 
+  const timetableRows = Object.entries(timetable).flatMap(([day, slots]) =>
+    slots
+      .filter((slot) =>
+        (!filterTeacherId || slot.teacher_id === Number(filterTeacherId)) &&
+        (!filterSubjectId || slot.subject_id === Number(filterSubjectId)) &&
+        (!filterDayOfWeek || Number(day) === Number(filterDayOfWeek))
+      )
+      .map((slot) => ({ day: Number(day), slot }))
+  );
+
   const handleSlotSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
@@ -369,6 +381,7 @@ export default function TimetablePage({ loaderData }: TTRoute.ComponentProps) {
 
   return (
     <div className="p-3 sm:p-6 max-w-7xl mx-auto text-slate-200 min-h-screen">
+      <PrintTools title="Class Timetable" />
       {/* ── Page Header ────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
         <div>
@@ -380,15 +393,35 @@ export default function TimetablePage({ loaderData }: TTRoute.ComponentProps) {
         </div>
 
         {/* Action Controls Header Toolbar */}
-        <div className="bg-slate-900/60 border border-slate-800 p-2 rounded-2xl flex flex-wrap items-center gap-2">
+        <div className="w-full bg-slate-900/60 border border-slate-800 p-2 rounded-2xl flex flex-wrap items-stretch sm:items-center gap-2">
+          <PrintListButton
+            title="Timetable Register"
+            filterSummary={[
+              viewAll ? "All classes" : `Class: ${classes.find((item) => item.id === Number(selectedClass))?.name ?? selectedClass}`,
+              filterTeacherId && `Teacher: ${teachers.find((teacher) => teacher.id === Number(filterTeacherId))?.user?.name ?? filterTeacherId}`,
+              filterSubjectId && `Subject: ${subjects.find((subject) => subject.id === Number(filterSubjectId))?.name ?? filterSubjectId}`,
+              filterDayOfWeek && `Day: ${DAYS.find((day) => day.id === Number(filterDayOfWeek))?.label}`,
+            ].filter(Boolean).join(" · ")}
+            loadRows={() => Promise.resolve(timetableRows)}
+            columns={[
+              { label: "Class", value: ({ slot }) => slot.class_room?.name ?? classes.find((item) => item.id === slot.class_id)?.name },
+              { label: "Day", value: ({ day }) => DAYS.find((item) => item.id === day)?.label },
+              { label: "Period", value: ({ slot }) => slot.period_number },
+              { label: "Time", value: ({ slot }) => formatTimeLabel(slot) },
+              { label: "Type", value: ({ slot }) => slot.slot_type },
+              { label: "Subject / Activity", value: ({ slot }) => slot.subject?.name ?? slot.title },
+              { label: "Teacher", value: ({ slot }) => slot.teacher?.user?.name },
+              { label: "Room", value: ({ slot }) => slot.room },
+            ]}
+          />
           <ClassSelectorDropdown
             classes={classes}
             selectedClassId={selectedClass}
             onSelect={(id) => setSelectedClass(id)}
           />
 
-          <div className="flex items-center gap-2">
-            <label className="inline-flex items-center gap-2 text-xs text-slate-300">
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
+            <label className="col-span-2 inline-flex items-center gap-2 text-xs text-slate-300 sm:col-span-1">
               <input
                 type="checkbox"
                 checked={viewAll}
@@ -398,17 +431,17 @@ export default function TimetablePage({ loaderData }: TTRoute.ComponentProps) {
               <span>All Classes</span>
             </label>
 
-            <select value={filterTeacherId} onChange={(e) => setFilterTeacherId(e.target.value ? Number(e.target.value) : "")} className="bg-slate-800 border border-slate-700 rounded-xl p-2 text-xs text-slate-200">
+            <select value={filterTeacherId} onChange={(e) => setFilterTeacherId(e.target.value ? Number(e.target.value) : "")} className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2 text-xs text-slate-200 sm:w-auto sm:min-w-[140px]">
               <option value="">All Teachers</option>
               {teachers.map(t => <option key={t.id} value={t.id}>{t.user?.name ?? `Teacher ${t.id}`}</option>)}
             </select>
 
-            <select value={filterSubjectId} onChange={(e) => setFilterSubjectId(e.target.value ? Number(e.target.value) : "") } className="bg-slate-800 border border-slate-700 rounded-xl p-2 text-xs text-slate-200">
+            <select value={filterSubjectId} onChange={(e) => setFilterSubjectId(e.target.value ? Number(e.target.value) : "") } className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2 text-xs text-slate-200 sm:w-auto sm:min-w-[140px]">
               <option value="">All Subjects</option>
               {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
 
-            <select value={filterDayOfWeek} onChange={(e) => setFilterDayOfWeek(e.target.value ? Number(e.target.value) : "") } className="bg-slate-800 border border-slate-700 rounded-xl p-2 text-xs text-slate-200">
+            <select value={filterDayOfWeek} onChange={(e) => setFilterDayOfWeek(e.target.value ? Number(e.target.value) : "") } className="w-full rounded-xl border border-slate-700 bg-slate-800 p-2 text-xs text-slate-200 sm:w-auto sm:min-w-[140px]">
               <option value="">Any Day</option>
               {DAYS.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
             </select>
@@ -418,7 +451,7 @@ export default function TimetablePage({ loaderData }: TTRoute.ComponentProps) {
             type="button"
             onClick={() => setIsSettingsModalOpen(true)}
             disabled={!selectedClass}
-            className="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs sm:text-sm px-3.5 py-2.5 rounded-xl font-semibold transition border border-slate-700 flex items-center gap-1.5 cursor-pointer"
+            className="w-full justify-center rounded-xl border border-slate-700 bg-slate-800 px-3.5 py-2.5 text-xs font-semibold text-slate-300 transition hover:bg-slate-700 sm:w-auto sm:text-sm flex items-center gap-1.5 cursor-pointer"
           >
             <span>⚙️</span>
             <span>Settings</span>

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Link, Form, useSearchParams, useNavigation } from "react-router";
 import type { Route } from "./+types/index";
 import { api } from "~/lib/api";
+import { fetchAllPages, PrintListButton } from "~/components/PrintListButton";
 
 // ── Types ─────────────────────────────────────────────────────
 type ExamStatus = "scheduled" | "ongoing" | "completed" | "cancelled";
@@ -97,9 +98,30 @@ export default function ExamsPage({ loaderData }: Route.ComponentProps) {
           <h1 className="text-2xl font-bold">📝 Exams</h1>
           <p className="text-slate-400 text-xs sm:text-sm">Real-time examination performance and scheduling</p>
         </div>
-        <Link to="/exams/new" className="px-4 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-500 transition text-center text-sm shadow-md">
-          + Schedule Exam
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <PrintListButton
+            title="Exam Register"
+            filterSummary={statusParam ? `Status: ${statusParam}` : "All exams"}
+            loadRows={() => fetchAllPages((page, per_page) => api.exams.list({
+              page,
+              per_page,
+              status: statusParam ? statusParam as ExamStatus : undefined,
+            }))}
+            columns={[
+              { label: "Exam", value: (exam) => exam.title },
+              { label: "Subject", value: (exam) => exam.subject?.name },
+              { label: "Class", value: (exam) => exam.class_room?.name },
+              { label: "Date", value: (exam) => exam.exam_date },
+              { label: "Start", value: (exam) => exam.start_time },
+              { label: "End", value: (exam) => exam.end_time },
+              { label: "Room", value: (exam) => exam.room },
+              { label: "Status", value: (exam) => exam.status },
+            ]}
+          />
+          <Link to="/exams/new" className="px-4 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-500 transition text-center text-sm shadow-md">
+            + Schedule Exam
+          </Link>
+        </div>
       </div>
 
       {/* Stats Section */}

@@ -152,13 +152,27 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 767px)");
-    const handleChange = () => setIsMobile(mediaQuery.matches);
+    const handleChange = () => {
+      setIsMobile(mediaQuery.matches);
+      if (!mediaQuery.matches) setMobileExpanded(false);
+    };
 
     handleChange();
     mediaQuery.addEventListener("change", handleChange);
 
     return () => mediaQuery.removeEventListener("change", handleChange);
   }, []);
+
+  useEffect(() => {
+    if (!isMobile || !mobileExpanded) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileExpanded(false);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isMobile, mobileExpanded]);
 
   useEffect(() => {
     void refreshUnreadEventCount();
@@ -183,9 +197,8 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
     void refreshUnreadMessageCount();
   }, [location.pathname, refreshUnreadEventCount, refreshUnreadMessageCount]);
 
-  const sidebarWidth = isMobile ? (mobileExpanded ? "150px" : "70px") : collapsed ? "70px" : "260px";
-  const isCollapsed = isMobile ? !mobileExpanded : collapsed;
-  const showLabelsBelowIcon = isMobile && !isCollapsed;
+  const sidebarWidth = isMobile ? "min(280px, calc(100vw - 48px))" : collapsed ? "70px" : "260px";
+  const isCollapsed = !isMobile && collapsed;
 
   const handleLogout = async () => {
     await api.auth.logout().catch(() => {});
@@ -196,31 +209,38 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
   return (
     <div className="flex h-screen overflow-hidden bg-[#0a0e1a] text-slate-100" style={{ fontFamily: "'Sora', sans-serif", color: "#e8edf8" }}>
       {/* ── Sidebar ── */}
+      {isMobile && mobileExpanded && (
+        <button
+          type="button"
+          aria-label="Close navigation"
+          className="fixed inset-0 z-[110] bg-slate-950/70 md:hidden"
+          onClick={() => setMobileExpanded(false)}
+        />
+      )}
       <aside
-        className="fixed inset-y-0 left-0 z-[120] md:static md:z-auto"
+        id="primary-navigation"
+        aria-label="Main navigation"
+        className="fixed inset-y-0 left-0 z-[120] md:static md:z-auto dashboard-print-hidden"
         style={{
           width: sidebarWidth,
-          maxWidth: "320px",
+          maxWidth: isMobile ? "calc(100vw - 48px)" : "320px",
           background: "#0f1424",
           borderRight: "1px solid #2a3350",
           transition: "width .3s ease, transform .2s ease",
           display: "flex",
           flexDirection: "column",
           flexShrink: 0,
-          position: "relative",
+          position: isMobile ? "fixed" : "relative",
+          transform: isMobile && !mobileExpanded ? "translateX(-100%)" : "translateX(0)",
         }}
       >
         <button
           type="button"
-          className="flex"
+          className="hidden md:flex"
           aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           onClick={() => {
-            if (isMobile) {
-              setMobileExpanded(v => !v);
-              setActiveTooltip(null);
-            } else {
-              setCollapsed(c => !c);
-            }
+            setCollapsed(c => !c);
+            setActiveTooltip(null);
           }}
           style={{
             position: "absolute",
@@ -241,6 +261,14 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
           }}
         >
           {isCollapsed ? "▶" : "◀"}
+        </button>
+        <button
+          type="button"
+          className="absolute right-4 top-[22px] z-[1] inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-700 bg-slate-800 text-slate-200 md:hidden"
+          aria-label="Close navigation menu"
+          onClick={() => setMobileExpanded(false)}
+        >
+          ×
         </button>
 
         {/* Logo */}
@@ -289,6 +317,7 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
                       }}
                       onClick={() => {
                         if (isCollapsed) setActiveTooltip(item.label);
+                        if (isMobile) setMobileExpanded(false);
                         if (item.to === "/events" && unreadEventCount > 0) {
                           void api.notifications.markEventNotificationsRead()
                             .then(() => setUnreadEventCount(0))
@@ -297,11 +326,11 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
                       }}
                       style={({ isActive }) => ({
                         display: "flex",
-                        flexDirection: showLabelsBelowIcon ? "column" : "row",
+                        flexDirection: "row",
                         alignItems: "center",
-                        justifyContent: showLabelsBelowIcon ? "center" : "flex-start",
-                        gap: showLabelsBelowIcon ? "4px" : "8px",
-                        padding: showLabelsBelowIcon ? "10px 8px" : "10px 16px",
+                        justifyContent: "flex-start",
+                        gap: "8px",
+                        padding: "10px 16px",
                         cursor: "pointer",
                         textDecoration: "none",
                         color: isActive ? "#4f8ef7" : "#a0aec0",
@@ -309,10 +338,10 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
                         borderLeft: isActive ? "3px solid #4f8ef7" : "3px solid transparent",
                         transition: "all .15s",
                         whiteSpace: "nowrap", overflow: "hidden",
-                        fontSize: showLabelsBelowIcon ? "11px" : "13.5px",
+                        fontSize: "13.5px",
                         fontWeight: 500,
                         position: "relative",
-                        textAlign: showLabelsBelowIcon ? "center" : "left",
+                        textAlign: "left",
                       })}
                     >
                       <span style={{ width: "20px", flexShrink: 0, textAlign: "center", fontSize: "16px" }}>{item.icon}</span>
@@ -320,8 +349,8 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
                         <span style={{ position: "absolute", top: "4px", right: "4px", minWidth: "8px", height: "8px", borderRadius: "999px", background: "#ef4444", border: "2px solid #0f1424" }} />
                       )}
                       {!isCollapsed && (
-                        <div style={{ display: "flex", flexDirection: showLabelsBelowIcon ? "column" : "row", alignItems: "center", justifyContent: "flex-start", gap: showLabelsBelowIcon ? "2px" : "8px", flex: showLabelsBelowIcon ? "none" : 1 }}>
-                          <span style={{ fontSize: showLabelsBelowIcon ? "11px" : "13.5px", lineHeight: 1.2 }}>{item.label}</span>
+                        <div style={{ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "flex-start", gap: "8px", flex: 1 }}>
+                          <span style={{ fontSize: "13.5px", lineHeight: 1.2 }}>{item.label}</span>
                           {(item.to === "/events" ? unreadEventCount : item.to === "/messages" ? unreadMessageCount : item.badge) ? (
                             <span style={{ background: "#ef4444", color: "#fff", fontSize: "10px", fontWeight: 700, padding: "2px 6px", borderRadius: "10px" }}>
                               {item.to === "/events" ? unreadEventCount : item.to === "/messages" ? unreadMessageCount : item.badge}
@@ -352,7 +381,7 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
                       )}
                     </NavLink>
                     {showChildren && (
-                      <div style={{ paddingLeft: showLabelsBelowIcon ? "0" : "34px", marginTop: "4px", display: "grid", gap: "4px" }}>
+                      <div style={{ paddingLeft: "34px", marginTop: "4px", display: "grid", gap: "4px" }}>
                         {childItems.map(child => (
                           <NavLink
                             key={child.to}
@@ -406,9 +435,19 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
 
         {/* Topbar */}
         <header
-          className="flex min-h-[65px] flex-wrap items-center gap-2 border-b border-slate-800/80 bg-[#0f1424] px-4 py-2 md:h-[65px] md:flex-nowrap md:gap-3 md:px-7 md:py-0"
+          className="flex min-h-[65px] flex-wrap items-center gap-2 border-b border-slate-800/80 bg-[#0f1424] px-4 py-2 md:h-[65px] md:flex-nowrap md:gap-3 md:px-7 md:py-0 dashboard-print-hidden"
           style={{ flexShrink: 0 }}
         >
+          <button
+            type="button"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-700 bg-slate-800 text-lg text-slate-100 md:hidden"
+            aria-label={mobileExpanded ? "Close navigation" : "Open navigation"}
+            aria-controls="primary-navigation"
+            aria-expanded={mobileExpanded}
+            onClick={() => setMobileExpanded(expanded => !expanded)}
+          >
+            {mobileExpanded ? "×" : "☰"}
+          </button>
           <div className="hidden md:block" style={{ flex: 1 }} />
 
           {/* Search */}

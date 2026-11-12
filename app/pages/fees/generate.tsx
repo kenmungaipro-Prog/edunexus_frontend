@@ -6,15 +6,17 @@ import { Form, Link, useActionData, useNavigation } from "react-router";
 import { useState } from "react";
 import { api } from "~/lib/api";
 
-export async function clientLoader() {
+export async function clientLoader({ request }: { request: Request }) {
   const [structuresRes, studentsRes] = await Promise.all([
     api.finance.feeStructures(),
     api.students.list({ per_page: 500, status: 'active' })
   ]);
+  const studentId = new URL(request.url).searchParams.get("student_id");
   
   return {
     feeStructures: structuresRes.data?.data ?? structuresRes.data ?? [],
     students: studentsRes.data?.data ?? studentsRes.data ?? [],
+    initialStudentId: studentId && Number.isInteger(Number(studentId)) ? studentId : "",
   };
 }
 
@@ -49,7 +51,7 @@ export default function GenerateInvoicesPage({ loaderData, actionData }: any) {
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
   
-  const [targetType, setTargetType] = useState<"bulk" | "single">("bulk");
+  const [targetType, setTargetType] = useState<"bulk" | "single">(loaderData.initialStudentId ? "single" : "bulk");
 
   if (actionData?.success) {
     return (
@@ -156,6 +158,7 @@ export default function GenerateInvoicesPage({ loaderData, actionData }: any) {
                 <select 
                   name="student_id" 
                   required={targetType === "single"}
+                  defaultValue={loaderData.initialStudentId}
                   className="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-3 text-sm text-slate-200 outline-none focus:border-blue-500 transition"
                 >
                   <option value="">Search or select student...</option>

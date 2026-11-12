@@ -4,6 +4,7 @@
 
 import { Link, useNavigation, useSearchParams } from "react-router";
 import { api, type Invoice, type InvoiceStatus, type PaginationMeta } from "~/lib/api";
+import { fetchAllPages, PrintListButton } from "~/components/PrintListButton";
 
 export async function clientLoader({ request }: { request: Request }) {
   const url = new URL(request.url);
@@ -48,6 +49,25 @@ export default function FinanceInvoicesPage({ loaderData }: { loaderData: { invo
           <p className="text-xs sm:text-sm text-slate-400 mt-1">Issued student bills and balances</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2.5 sm:items-center">
+          <PrintListButton
+            title="Invoice Register"
+            filterSummary={searchParams.get("status") ? `Status: ${searchParams.get("status")}` : "All invoices"}
+            loadRows={() => fetchAllPages((page, per_page) => api.finance.invoices({
+              page,
+              per_page,
+              status: (searchParams.get("status") as InvoiceStatus | null) ?? undefined,
+            }))}
+            columns={[
+              { label: "Invoice", value: (invoice) => invoice.invoice_number },
+              { label: "Student", value: (invoice) => invoice.student?.full_name },
+              { label: "Class", value: (invoice) => invoice.student?.class_room?.name },
+              { label: "Total", value: (invoice) => money(invoice.total) },
+              { label: "Paid", value: (invoice) => money(invoice.amount_paid) },
+              { label: "Balance", value: (invoice) => money(invoice.balance) },
+              { label: "Due", value: (invoice) => invoice.due_date },
+              { label: "Status", value: (invoice) => invoice.status.replaceAll("_", " ") },
+            ]}
+          />
           <select value={searchParams.get("status") ?? ""} onChange={(e) => setParam("status", e.target.value)} className="w-full sm:w-auto rounded-lg border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-slate-200">
             <option value="">All statuses</option>
             <option value="draft">Draft</option>

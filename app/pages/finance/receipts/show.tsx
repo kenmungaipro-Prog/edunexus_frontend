@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 import { api, type Receipt } from "~/lib/api";
+import { PrintTools } from "~/components/PrintTools";
 
 export async function clientLoader({ params }: { params: { id: string } }) {
   const res = await api.finance.receipt(Number(params.id));
@@ -34,6 +35,7 @@ export default function FinanceReceiptShowPage({ loaderData }: { loaderData: { r
 
   return (
     <div className="max-w-5xl space-y-6">
+      <PrintTools title={`Payment Receipt — ${receipt.receipt_number}`} />
       <div>
         <Link to="/finance/receipts" className="text-sm text-slate-400 hover:text-white">← Back to receipts</Link>
         <h1 className="mt-2 text-2xl font-bold text-white">Receipt {receipt.receipt_number}</h1>

@@ -254,16 +254,16 @@ export default function NewClassPage({ loaderData, actionData }: any) {
 
           <div>
             <label className={labelClass}>
-              Capacity <span className="text-red-400">*</span>
+              Capacity <span className="text-slate-500 normal-case">(optional)</span>
             </label>
             <input
               name="capacity"
               type="number"
-              required
               min="1"
               placeholder="e.g. 40"
               className={inputClass}
             />
+            <p className="mt-1.5 text-xs text-slate-500">Leave blank to use the default capacity of 40.</p>
             {errors.capacity && (
               <p className="mt-1.5 text-xs text-red-400 font-medium flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-400" />

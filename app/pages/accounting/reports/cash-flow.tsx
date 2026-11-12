@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { api, type CashFlowData, type CashFlowAccount } from "~/lib/api";
+import { PrintTools } from "~/components/PrintTools";
+import { PrintListButton } from "~/components/PrintListButton";
 
 export async function clientLoader() {
   try {
@@ -16,6 +18,13 @@ function money(value: number | string | null | undefined) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
+}
+
+function accountNameStyle(depth: number) {
+  if (depth === 0) return "font-semibold text-white";
+  if (depth === 1) return "font-medium text-blue-300";
+  if (depth === 2) return "font-medium text-violet-300";
+  return "font-medium text-slate-300";
 }
 
 export default function CashFlowPage({ loaderData }: { loaderData: { report: CashFlowData } }) {
@@ -40,17 +49,34 @@ export default function CashFlowPage({ loaderData }: { loaderData: { report: Cas
 
   return (
     <div className="space-y-6 p-4 sm:p-6 max-w-6xl mx-auto">
+      <PrintTools title="Cash Flow Statement" />
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-white">Cash Flow Statement</h1>
           <p className="text-xs text-slate-400">From {report.from_date} to {report.to_date}</p>
         </div>
-        <button
-          onClick={() => navigate('/accounting/reports')}
-          className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-200"
-        >
-          Back
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <PrintListButton
+            title="Cash Flow Account Register"
+            filterSummary={`${fromDate} to ${toDate}`}
+            loadRows={() => api.accounting.cashFlow({ from_date: fromDate, to_date: toDate }).then((response) => response.data.cash_accounts)}
+            columns={[
+              { label: "Account", value: (account) => account.account_name },
+              { label: "Code", value: (account) => account.account_code },
+              { label: "Starting Balance", value: (account) => money(account.starting_balance) },
+              { label: "Inflows", value: (account) => money(account.inflows) },
+              { label: "Outflows", value: (account) => money(account.outflows) },
+              { label: "Net Change", value: (account) => money(account.net_change) },
+              { label: "Ending Balance", value: (account) => money(account.ending_balance) },
+            ]}
+          />
+          <button
+            onClick={() => navigate('/accounting/reports')}
+            className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-200"
+          >
+            Back
+          </button>
+        </div>
       </div>
 
       <div className="rounded-xl border border-slate-700 bg-slate-800 p-4">
@@ -113,7 +139,11 @@ export default function CashFlowPage({ loaderData }: { loaderData: { report: Cas
             <tbody className="divide-y divide-slate-700/30">
               {report.cash_accounts.map((account: CashFlowAccount) => (
                 <tr key={account.id} className="hover:bg-slate-700/20 transition-colors">
-                  <td className="px-4 py-3 text-slate-200">{account.account_name}</td>
+                  <td className={`px-4 py-3 ${accountNameStyle(account.account_depth)}`}>
+                    <span style={{ paddingLeft: `${account.account_depth * 16}px` }}>
+                      {account.account_depth > 0 ? "↳ " : ""}{account.account_name}
+                    </span>
+                  </td>
                   <td className="px-4 py-3 font-mono text-xs text-slate-400">{account.account_code}</td>
                   <td className="px-4 py-3 text-right text-slate-300">{money(account.starting_balance)}</td>
                   <td className="px-4 py-3 text-right text-slate-300">{money(account.inflows)}</td>

@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 import { api, type FinancePayment } from "~/lib/api";
+import { PrintTools } from "~/components/PrintTools";
 
 export async function clientLoader({ params }: { params: { id: string } }) {
   const res = await api.finance.payment(Number(params.id));
@@ -32,6 +33,7 @@ export default function FinancePaymentShowPage({ loaderData }: { loaderData: { p
 
   return (
     <div className="max-w-5xl space-y-6">
+      <PrintTools title={`Payment Record — ${payment.payment_number}`} />
       <div>
         <Link to="/finance/payments" className="text-sm text-slate-400 hover:text-white">← Back to payments</Link>
         <h1 className="mt-2 text-2xl font-bold text-white">Payment {payment.payment_number}</h1>

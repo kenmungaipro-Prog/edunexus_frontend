@@ -51,6 +51,17 @@ export function validateStudent(data: Record<string, unknown>): ValidationErrors
     }
   }
 
+  if (data.existing_student === true || data.existing_student === "1" || data.existing_student === "true") {
+    const today = new Date();
+    const todayInputValue = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    if (!data.admission_no || !String(data.admission_no).trim()) {
+      errors.admission_no = "Enter the student's official admission number.";
+    }
+    if (!data.admission_date || String(data.admission_date) >= todayInputValue) {
+      errors.admission_date = "An official admission number can only be used when the admission date is before today.";
+    }
+  }
+
   // Conditional parent validation
   const hasParentId = data.parent_id && String(data.parent_id).trim() !== "";
   if (!hasParentId) {
@@ -239,8 +250,6 @@ export function validateClassRoom(data: Record<string, unknown>): ValidationErro
   if (!data.name) errors.name = "Class name is required.";
   if (!data.grade && data.grade !== 0) errors.grade = "Grade is required.";
   if (!data.section) errors.section = "Section is required.";
-  if (!data.capacity && data.capacity !== 0) errors.capacity = "Capacity is required.";
-
   // Grade range validation (1-12)
   if (data.grade !== undefined && data.grade !== "") {
     const grade = Number(data.grade);

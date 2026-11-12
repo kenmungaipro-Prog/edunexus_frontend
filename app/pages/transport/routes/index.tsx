@@ -4,6 +4,7 @@
 import { useState } from "react";
 import { Link, useLoaderData } from "react-router";
 import { api, type TransportRoute } from "~/lib/api";
+import { PrintListButton } from "~/components/PrintListButton";
 
 export async function clientLoader() {
   try {
@@ -52,12 +53,27 @@ export default function RoutesManagementPage() {
           <h1 className="text-2xl font-bold text-white">🗺️ Manage Routes</h1>
           <p className="text-slate-400 text-sm mt-0.5">View, edit, or remove registered routes</p>
         </div>
-        <Link
-          to="/transport/new"
-          className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg text-sm font-semibold hover:opacity-90 transition self-start"
-        >
-          ➕ Add New Route
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <PrintListButton
+            title="Transport Route Register"
+            filterSummary={searchTerm ? `Search: ${searchTerm}` : "All routes"}
+            loadRows={() => Promise.resolve(filtered)}
+            columns={[
+              { label: "Route", value: (route) => route.name },
+              { label: "Vehicle", value: (route) => route.vehicle?.registration_number },
+              { label: "Driver", value: (route) => route.driver?.name },
+              { label: "Stops", value: (route) => route.stops?.map((stop) => stop.name).join(", ") },
+              { label: "Students", value: (route) => route.students_count ?? 0 },
+              { label: "Monthly Fee", value: (route) => `KES ${Number(route.monthly_fee ?? 0).toLocaleString()}` },
+            ]}
+          />
+          <Link
+            to="/transport/new"
+            className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg text-sm font-semibold hover:opacity-90 transition self-start"
+          >
+            ➕ Add New Route
+          </Link>
+        </div>
       </div>
 
       {/* Search Bar */}

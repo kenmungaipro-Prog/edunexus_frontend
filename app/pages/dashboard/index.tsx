@@ -9,66 +9,36 @@ import { useUser } from "~/layouts/dashboard";
  * to ensure all UI components have real database backing.
  */
 export async function clientLoader() {
-  try {
-    const [stats, activity, charts, perf, fees] = await Promise.all([
-      apiService.dashboard.stats(),
-      apiService.dashboard.activity(),
-      apiService.dashboard.charts(),
-      apiService.analytics.gradePerformance(),
-      apiService.analytics.feeAnalytics(),
-    ]);
+  const [stats, activity, charts, fees] = await Promise.all([
+    apiService.dashboard.stats(),
+    apiService.dashboard.activity(),
+    apiService.dashboard.charts(),
+    apiService.analytics.feeAnalytics(),
+  ]);
 
-    return {
-      stats: stats.data,
-      activity: activity.data || [],
-      charts: charts.data,
-      topPerformers: perf.data || [],
-      feeDetails: {
-        paid: fees.data?.paid || 0,
-        pending: fees.data?.pending || 0,
-        overdue: fees.data?.overdue || 0,
-      },
-    };
-  } catch (error) {
-    console.error("Dashboard Sync Failed:", error);
-
-    return {
-      stats: {
-        students: 0,
-        teachers: 0,
-        fee_collected: 0,
-        avg_attendance: 0,
-        upcoming_events: 0,
-        pending_fees: 0,
-        low_attendance: 0,
-        classes_count: 0,
-        my_students_count: 0,
-        total_books: 0,
-        borrowed_books: 0,
-      },
-      activity: [],
-      charts: {
-        enrollment: {},
-        fees: {},
-        attendance: {},
-      },
-      topPerformers: [],
-      feeDetails: {
-        paid: 0,
-        pending: 0,
-        overdue: 0,
-      },
-    };
-  }
+  return {
+    stats: stats.data,
+    activity: activity.data,
+    charts: charts.data,
+    topPerformers: stats.data.top_performers,
+    classDistribution: stats.data.class_distribution,
+    feeDetails: {
+      paid: fees.data.totals.paid,
+      pending: fees.data.totals.pending,
+      overdue: fees.data.totals.overdue,
+    },
+  };
 }
 
 export default function DashboardPage({ loaderData }: Route.ComponentProps) {
-  const { stats, activity, charts, topPerformers, feeDetails } = loaderData;
+  const { stats, activity, charts, topPerformers, classDistribution, feeDetails } = loaderData;
   const { user } = useUser();
   const userRole = user?.role as UserRole;
 
   // --- Calculations for UI Logic ---
-  const totalFees = (feeDetails.paid || 0) + (feeDetails.pending || 0) + (feeDetails.overdue || 0);
+  const classDistributionTotal = classDistribution.reduce((total, entry) => total + entry.students, 0);
+  const enrollmentMax = Math.max(0, ...Object.values(charts.enrollment || {}));
+  const totalFees = feeDetails.paid + feeDetails.pending + feeDetails.overdue;
   const getPercent = (val: number) => (totalFees > 0 ? (val / totalFees) * 100 : 0);
 
   // Role-based dashboard title and subtitle
@@ -113,7 +83,7 @@ export default function DashboardPage({ loaderData }: Route.ComponentProps) {
             />
             <MetricCard 
               title="Avg Attendance" 
-              value={`${stats.avg_attendance || 0}%`} 
+              value={stats.avg_attendance == null ? "—" : `${stats.avg_attendance}%`}
               subText="Current academic month"
               icon="📅"
             />
@@ -135,12 +105,12 @@ export default function DashboardPage({ loaderData }: Route.ComponentProps) {
                 <span className="text-xs bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full border border-blue-500/20">Monthly</span>
               </div>
               <div className="overflow-x-auto pb-2">
-                <div className="flex items-end justify-between gap-2 h-56 px-2 min-w-[450px]">
-                  {Object.entries(charts.enrollment || {}).map(([month, count]: [string, any]) => (
+                {enrollmentMax > 0 ? <div className="flex items-end justify-between gap-2 h-56 px-2 min-w-[450px]">
+                  {Object.entries(charts.enrollment || {}).map(([month, count]) => (
                     <div key={month} className="flex-1 flex flex-col items-center gap-3 group">
                       <div 
                         className="w-full max-w-[40px] rounded-t-md bg-blue-600/20 border-t-2 border-blue-500 group-hover:bg-blue-500/40 transition-all duration-500 relative"
-                        style={{ height: `${Math.max((count / 100) * 100, 5)}%` }}
+                        style={{ height: `${enrollmentMax > 0 ? Math.max((count / enrollmentMax) * 100, count > 0 ? 5 : 0) : 0}%` }}
                       >
                         <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
                           {count} Students
@@ -149,7 +119,7 @@ export default function DashboardPage({ loaderData }: Route.ComponentProps) {
                       <span className="text-[10px] font-bold text-slate-500 uppercase">{month}</span>
                     </div>
                   ))}
-                </div>
+                </div> : <div className="flex h-56 items-center justify-center text-sm text-slate-500">No enrollment records this year.</div>}
               </div>
             </div>
 
@@ -208,17 +178,22 @@ export default function DashboardPage({ loaderData }: Route.ComponentProps) {
             <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-4 sm:p-6">
               <h3 className="font-bold text-white text-base sm:text-lg mb-6">Class Load Distribution</h3>
               <div className="space-y-6">
-                {["Primary", "Secondary", "Higher Secondary"].map((level, i) => (
-                  <div key={level}>
+                {classDistribution.length > 0 ? classDistribution.map((group) => {
+                  const percentage = classDistributionTotal > 0
+                    ? Math.round((group.students / classDistributionTotal) * 100)
+                    : 0;
+                  return (
+                  <div key={group.grade}>
                     <div className="flex justify-between text-xs mb-2">
-                      <span className="text-slate-400 font-medium">{level}</span>
-                      <span className="text-white font-bold">{[45, 32, 23][i]}%</span>
+                      <span className="text-slate-400 font-medium">{group.grade} ({group.classes} classes)</span>
+                      <span className="text-white font-bold">{percentage}%</span>
                     </div>
                     <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-blue-500 rounded-full" style={{ width: `${[45, 32, 23][i]}%` }} />
+                      <div className="h-full bg-blue-500 rounded-full" style={{ width: `${percentage}%` }} />
                     </div>
                   </div>
-                ))}
+                  );
+                }) : <p className="text-sm text-slate-500">No class enrollment data available.</p>}
               </div>
             </div>
 
@@ -364,7 +339,7 @@ export default function DashboardPage({ loaderData }: Route.ComponentProps) {
             />
             <MetricCard 
               title="Avg Attendance" 
-              value={`${stats.avg_attendance || 0}%`} 
+              value={stats.avg_attendance == null ? "—" : `${stats.avg_attendance}%`}
               subText="This month"
               icon="✅"
             />

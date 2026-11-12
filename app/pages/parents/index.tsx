@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { Link, Form, useNavigation } from "react-router";
 import type { Route } from "./+types/index";
 import { api, type ParentProfile, type PaginationMeta, type ParentStats } from "~/lib/api";
+import { fetchAllPages, PrintListButton } from "~/components/PrintListButton";
 
 export async function clientLoader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
@@ -45,7 +46,10 @@ export async function clientAction({ request }: Route.ActionArgs) {
   const intent = form.get("intent") as string;
 
   if (intent === "delete") {
-    await api.parents.delete(Number(form.get("id")));
+    await api.parents.delete(Number(form.get("id")), {
+      delete_linked_students: form.get("delete_linked_students") === "true",
+      delete_other_parents: form.get("delete_other_parents") === "true",
+    });
     return { ok: true, message: "Parent profile removed successfully." };
   }
 
@@ -114,6 +118,30 @@ export default function ParentsIndexPage({ loaderData, actionData }: Route.Compo
           <p style={{ color: "#94a3b8", marginTop: "6px", fontSize: "14px" }}>Manage guardian relationships, accounts, and communications.</p>
         </div>
         <div style={{ display: "flex", gap: "12px", justifyContent: 'flex-end', flexWrap: "wrap", minWidth: 0 }}>
+          <PrintListButton
+            title="Parent / Guardian Register"
+            filterSummary={[
+              filters.search && `Search: ${filters.search}`,
+              filters.status && `Status: ${filters.status}`,
+              filters.has_children === "has" ? "Has children" : filters.has_children === "none" ? "No children" : null,
+            ].filter(Boolean).join(" · ") || "All parents"}
+            loadRows={() => fetchAllPages((page, per_page) => api.parents.list({
+              page,
+              per_page,
+              search: filters.search,
+              status: filters.status,
+              has_children: filters.has_children,
+            }))}
+            columns={[
+              { label: "Parent / Guardian", value: (parent) => parent.user?.name },
+              { label: "Email", value: (parent) => parent.user?.email },
+              { label: "Phone", value: (parent) => parent.phone },
+              { label: "Relationship", value: (parent) => parent.relationship },
+              { label: "Occupation", value: (parent) => parent.occupation },
+              { label: "Children", value: (parent) => parent.children_count ?? 0 },
+              { label: "Status", value: (parent) => parent.user?.status },
+            ]}
+          />
           <Link 
             to="/parents/bulk-sms" 
             style={{ minWidth: 140, maxWidth: 160, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", background: "#1e293b", color: "#f8fafc", padding: "10px 16px", borderRadius: "8px", textDecoration: "none", fontWeight: 600, fontSize: "14px", border: "1px solid #334155", transition: "all 0.2s" }}
@@ -276,9 +304,28 @@ export default function ParentsIndexPage({ loaderData, actionData }: Route.Compo
                     <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", alignItems: "center" }}>
                       <Link to={`/parents/${parent.id}`} style={{ color: "#3b82f6", fontWeight: 600, fontSize: "13px", textDecoration: "none" }}>View</Link>
                       <Link to={`/parents/${parent.id}/edit`} style={{ color: "#10b981", fontWeight: 600, fontSize: "13px", textDecoration: "none" }}>Edit</Link>
-                      <Form method="post" onSubmit={(e) => !confirm('Are you sure you want to completely remove this parent profile?') && e.preventDefault()}>
+                      <Form
+                        method="post"
+                        onSubmit={(event) => {
+                          if (!confirm("Remove this parent account?")) {
+                            event.preventDefault();
+                            return;
+                          }
+                          const deleteLinkedStudents = (parent.children_count ?? parent.children?.length ?? 0) > 0
+                            && confirm(`Also soft-delete the ${parent.children_count ?? parent.children?.length ?? 0} linked student(s)?`);
+                          const deleteOtherParents = deleteLinkedStudents && confirm(
+                            "If any selected student has another linked parent, also deactivate that co-parent account? This may affect access to their other children."
+                          );
+                          const studentsInput = event.currentTarget.elements.namedItem("delete_linked_students") as HTMLInputElement | null;
+                          const parentsInput = event.currentTarget.elements.namedItem("delete_other_parents") as HTMLInputElement | null;
+                          if (studentsInput) studentsInput.value = String(deleteLinkedStudents);
+                          if (parentsInput) parentsInput.value = String(deleteOtherParents);
+                        }}
+                      >
                         <input type="hidden" name="intent" value="delete" />
                         <input type="hidden" name="id" value={parent.id.toString()} />
+                        <input type="hidden" name="delete_linked_students" value="false" />
+                        <input type="hidden" name="delete_other_parents" value="false" />
                         <button type="submit" style={{ background: "none", border: "none", color: "#ef4444", fontWeight: 600, fontSize: "13px", cursor: "pointer", padding: 0 }}>Delete</button>
                       </Form>
                     </div>

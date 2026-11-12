@@ -5,6 +5,7 @@
 import { Link, useSearchParams, useNavigation } from "react-router";
 import type { Route as LibRoute } from "./+types/index";
 import { api, type Book, type PaginationMeta } from "~/lib/api";
+import { fetchAllPages, PrintListButton } from "~/components/PrintListButton";
 
 interface LibraryStats {
   total_titles: number;
@@ -85,9 +86,29 @@ export default function LibraryPage({ loaderData }: LibRoute.ComponentProps) {
           </h1>
           <p className="text-slate-400 text-xs sm:text-sm">Monitor book inventory and circulation</p>
         </div>
-        <Link to="/library/new" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg transition font-medium flex items-center justify-center gap-2 text-sm">
-          ➕ Add Book
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <PrintListButton
+            title="Library Book Register"
+            filterSummary={searchParams.get("search") ? `Search: ${searchParams.get("search")}` : "All books"}
+            loadRows={() => fetchAllPages((page, per_page) => api.library.list({
+              page,
+              per_page,
+              search: searchParams.get("search") || undefined,
+              category: searchParams.get("cat") || undefined,
+            }))}
+            columns={[
+              { label: "Book ID", value: (book) => book.book_id },
+              { label: "Title", value: (book) => book.title },
+              { label: "Author", value: (book) => book.author },
+              { label: "Category", value: (book) => book.category },
+              { label: "Available Copies", value: (book) => book.available_copies },
+              { label: "Total Copies", value: (book) => book.total_copies },
+            ]}
+          />
+          <Link to="/library/new" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg transition font-medium flex items-center justify-center gap-2 text-sm">
+            ➕ Add Book
+          </Link>
+        </div>
       </div>
 
       {/* Analytics Grid */}

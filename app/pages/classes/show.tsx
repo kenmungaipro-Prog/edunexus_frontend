@@ -4,6 +4,7 @@
 import { Link } from "react-router";
 import type { Route } from "./+types/show";
 import { api, type ClassRoom as ApiClassRoom } from "~/lib/api";
+import { PrintTools } from "~/components/PrintTools";
 
 type ClassRoom = ApiClassRoom & {
   students_count: number;
@@ -39,6 +40,7 @@ export default function ClassShowPage({ loaderData }: Route.ComponentProps) {
 
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-8">
+      <PrintTools title={`Class Record — ${classData.name}`} />
       
       {/* ── Breadcrumb & Actions ───────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 bg-slate-900/60 backdrop-blur-xl border border-slate-800/80 p-5 rounded-3xl shadow-xl">

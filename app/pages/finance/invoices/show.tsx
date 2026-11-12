@@ -4,6 +4,7 @@
 import { Link, useNavigation } from "react-router";
 import type { Route } from "./+types/show";
 import { api, type Invoice, type InvoiceItem } from "~/lib/api";
+import { PrintTools } from "~/components/PrintTools";
 
 export async function clientLoader({ params }: Route.LoaderArgs) {
   const res = await api.finance.invoice(Number(params.id));
@@ -64,6 +65,7 @@ export default function InvoiceShowPage({ loaderData }: Route.ComponentProps) {
 
   return (
     <div className={`space-y-6 p-2 sm:p-0 ${navigation.state === "loading" ? "opacity-60" : ""}`}>
+      <PrintTools title={`Invoice — ${invoice.invoice_number}`} />
       {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "16px" }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: "16px" }}>

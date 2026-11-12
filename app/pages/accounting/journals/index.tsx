@@ -5,6 +5,7 @@
 import { Link, useNavigate } from "react-router";
 import { useState } from "react";
 import { accounting, type JournalEntry, type JournalEntryLine, type ChartOfAccount, type JournalEntryStatus } from "~/lib/api";
+import { PrintListButton } from "~/components/PrintListButton";
 
 export async function clientLoader() {
   const [entries, accounts] = await Promise.all([
@@ -80,7 +81,32 @@ export default function JournalEntriesPage({
           <h1 className="text-2xl font-bold text-white tracking-tight">Journal Entries</h1>
           <p className="text-sm text-slate-400 mt-1">General ledger double-entry records</p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2 shrink-0 w-full sm:w-auto">
+        <div className="flex flex-wrap gap-2 shrink-0 w-full sm:w-auto">
+          <PrintListButton
+            title="Journal Entry Register"
+            filterSummary={[
+              search && `Search: ${search}`,
+              statusFilter !== "all" && `Status: ${statusFilter}`,
+            ].filter(Boolean).join(" · ") || "All journal entries"}
+            loadRows={async () => {
+              const response = await accounting.journalEntries();
+              return response.data.filter((entry) => {
+                const matchesSearch =
+                  !search ||
+                  entry.description.toLowerCase().includes(search.toLowerCase()) ||
+                  (entry.reference ?? "").toLowerCase().includes(search.toLowerCase());
+                return matchesSearch && (statusFilter === "all" || entry.status === statusFilter);
+              });
+            }}
+            columns={[
+              { label: "Date", value: (entry) => formatDate(entry.entry_date) },
+              { label: "Reference", value: (entry) => entry.reference },
+              { label: "Description", value: (entry) => entry.description },
+              { label: "Debit", value: (entry) => money(sumLines(entry.lines, "debit")) },
+              { label: "Credit", value: (entry) => money(sumLines(entry.lines, "credit")) },
+              { label: "Status", value: (entry) => entry.status },
+            ]}
+          />
           <Link
             to="/accounting/accounts"
             className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-sm text-slate-200 hover:bg-slate-700 transition-colors text-center"

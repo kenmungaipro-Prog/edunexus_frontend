@@ -1,6 +1,7 @@
 import { Link } from "react-router";
 import type { Route } from "./+types/history";
 import { api, type Book, type BookIssue } from "~/lib/api";
+import { PrintListButton } from "~/components/PrintListButton";
 
 interface LoadedHistory {
   book: Book;
@@ -73,12 +74,27 @@ export default function IssueHistoryPage({ loaderData }: Route.ComponentProps) {
           <h1 className="text-xl font-bold text-white sm:text-2xl">Issue history</h1>
           <p className="mt-1 text-sm text-slate-400">{book.title} · {issues.length} total {issues.length === 1 ? "record" : "records"}</p>
         </div>
-        <Link
-          to={`/library/books/${book.id}`}
-          className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-center text-sm text-slate-300 hover:bg-slate-700"
-        >
-          ← Back to book
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <PrintListButton
+            title={`${book.title} Issue History Register`}
+            loadRows={() => Promise.resolve(issues)}
+            columns={[
+              { label: "Borrower", value: (issue) => issue.member?.name ?? `Member #${issue.member_id}` },
+              { label: "Role", value: (issue) => issue.member?.role },
+              { label: "Issued", value: (issue) => formatDate(issue.issued_at) },
+              { label: "Due", value: (issue) => formatDate(issue.due_date) },
+              { label: "Returned", value: (issue) => formatDate(issue.returned_at) },
+              { label: "Status", value: (issue) => issue.status },
+              { label: "Fine", value: (issue) => `KES ${Number(issue.fine_amount).toLocaleString("en-KE")}` },
+            ]}
+          />
+          <Link
+            to={`/library/books/${book.id}`}
+            className="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-center text-sm text-slate-300 hover:bg-slate-700"
+          >
+            ← Back to book
+          </Link>
+        </div>
       </header>
 
       <section className="overflow-hidden rounded-xl border border-slate-700 bg-slate-800">

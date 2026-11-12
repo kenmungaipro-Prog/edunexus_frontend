@@ -4,6 +4,7 @@
 
 import { Link } from "react-router";
 import { api, type FinancePayment, type Invoice, type Student, type StudentFinanceBalance } from "~/lib/api";
+import { PrintTools } from "~/components/PrintTools";
 
 export async function clientLoader({ params }: { params: { id: string } }) {
   const res = await api.finance.studentStatement(Number(params.id));
@@ -28,6 +29,7 @@ export default function StudentStatementPage({ loaderData }: { loaderData: { stu
 
   return (
     <div className="space-y-6">
+      <PrintTools title={`Student Fee Statement — ${student.full_name}`} />
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <Link to="/finance/dashboard" className="text-sm text-slate-400 hover:text-white">← Back to finance</Link>

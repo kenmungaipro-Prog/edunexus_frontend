@@ -16,6 +16,7 @@ import {
   type StudentStats,
   type ValidationError,
 } from "~/lib/api";
+import { fetchAllPages, PrintListButton } from "~/components/PrintListButton";
 
 // --- Loaders & Actions ---
 
@@ -54,13 +55,20 @@ export async function clientAction({ request }: Route.ActionArgs) {
   try {
     if (intent === "delete") {
       const id = Number(form.get("id"));
-      await api.students.delete(id);
+      await api.students.delete(id, {
+        remove_orphaned_parents: form.get("remove_orphaned_parents") === "true",
+      });
       return { ok: true, message: "Student removed successfully." };
     }
 
     if (intent === "bulk-delete") {
       const ids = form.getAll("ids").map(Number);
-      await Promise.all(ids.map((id) => api.students.delete(id)));
+      const removeOrphanedParents = form.get("remove_orphaned_parents") === "true";
+      for (const id of ids) {
+        await api.students.delete(id, {
+          remove_orphaned_parents: removeOrphanedParents,
+        });
+      }
       return { ok: true, message: `${ids.length} student(s) removed.` };
     }
 
@@ -365,6 +373,25 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
           <p className="text-xs text-slate-400 mt-1">Manage student profiles, academic status, and records</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <PrintListButton
+            title="Student Register"
+            filterSummary={[
+              filters.search && `Search: ${filters.search}`,
+              filters.class_id && `Class: ${classes.find((room) => room.id === filters.class_id)?.name ?? filters.class_id}`,
+              filters.status && `Status: ${filters.status}`,
+              filters.gender && `Gender: ${filters.gender}`,
+            ].filter(Boolean).join(" · ") || "All students"}
+            loadRows={() => fetchAllPages((page, per_page) => api.students.list({ ...filters, page, per_page }))}
+            columns={[
+              { label: "Admission No.", value: (student) => student.admission_no },
+              { label: "Student", value: (student) => student.full_name },
+              { label: "Class", value: (student) => student.class_room?.name },
+              { label: "Gender", value: (student) => student.gender },
+              { label: "Parent / Guardian", value: (student) => student.parent?.name },
+              { label: "Parent Phone", value: (student) => student.parent_phone },
+              { label: "Status", value: (student) => student.status },
+            ]}
+          />
           <button
             onClick={() => setShowImportModal(true)}
             className="px-3.5 py-2 rounded-lg text-xs font-semibold bg-[#1e2640] border border-[#2a3350] text-slate-300 hover:bg-[#252f4e] transition-all"
@@ -502,7 +529,15 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
                   </div>
                   <div className="py-1">
                     <button
-                      onClick={() => { if (confirm(`Remove ${selected.size} student(s)?`)) bulkAction("bulk-delete"); }}
+                      onClick={() => {
+                        if (!confirm(`Remove ${selected.size} student(s)?`)) return;
+                        const removeOrphanedParents = confirm(
+                          "Also deactivate linked parent accounts that have no other active students? Shared parent accounts will be kept."
+                        );
+                        bulkAction("bulk-delete", {
+                          remove_orphaned_parents: String(removeOrphanedParents),
+                        });
+                      }}
                       className="w-full text-left px-4 py-2 text-xs text-rose-400 hover:bg-rose-500/10 transition-colors"
                     >
                       🗑 Delete Selected
@@ -671,10 +706,21 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
                           <Form method="post" className="inline">
                             <input type="hidden" name="intent" value="delete" />
                             <input type="hidden" name="id" value={student.id} />
+                            <input type="hidden" name="remove_orphaned_parents" value="false" />
                             <button
                               type="submit"
                               title="Remove student"
-                              onClick={(e) => { if (!confirm(`Remove ${student.full_name}?`)) e.preventDefault(); }}
+                              onClick={(e) => {
+                                if (!confirm(`Remove ${student.full_name}?`)) {
+                                  e.preventDefault();
+                                  return;
+                                }
+                                const removeOrphanedParents = Boolean(student.parent_id || student.secondary_parent_id) && confirm(
+                                  "Also deactivate linked parent accounts that have no other active students? Shared parent accounts will be kept."
+                                );
+                                const input = e.currentTarget.form?.elements.namedItem("remove_orphaned_parents") as HTMLInputElement | null;
+                                if (input) input.value = String(removeOrphanedParents);
+                              }}
                               className="w-7 h-7 rounded-md bg-rose-500/10 border border-rose-500/20 flex items-center justify-center hover:bg-rose-500/20 transition-all text-xs"
                             >
                               🗑

@@ -5,6 +5,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { api, type TrialBalanceData, type TrialBalanceAccount } from "~/lib/api";
+import { PrintListButton } from "~/components/PrintListButton";
 
 export async function clientLoader() {
   try {
@@ -30,6 +31,28 @@ const accountTypeColors: Record<string, string> = {
   revenue: "text-emerald-400",
   expense: "text-amber-400",
 };
+
+function accountDepth(account: TrialBalanceAccount, accounts: TrialBalanceAccount[]) {
+  const accountsById = new Map(accounts.map((item) => [item.id, item]));
+  const visited = new Set([account.id]);
+  let depth = 0;
+  let parentId = account.parent_account_id;
+
+  while (parentId !== null && accountsById.has(parentId) && !visited.has(parentId)) {
+    visited.add(parentId);
+    depth++;
+    parentId = accountsById.get(parentId)?.parent_account_id ?? null;
+  }
+
+  return depth;
+}
+
+function accountNameStyle(depth: number) {
+  if (depth === 0) return "font-semibold text-white";
+  if (depth === 1) return "font-medium text-blue-300";
+  if (depth === 2) return "font-medium text-violet-300";
+  return "font-medium text-slate-300";
+}
 
 export default function AccountingReportsPage({
   loaderData,
@@ -81,6 +104,19 @@ export default function AccountingReportsPage({
             General ledger trial balance for the selected reporting period.
           </p>
         </div>
+        <PrintListButton
+          title="Trial Balance Register"
+          filterSummary={`${fromDate} to ${toDate}`}
+          loadRows={() => api.accounting.trialBalance({ from_date: fromDate, to_date: toDate }).then((response) => response.data.accounts)}
+          columns={[
+            { label: "Code", value: (account) => account.account_code },
+            { label: "Account", value: (account) => account.account_name },
+            { label: "Type", value: (account) => account.account_type },
+            { label: "Debit", value: (account) => money(account.debit) },
+            { label: "Credit", value: (account) => money(account.credit) },
+            { label: "Balance", value: (account) => money(account.balance) },
+          ]}
+        />
 
         <div className="grid gap-3 sm:grid-cols-[repeat(3,minmax(180px,1fr))]">
           <div>
@@ -171,7 +207,11 @@ export default function AccountingReportsPage({
                     {accounts.map((account) => (
                       <tr key={account.id} className="hover:bg-slate-700/20 transition-colors">
                         <td className="px-4 py-3 font-mono text-xs text-slate-400">{account.account_code}</td>
-                        <td className="px-4 py-3 text-slate-200">{account.account_name}</td>
+                        <td className={`px-4 py-3 ${accountNameStyle(accountDepth(account, accounts))}`}>
+                          <span style={{ paddingLeft: `${accountDepth(account, accounts) * 16}px` }}>
+                            {accountDepth(account, accounts) > 0 ? "↳ " : ""}{account.account_name}
+                          </span>
+                        </td>
                         <td className="px-4 py-3 text-right text-slate-300">{account.debit > 0 ? money(account.debit) : "-"}</td>
                         <td className="px-4 py-3 text-right text-slate-300">{account.credit > 0 ? money(account.credit) : "-"}</td>
                         <td className={`px-4 py-3 text-right font-semibold ${account.balance >= 0 ? "text-white" : "text-red-400"}`}>

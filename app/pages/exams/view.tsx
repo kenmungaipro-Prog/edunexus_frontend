@@ -1,6 +1,8 @@
 import { Link } from "react-router";
 import type { Route } from "./+types/view";
 import { api, type Exam, type Student } from "~/lib/api";
+import { PrintTools } from "~/components/PrintTools";
+import { PrintListButton } from "~/components/PrintListButton";
 
 interface ExamDetails extends Exam {
   class_room?: Exam["class_room"] & { students?: Student[] };
@@ -25,6 +27,7 @@ export default function ViewExamPage({ loaderData }: Route.ComponentProps) {
 
   return (
     <main className="mx-auto max-w-5xl p-4 sm:p-6">
+      <PrintTools title={`Exam — ${exam.title}`} />
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <Link to="/exams" className="text-sm text-slate-400 transition hover:text-white">
           ← Back to exams
@@ -89,10 +92,31 @@ export default function ViewExamPage({ loaderData }: Route.ComponentProps) {
 
       <section className="mt-6 overflow-hidden rounded-xl border border-slate-700 bg-slate-800">
         <div className="border-b border-slate-700 p-5">
-          <h2 className="font-bold text-white">Class roster and marks</h2>
-          <p className="mt-1 text-sm text-slate-400">
-            {students.length} students · {(exam.grades ?? []).length} marks recorded
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-bold text-white">Class roster and marks</h2>
+              <p className="mt-1 text-sm text-slate-400">
+                {students.length} students · {(exam.grades ?? []).length} marks recorded
+              </p>
+            </div>
+            <PrintListButton
+              title={`${exam.title} Class Roster`}
+              filterSummary={`${exam.class_room?.name ?? "Class"} · ${exam.subject?.name ?? "Subject"}`}
+              loadRows={() => Promise.resolve(students)}
+              columns={[
+                { label: "Student", value: (student) => student.full_name },
+                { label: "Admission Number", value: (student) => student.admission_no },
+                { label: "Marks", value: (student) => {
+                  const grade = grades.get(student.id);
+                  return grade ? `${grade.marks_obtained} / ${grade.total_marks}` : "Not entered";
+                } },
+                { label: "Result", value: (student) => {
+                  const grade = grades.get(student.id);
+                  return grade ? `${Number(grade.percentage).toFixed(1)}% · ${grade.letter_grade} · ${grade.status}` : "—";
+                } },
+              ]}
+            />
+          </div>
         </div>
         {students.length === 0 ? (
           <p className="p-6 text-sm text-slate-400">There are no students currently assigned to this class.</p>

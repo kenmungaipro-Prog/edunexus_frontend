@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Link, Form, useRevalidator } from "react-router";
 import type { Route } from "./+types/show";
 import { api, type ParentProfile, type Student } from "~/lib/api";
+import { PrintTools } from "~/components/PrintTools";
 
 export async function clientLoader({ params }: Route.LoaderArgs) {
   const id = Number(params.id);
@@ -17,7 +18,10 @@ export async function clientAction({ request, params }: Route.ActionArgs) {
   const intent = form.get("intent");
 
   if (intent === "delete") {
-    await api.parents.delete(Number(params.id));
+    await api.parents.delete(Number(params.id), {
+      delete_linked_students: form.get("delete_linked_students") === "true",
+      delete_other_parents: form.get("delete_other_parents") === "true",
+    });
     return { redirect: "/parents" };
   }
   return null;
@@ -132,6 +136,7 @@ export default function ParentShowPage({ loaderData }: Route.ComponentProps) {
 
   return (
     <div style={{ color: "#f8fafc", fontFamily: "'Sora', sans-serif", maxWidth: "1000px", margin: "0 auto", padding: "12px", boxSizing: "border-box" }}>
+      <PrintTools title={`Parent Record — ${parent.user?.name ?? "Parent"}`} />
       
       {/* Navigation */}
       <div style={{ marginBottom: "20px" }}>
@@ -155,8 +160,34 @@ export default function ParentShowPage({ loaderData }: Route.ComponentProps) {
           <Link to={`/parents/${parent.id}/edit`} style={{ flex: 1, textAlign: "center", background: "#3b82f6", color: "#ffffff", padding: "10px 16px", borderRadius: "8px", textDecoration: "none", fontWeight: 600, fontSize: "14px" }}>
             Edit Profile
           </Link>
-          <Form method="post" onSubmit={(e) => !confirm("Delete this profile permanent?") && e.preventDefault()} style={{ flex: 1 }}>
+          <Form
+            method="post"
+            onSubmit={(event) => {
+              if (!confirm("Remove this parent account?")) {
+                event.preventDefault();
+                return;
+              }
+              const children = parent.children ?? [];
+              const deleteLinkedStudents = children.length > 0
+                && confirm(`Also soft-delete the ${children.length} linked student(s)?`);
+              const otherParentIds = new Set(
+                children.flatMap((child) => [child.parent, child.secondary_parent])
+                  .filter((childParent) => childParent && childParent.id !== parent.user_id)
+                  .map((childParent) => childParent!.id)
+              );
+              const deleteOtherParents = deleteLinkedStudents && otherParentIds.size > 0 && confirm(
+                `These students share records with ${otherParentIds.size} other parent account(s). Also deactivate those co-parent accounts? This may affect access to their other children.`
+              );
+              const studentsInput = event.currentTarget.elements.namedItem("delete_linked_students") as HTMLInputElement | null;
+              const parentsInput = event.currentTarget.elements.namedItem("delete_other_parents") as HTMLInputElement | null;
+              if (studentsInput) studentsInput.value = String(deleteLinkedStudents);
+              if (parentsInput) parentsInput.value = String(deleteOtherParents);
+            }}
+            style={{ flex: 1 }}
+          >
             <input type="hidden" name="intent" value="delete" />
+            <input type="hidden" name="delete_linked_students" value="false" />
+            <input type="hidden" name="delete_other_parents" value="false" />
             <button type="submit" style={{ width: "100%", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171", padding: "10px 16px", borderRadius: "8px", fontWeight: 600, cursor: "pointer", fontSize: "14px" }}>
               Delete Account
             </button>

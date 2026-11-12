@@ -4,6 +4,7 @@
 
 import { Link, useSearchParams } from "react-router";
 import { api, type Receipt, type PaginationMeta } from "~/lib/api";
+import { fetchAllPages, PrintListButton } from "~/components/PrintListButton";
 
 export async function clientLoader({ request }: { request: Request }) {
   const url = new URL(request.url);
@@ -55,16 +56,37 @@ export default function ReceiptsPage({
             Official payment acknowledgments issued to students
           </p>
         </div>
-        <select
-          value={searchParams.get("status") ?? ""}
-          onChange={(e) => setParam("status", e.target.value)}
-          className="w-full sm:w-auto rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-slate-200"
-        >
-          <option value="">All statuses</option>
-          <option value="issued">Issued</option>
-          <option value="reversed">Reversed</option>
-          <option value="void">Void</option>
-        </select>
+        <div className="flex flex-wrap items-center gap-2">
+          <PrintListButton
+            title="Receipt Register"
+            filterSummary={searchParams.get("status") ? `Status: ${searchParams.get("status")}` : "All receipts"}
+            loadRows={() => fetchAllPages((page, per_page) => api.finance.receipts({
+              page,
+              per_page,
+              status: searchParams.get("status") || undefined,
+            }))}
+            columns={[
+              { label: "Receipt #", value: (receipt) => receipt.receipt_number },
+              { label: "Payment #", value: (receipt) => receipt.payment?.payment_number },
+              { label: "Student", value: (receipt) => receipt.payment?.student?.full_name },
+              { label: "Class", value: (receipt) => receipt.payment?.student?.class_room?.name },
+              { label: "Amount", value: (receipt) => receipt.payment ? money(receipt.payment.amount) : "—" },
+              { label: "Method", value: (receipt) => receipt.payment?.payment_method.replaceAll("_", " ") },
+              { label: "Date", value: (receipt) => date(receipt.receipt_date) },
+              { label: "Status", value: (receipt) => receipt.status },
+            ]}
+          />
+          <select
+            value={searchParams.get("status") ?? ""}
+            onChange={(e) => setParam("status", e.target.value)}
+            className="w-full sm:w-auto rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-slate-200"
+          >
+            <option value="">All statuses</option>
+            <option value="issued">Issued</option>
+            <option value="reversed">Reversed</option>
+            <option value="void">Void</option>
+          </select>
+        </div>
       </div>
 
       {/* Receipts Table */}

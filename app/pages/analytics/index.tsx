@@ -16,12 +16,25 @@ export async function clientLoader() {
     analytics.examPerformance(),
   ]);
 
+  const errorMessage = (result: PromiseSettledResult<unknown>, section: string) => {
+    if (result.status === "fulfilled") return null;
+    console.error(`Unable to load ${section} analytics:`, result.reason);
+    return `${section} analytics could not be loaded.`;
+  };
+
   return {
     overview:   overviewRes.status   === "fulfilled" ? overviewRes.value.data   : null,
     grades:     gradesRes.status     === "fulfilled" ? gradesRes.value.data     : [],
     attendance: attendanceRes.status === "fulfilled" ? attendanceRes.value.data : [],
     fees:       feesRes.status       === "fulfilled" ? feesRes.value.data       : null,
     exams:      examsRes.status      === "fulfilled" ? examsRes.value.data      : null,
+    errors: {
+      overview: errorMessage(overviewRes, "Overview"),
+      grades: errorMessage(gradesRes, "Grade performance"),
+      attendance: errorMessage(attendanceRes, "Attendance"),
+      fees: errorMessage(feesRes, "Fee"),
+      exams: errorMessage(examsRes, "Exam"),
+    },
   };
 }
 
@@ -32,18 +45,17 @@ interface OverviewData {
   avg_attendance: number;
   pass_rate: number;
   fee_collection: number;
-  teacher_rating: number;
 }
 
 interface GradeRow {
   class: string;
   students: number;
-  avg: number;
+  avg: number | null;
 }
 
 interface AttendanceMonth {
   month: string;
-  rate: number;
+  rate: number | null;
 }
 
 interface FeeByType {
@@ -58,6 +70,7 @@ interface FeeData {
   total_collected?: number;
   by_type: FeeByType[];
   by_month: Array<{ month: string; collected: number }>;
+  totals: { paid: number; pending: number; overdue: number };
 }
 
 interface ExamGradeDist {
@@ -85,6 +98,7 @@ interface LoaderData {
   attendance: AttendanceMonth[];
   fees: FeeData | null;
   exams: ExamData | null;
+  errors: Record<string, string | null>;
 }
 
 // ============================================================
@@ -98,7 +112,8 @@ function fmt(n: number | undefined | null, decimals = 1): string {
 const formatKES = (value: number | null | undefined) =>
   `KES ${Number(value || 0).toLocaleString("en-KE", { maximumFractionDigits: 0 })}`;
 
-function barColor(rate: number): string {
+function barColor(rate: number | null): string {
+  if (rate === null) return "linear-gradient(180deg,#64748b,rgba(100,116,139,0.25))";
   if (rate >= 95) return "linear-gradient(180deg,#34d399,rgba(52,211,153,0.25))";
   if (rate >= 90) return "linear-gradient(180deg,#fbbf24,rgba(251,191,36,0.25))";
   return "linear-gradient(180deg,#f87171,rgba(248,113,113,0.25))";
@@ -110,13 +125,13 @@ const FEE_PALETTE = ["#4f8ef7", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#06
 // Page Component
 // ============================================================
 export default function AnalyticsPage({ loaderData }: AnalyticsRoute.ComponentProps) {
-  const { overview, grades, attendance, fees, exams } = loaderData as LoaderData;
+  const { overview, grades, attendance, fees, exams, errors } = loaderData as LoaderData;
 
   // ── KPI cards ─────────────────────────────────────────────
   const kpis = [
     {
       label: "Avg Attendance",
-      val:   `${fmt(overview?.avg_attendance)}%`,
+      val:   overview?.avg_attendance == null ? "—" : `${fmt(overview.avg_attendance)}%`,
       color: "text-blue-400",
       ring:  "ring-blue-500/20",
       bg:    "from-blue-500/10",
@@ -125,99 +140,53 @@ export default function AnalyticsPage({ loaderData }: AnalyticsRoute.ComponentPr
     },
     {
       label: "Pass Rate",
-      val:   `${fmt(overview?.pass_rate)}%`,
+      val:   overview?.pass_rate == null ? "—" : `${fmt(overview.pass_rate)}%`,
       color: "text-emerald-400",
       ring:  "ring-emerald-500/20",
       bg:    "from-emerald-500/10",
-      note:  "Last exams",
+      note:  "All recorded grades",
       icon:  "✅",
     },
     {
       label: "Fee Collection",
-      val:   `${fmt(overview?.fee_collection)}%`,
+      val:   overview?.fee_collection == null ? "—" : `${fmt(overview.fee_collection)}%`,
       color: "text-amber-400",
       ring:  "ring-amber-500/20",
       bg:    "from-amber-500/10",
       note:  "This year",
       icon:  "💰",
     },
-    {
-      label: "Teacher Rating",
-      val:   `${fmt(overview?.teacher_rating)}/5`,
-      color: "text-violet-400",
-      ring:  "ring-violet-500/20",
-      bg:    "from-violet-500/10",
-      note:  "Avg score",
-      icon:  "⭐",
-    },
   ];
 
   // ── Grade performance rows ────────────────────────────────
-  const gradeRows: GradeRow[] = grades?.length
-    ? grades
-    : [
-        { class: "Grade 12", students: 0, avg: 91 },
-        { class: "Grade 11", students: 0, avg: 87 },
-        { class: "Grade 10", students: 0, avg: 84 },
-        { class: "Grade 9",  students: 0, avg: 82 },
-        { class: "Grade 8",  students: 0, avg: 79 },
-        { class: "Grade 7",  students: 0, avg: 76 },
-      ];
+  const gradeRows: GradeRow[] = grades;
 
   // ── Attendance months ─────────────────────────────────────
-  const attMonths: AttendanceMonth[] = attendance?.length
-    ? attendance
-    : ["J","F","M","A","M","J","J","A","S","O","N","D"].map((m, i) => ({
-        month: m,
-        rate: [92,94,91,96,93,89,95,97,94,92,96,91][i],
-      }));
+  const attMonths: AttendanceMonth[] = attendance;
 
   // ── Fee by type ───────────────────────────────────────────
-  const feeByType: FeeByType[] = fees?.by_type?.length
-    ? fees.by_type
-    : [
-        { name: "Tuition Fee",   collected: 0, rate: 78 },
-        { name: "Transport Fee", collected: 0, rate: 62 },
-        { name: "Exam Fee",      collected: 0, rate: 91 },
-        { name: "Library Fee",   collected: 0, rate: 45 },
-      ];
+  const feeByType: FeeByType[] = fees?.by_type ?? [];
 
   // ── Exam stats ────────────────────────────────────────────
-  const examStats = exams?.stats ?? { total: 0, upcoming: 0, ongoing: 0, completed: 0 };
+  const examStats = exams?.stats ?? { total: "—", upcoming: "—", ongoing: "—", completed: "—" };
 
   // ── Exam grade distribution ───────────────────────────────
-  const examGrades: ExamGradeDist[] = exams?.grades?.length
-    ? exams.grades
-    : [
-        { grade: "A+", count: 0, pct: 0, color: "bg-emerald-400" },
-        { grade: "A",  count: 0, pct: 0, color: "bg-blue-400"    },
-        { grade: "B",  count: 0, pct: 0, color: "bg-amber-400"   },
-        { grade: "C",  count: 0, pct: 0, color: "bg-orange-400"  },
-        { grade: "F",  count: 0, pct: 0, color: "bg-red-400"     },
-      ];
+  const examGrades: ExamGradeDist[] = exams?.grades ?? [];
 
   // ── Subject performance ───────────────────────────────────
-  const subjects: ExamSubject[] = exams?.subjects?.length
-    ? exams.subjects
-    : [
-        { name: "Science",     avg: 89.2, pass: 94 },
-        { name: "Mathematics", avg: 87.4, pass: 88 },
-        { name: "English",     avg: 85.1, pass: 96 },
-        { name: "Computer",    avg: 83.8, pass: 91 },
-        { name: "Social St.",  avg: 81.2, pass: 89 },
-      ];
+  const subjects: ExamSubject[] = exams?.subjects ?? [];
 
   // ── Fee donut arcs ─────────────────────────────────────────
-  const feeTotal = feeByType.reduce((sum, f) => sum + (f.collected ?? 0), 0) || 1;
+  const feeTotal = feeByType.reduce((sum, f) => sum + (f.collected ?? 0), 0);
   let arcOffset = 0;
   const CIRC = 238; // 2π×38
-  const arcs = feeByType.slice(0, 6).map((f, i) => {
-    const pct  = feeTotal > 0 ? (f.collected / feeTotal) : (1 / feeByType.length);
+  const arcs = feeTotal > 0 ? feeByType.slice(0, 6).map((f, i) => {
+    const pct  = f.collected / feeTotal;
     const dash = pct * CIRC;
     const arc  = { color: FEE_PALETTE[i], dash, offset: -arcOffset + 60 };
     arcOffset += dash;
     return arc;
-  });
+  }) : [];
 
   const collectionRate = fmt(overview?.fee_collection);
 
@@ -232,7 +201,13 @@ export default function AnalyticsPage({ loaderData }: AnalyticsRoute.ComponentPr
       </div>
 
       {/* ── KPI Strip ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+      {Object.values(errors).some(Boolean) && (
+        <div role="alert" className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+          Some analytics could not be loaded. {Object.values(errors).filter(Boolean).join(" ")}
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6">
         {kpis.map(k => (
           <div
             key={k.label}
@@ -271,9 +246,13 @@ export default function AnalyticsPage({ loaderData }: AnalyticsRoute.ComponentPr
         {/* Grade Performance bars */}
         <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 sm:p-5">
           <h3 className="text-sm font-semibold mb-5 flex items-center gap-2 text-slate-200">
-            <span>📊</span> Performance by Grade
+            <span>📊</span> Performance by Class
           </h3>
-          <div className="space-y-3">
+          {gradeRows.length === 0 ? (
+            <p className="py-8 text-center text-sm text-slate-500">
+              {errors.grades ?? "No class grade data available."}
+            </p>
+          ) : <div className="space-y-3">
             {gradeRows.map(g => (
               <div key={g.class} className="flex items-center gap-3">
                 <div className="text-xs text-slate-400 w-16 sm:w-20 flex-shrink-0 font-mono">{g.class}</div>
@@ -281,19 +260,17 @@ export default function AnalyticsPage({ loaderData }: AnalyticsRoute.ComponentPr
                   <div
                     className="h-full rounded-lg flex items-center px-3 transition-all duration-700"
                     style={{
-                      width: `${Math.min(g.avg, 100)}%`,
+                      width: `${g.avg == null ? 0 : Math.min(g.avg, 100)}%`,
                       background: "linear-gradient(90deg, #3b82f6, #6366f1)",
                     }}
                   >
                     <span className="text-xs font-semibold text-white font-mono">{fmt(g.avg)}%</span>
                   </div>
                 </div>
-                {g.students > 0 && (
-                  <span className="text-xs text-slate-500 w-12 text-right">{g.students}st</span>
-                )}
+                <span className="text-xs text-slate-500 w-12 text-right">{g.students} students</span>
               </div>
             ))}
-          </div>
+          </div>}
         </div>
 
         {/* Monthly Attendance Trend */}
@@ -307,15 +284,20 @@ export default function AnalyticsPage({ loaderData }: AnalyticsRoute.ComponentPr
                 <div
                   className="w-full rounded-t transition-all hover:brightness-125 cursor-pointer"
                   style={{
-                    height: `${Math.max(4, (m.rate / 100) * 100)}%`,
+                    height: `${m.rate == null ? 0 : m.rate}%`,
                     background: barColor(m.rate),
                   }}
-                  title={`${m.month}: ${m.rate}%`}
+                  title={`${m.month}: ${m.rate == null ? "No records" : `${m.rate}%`}`}
                 />
                 <span className="text-[10px] text-slate-500 font-mono">{m.month}</span>
               </div>
             ))}
           </div>
+          {!attMonths.some((month) => month.rate !== null) && (
+            <p className="mt-3 text-center text-xs text-slate-500">
+              {errors.attendance ?? "No attendance records for this year."}
+            </p>
+          )}
           <div className="flex flex-wrap gap-3 mt-3 justify-end text-[11px] sm:text-xs">
             {[["≥95%","text-emerald-400"],["90–95%","text-amber-400"],["<90%","text-red-400"]].map(([l,c]) => (
               <span key={l} className={c}>● {l}</span>
@@ -345,7 +327,7 @@ export default function AnalyticsPage({ loaderData }: AnalyticsRoute.ComponentPr
               </text>
             </svg>
             <div className="space-y-2.5 w-full sm:flex-1">
-              {feeByType.slice(0, 6).map((f, i) => {
+              {feeByType.length > 0 ? feeByType.slice(0, 6).map((f, i) => {
                 const label = f.name ?? f.type ?? `Type ${i + 1}`;
                 return (
                   <div key={label} className="flex items-center gap-2 text-xs">
@@ -354,7 +336,7 @@ export default function AnalyticsPage({ loaderData }: AnalyticsRoute.ComponentPr
                     <span className="font-mono font-semibold" style={{ color: FEE_PALETTE[i] }}>{formatKES(f.collected)}</span>
                   </div>
                 );
-              })}
+              }) : <p className="text-sm text-slate-500">{errors.fees ?? "No fee types available."}</p>}
             </div>
           </div>
         </div>
@@ -374,7 +356,9 @@ export default function AnalyticsPage({ loaderData }: AnalyticsRoute.ComponentPr
                 </tr>
               </thead>
               <tbody>
-                {subjects
+                {subjects.length === 0 ? (
+                  <tr><td colSpan={4} className="py-8 text-center text-sm text-slate-500">{errors.exams ?? "No subject grade data available."}</td></tr>
+                ) : subjects
                   .slice()
                   .sort((a, b) => b.avg - a.avg)
                   .map((s, idx) => (
@@ -395,7 +379,11 @@ export default function AnalyticsPage({ loaderData }: AnalyticsRoute.ComponentPr
           <h3 className="text-sm font-semibold mb-5 flex items-center gap-2 text-slate-200">
             <span>🎓</span> Grade Distribution
           </h3>
-          <div className="space-y-3">
+          {examGrades.length === 0 ? (
+            <p className="py-8 text-center text-sm text-slate-500">
+              {errors.exams ?? "No exam grade distribution available."}
+            </p>
+          ) : <div className="space-y-3">
             {examGrades.map(g => {
               const colorMap: Record<string, string> = {
                 "bg-emerald-400": "#34d399",
@@ -416,7 +404,7 @@ export default function AnalyticsPage({ loaderData }: AnalyticsRoute.ComponentPr
                   <div className="flex-1 h-6 bg-slate-900/60 rounded-lg overflow-hidden">
                     <div
                       className="h-full rounded-lg flex items-center px-2 transition-all duration-700"
-                      style={{ width: `${Math.max(g.pct, 3)}%`, background: hex }}
+                      style={{ width: `${g.pct}%`, background: hex }}
                     >
                       {g.pct >= 8 && (
                         <span className="text-xs font-semibold text-slate-900 font-mono">{g.pct}%</span>
@@ -427,7 +415,7 @@ export default function AnalyticsPage({ loaderData }: AnalyticsRoute.ComponentPr
                 </div>
               );
             })}
-          </div>
+          </div>}
         </div>
 
         {/* Monthly Fee Collection bars */}
@@ -435,12 +423,12 @@ export default function AnalyticsPage({ loaderData }: AnalyticsRoute.ComponentPr
           <h3 className="text-sm font-semibold mb-4 flex items-center gap-2 text-slate-200">
             <span>📈</span> Monthly Fee Collection
           </h3>
-          {fees?.by_month?.length ? (
+          {fees?.by_month?.length && fees.by_month.some((month) => month.collected > 0) ? (
             <>
               <div className="flex items-end gap-1 sm:gap-1.5 h-32">
                 {fees.by_month.map((m) => {
                   const maxVal = Math.max(...fees.by_month.map(x => x.collected), 1);
-                  const heightPct = Math.max(4, (m.collected / maxVal) * 100);
+                  const heightPct = (m.collected / maxVal) * 100;
                   return (
                     <div key={m.month} className="flex-1 flex flex-col items-center gap-1">
                       <div
@@ -462,7 +450,7 @@ export default function AnalyticsPage({ loaderData }: AnalyticsRoute.ComponentPr
             </>
           ) : (
             <div className="h-32 flex items-center justify-center text-slate-600 text-sm">
-              No collection data available
+              {errors.fees ?? "No collection data available"}
             </div>
           )}
         </div>

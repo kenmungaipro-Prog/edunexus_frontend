@@ -5,6 +5,7 @@ import { useRevalidator, Link } from "react-router";
 import { useEffect } from "react";
 import type { Route as TransRoute } from "./+types/index";
 import { api, type ApiResponse, type TransportRoute, type LiveVehicle } from "~/lib/api";
+import { PrintListButton } from "~/components/PrintListButton";
 
 export async function clientLoader() {
   const [routesRes, liveRes] = await Promise.all([
@@ -46,6 +47,18 @@ export default function TransportPage({ loaderData }: TransRoute.ComponentProps)
           <p className="text-slate-400 text-xs sm:text-sm mt-0.5">Real-time fleet tracking and route management</p>
         </div>
         <div className="flex flex-wrap gap-2 sm:gap-3">
+          <PrintListButton
+            title="Transport Route Register"
+            loadRows={() => api.transport.list().then((response) => response.data)}
+            columns={[
+              { label: "Route", value: (route) => route.name },
+              { label: "Vehicle", value: (route) => route.vehicle?.registration_number },
+              { label: "Driver", value: (route) => route.driver?.name },
+              { label: "Stops", value: (route) => route.stops?.map((stop) => stop.name).join(", ") },
+              { label: "Students", value: (route) => route.students_count ?? 0 },
+              { label: "Monthly Fee", value: (route) => `KES ${Number(route.monthly_fee ?? 0).toLocaleString()}` },
+            ]}
+          />
           <button 
             onClick={() => revalidator.revalidate()}
             className="px-3 sm:px-4 py-2 bg-slate-800 text-slate-300 rounded-lg text-xs sm:text-sm font-medium hover:bg-slate-700 transition"

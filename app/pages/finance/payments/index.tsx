@@ -1,5 +1,6 @@
 import { Link, useNavigation, useSearchParams } from "react-router";
 import { api, type FinancePayment, type FinancePaymentStatus, type PaginationMeta, type PaymentMethod } from "~/lib/api";
+import { fetchAllPages, PrintListButton } from "~/components/PrintListButton";
 
 export async function clientLoader({ request }: { request: Request }) {
   const url = new URL(request.url);
@@ -90,6 +91,29 @@ export default function FinancePaymentsPage({ loaderData }: { loaderData: { paym
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <PrintListButton
+            title="Payment Register"
+            filterSummary={[
+              currentMethod && `Method: ${currentMethod}`,
+              currentStatus && `Status: ${currentStatus}`,
+            ].filter(Boolean).join(" · ") || "All payments"}
+            loadRows={() => fetchAllPages((page, per_page) => api.finance.payments({
+              page,
+              per_page,
+              status: (currentStatus as FinancePaymentStatus | null) ?? undefined,
+              method: (currentMethod as PaymentMethod | null) ?? undefined,
+            }))}
+            columns={[
+              { label: "Payment #", value: (payment) => payment.payment_number },
+              { label: "Receipt #", value: (payment) => payment.receipt?.receipt_number },
+              { label: "Student", value: (payment) => payment.student?.full_name },
+              { label: "Method", value: (payment) => payment.payment_method.replaceAll("_", " ") },
+              { label: "Reference", value: (payment) => payment.reference_number },
+              { label: "Amount", value: (payment) => money(payment.amount) },
+              { label: "Date", value: (payment) => date(payment.payment_date) },
+              { label: "Status", value: (payment) => payment.status.replaceAll("_", " ") },
+            ]}
+          />
           <Link 
             to="/finance/payments/mpesa-status" 
             className="flex-1 sm:flex-none text-center rounded-xl border border-slate-700/80 bg-slate-900/80 px-4 py-2.5 text-xs sm:text-sm font-semibold text-slate-200 hover:bg-slate-800 hover:border-slate-600 transition shadow-sm flex items-center justify-center gap-2"

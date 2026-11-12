@@ -5,6 +5,7 @@
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { useState, useEffect } from "react";
 import { api, type FeeStructure, type FeeCategory, type AcademicSession, type ClassRoom, type PaginationMeta } from "~/lib/api";
+import { fetchAllPages, PrintListButton } from "~/components/PrintListButton";
 
 export async function clientLoader({ request }: { request: Request }) {
   const url = new URL(request.url);
@@ -92,12 +93,36 @@ export default function FeeStructuresPage({
             Define billing templates per class, session, and term
           </p>
         </div>
-        <button
-          onClick={() => { setEditingStructure(null); setShowModal(true); }}
-          className="w-full sm:w-auto rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-600 transition-colors"
-        >
-          + Create Structure
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <PrintListButton
+            title="Fee Structure Register"
+            filterSummary={[
+              searchParams.get("status") && `Status: ${searchParams.get("status")}`,
+              searchParams.get("class_id") && `Class: ${classes.find((item) => item.id === Number(searchParams.get("class_id")))?.name ?? searchParams.get("class_id")}`,
+            ].filter(Boolean).join(" · ") || "All fee structures"}
+            loadRows={() => fetchAllPages((page, per_page) => api.finance.feeStructures({
+              page,
+              per_page,
+              status: searchParams.get("status") || undefined,
+              class_id: searchParams.get("class_id") ? Number(searchParams.get("class_id")) : undefined,
+            }))}
+            columns={[
+              { label: "Name", value: (structure) => structure.name },
+              { label: "Class", value: (structure) => structure.class_room?.name ?? "All Classes" },
+              { label: "Session", value: (structure) => structure.session?.name },
+              { label: "Period", value: (structure) => structure.billing_period },
+              { label: "Items", value: (structure) => structure.items?.length ?? 0 },
+              { label: "Total", value: (structure) => money(structure.items?.reduce((sum, item) => sum + Number(item.amount ?? 0), 0)) },
+              { label: "Status", value: (structure) => structure.status },
+            ]}
+          />
+          <button
+            onClick={() => { setEditingStructure(null); setShowModal(true); }}
+            className="w-full sm:w-auto rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-600 transition-colors"
+          >
+            + Create Structure
+          </button>
+        </div>
       </div>
 
       {/* Filters */}

@@ -4,6 +4,7 @@
 import { useState, useEffect, useRef } from "react";
 import type { Route as MsgRoute } from "./+types/index";
 import { apiService, type MessageThread, type Message, type MessageContact } from "~/lib/api";
+import { PrintListButton } from "~/components/PrintListButton";
 
 export async function clientLoader() {
   try {
@@ -140,10 +141,25 @@ export default function MessagesPage({ loaderData }: MsgRoute.ComponentProps) {
       <div className={`w-full md:w-80 flex-shrink-0 bg-slate-800 border border-slate-700 rounded-2xl flex flex-col overflow-hidden shadow-lg shadow-slate-900/20 ${mobileShowChat ? 'hidden md:flex' : 'flex'}`}>
         <div className="p-4 sm:p-5 border-b border-slate-700/80 flex items-center justify-between bg-slate-800">
           <h3 className="font-semibold text-slate-100 text-lg tracking-tight">Messages</h3>
-          <button onClick={() => setShowNewConversation(true)} className="px-3 py-1.5 bg-blue-500/10 text-blue-400 text-xs font-medium rounded-lg hover:bg-blue-500/20 hover:text-blue-300 transition-all flex items-center gap-1.5">
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
-            New
-          </button>
+          <div className="flex items-center gap-2">
+            <PrintListButton
+              title="Conversation Register"
+              filterSummary={searchQuery ? `Search: ${searchQuery}` : "All conversations"}
+              loadRows={() => apiService.messages.threads().then((response) =>
+                response.data.filter((thread) => thread.contact.name.toLowerCase().includes(searchQuery.toLowerCase()))
+              )}
+              columns={[
+                { label: "Contact", value: (thread) => thread.contact.name },
+                { label: "Role", value: (thread) => thread.contact.role },
+                { label: "Last Message Date", value: (thread) => new Date(thread.last_message.created_at).toLocaleString() },
+                { label: "Unread", value: (thread) => thread.unread },
+              ]}
+            />
+            <button onClick={() => setShowNewConversation(true)} className="px-3 py-1.5 bg-blue-500/10 text-blue-400 text-xs font-medium rounded-lg hover:bg-blue-500/20 hover:text-blue-300 transition-all flex items-center gap-1.5">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
+              New
+            </button>
+          </div>
         </div>
         
         <div className="p-3 sm:p-4 border-b border-slate-700/80 bg-slate-800/50">

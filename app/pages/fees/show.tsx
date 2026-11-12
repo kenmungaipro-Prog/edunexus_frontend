@@ -5,6 +5,7 @@
 import { Link, useLoaderData, useParams } from "react-router";
 import { api } from "~/lib/api";
 import type { Fee } from "~/lib/api";
+import { PrintTools } from "~/components/PrintTools";
 
 interface LoaderData {
   fee: Fee & {
@@ -60,8 +61,6 @@ export default function FeeShowPage() {
   const { fee } = useLoaderData<typeof clientLoader>() as unknown as LoaderData;
   const { id } = useParams();
 
-  const handlePrint = () => window.print();
-
   const getStatusStyles = (status?: string) => {
     switch (status?.toLowerCase()) {
       case "paid": return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
@@ -73,6 +72,7 @@ export default function FeeShowPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6 selection:bg-blue-500 selection:text-white">
+      <PrintTools title={`Fee Receipt — ${id}`} />
       <div className="flex items-center justify-between mb-6 print:hidden">
         <div className="flex items-center gap-3 overflow-x-auto whitespace-nowrap">
           <Link to="/fees" className="text-slate-400 hover:text-white text-sm transition-colors flex items-center gap-1.5">
@@ -97,9 +97,6 @@ export default function FeeShowPage() {
             </p>
           </div>
           
-          <button onClick={handlePrint} className="w-full sm:w-auto px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-medium transition shadow-md flex items-center justify-center gap-2 print:hidden">
-            <span>🖨</span> Print Receipt
-          </button>
         </div>
 
         <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 print:p-0 print:pt-6">
