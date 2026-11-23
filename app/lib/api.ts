@@ -122,6 +122,7 @@ export interface AcademicSession {
   name: string;
   start_date: string;
   end_date: string;
+  is_active: boolean;
   is_current: boolean;
 }
 
@@ -138,6 +139,8 @@ export interface ClassRoom {
   students_count?: number;
   occupancy_rate?: number;
   class_teacher?: Teacher | null;
+  subjects?: Subject[];
+  session?: AcademicSession | null;
 }
 
 export interface Subject {
@@ -148,6 +151,80 @@ export interface Subject {
   type: "core" | "elective" | "activity";
   exams_count?: number;
   teachers_count?: number;
+}
+
+export type LessonPlanStatus = "planned" | "taught" | "skipped";
+
+export interface LessonPlan {
+  id: number;
+  class_id: number;
+  subject_id: number;
+  planned_date: string;
+  title: string;
+  objectives: string | null;
+  materials: string | null;
+  activities: string | null;
+  homework: string | null;
+  status: LessonPlanStatus;
+  class_room?: Pick<ClassRoom, "id" | "name">;
+  subject?: Pick<Subject, "id" | "name">;
+  teacher?: { id: number; user?: { id: number; name: string } | null } | null;
+}
+
+export type SchemeOfWorkStatus = "not_started" | "in_progress" | "completed";
+
+export interface SchemeOfWork {
+  id: number;
+  class_id: number;
+  subject_id: number;
+  term_number: number;
+  week_number: number;
+  topic: string;
+  subtopic: string | null;
+  objectives: string | null;
+  activities: string | null;
+  resources: string | null;
+  assessment: string | null;
+  status: SchemeOfWorkStatus;
+  class_room?: Pick<ClassRoom, "id" | "name">;
+  subject?: Pick<Subject, "id" | "name">;
+  teacher?: { id: number; user?: { id: number; name: string } | null } | null;
+}
+
+export type AssignmentStatus = "draft" | "published" | "closed";
+export type AssignmentSubmissionMode = "online" | "offline" | "both";
+export type AssignmentSubmissionStatus = "submitted" | "offline_completed" | "graded";
+
+export interface AssignmentSubmission {
+  id: number;
+  student_id: number;
+  status: AssignmentSubmissionStatus;
+  response_text: string | null;
+  attachment_name: string | null;
+  marks_obtained: number | string | null;
+  feedback: string | null;
+  submitted_at: string | null;
+  student?: Pick<Student, "id" | "first_name" | "last_name" | "full_name">;
+}
+
+export interface Assignment {
+  id: number;
+  class_id: number;
+  subject_id: number;
+  title: string;
+  description: string | null;
+  instructions: string | null;
+  due_at: string;
+  max_score: number | string;
+  submission_mode: AssignmentSubmissionMode;
+  visible_to_parents: boolean;
+  status: AssignmentStatus;
+  attachment_name: string | null;
+  submissions_count?: number;
+  class_room?: Pick<ClassRoom, "id" | "name">;
+  subject?: Pick<Subject, "id" | "name">;
+  teacher?: { id: number; user?: { id: number; name: string } | null } | null;
+  submissions?: AssignmentSubmission[];
 }
 
 export interface Student {
@@ -171,6 +248,7 @@ export interface Student {
   admission_date: string | null;
   religion: string | null;
   category: string | null;
+  has_portal_account?: boolean;
   attendance_percentage: number;
   fee_status: "paid" | "pending" | "overdue";
   parent_phone?: string | null;
@@ -964,6 +1042,37 @@ export interface DashboardStats {
   }>;
 }
 
+export interface TeacherDashboardStats {
+  stats: Pick<DashboardStats, "classes_count" | "my_students_count" | "avg_attendance">;
+  classes: Array<{ id: number; name: string; room: string | null; students_count: number }>;
+  attendance_to_submit: Array<{
+    class_id: number;
+    class_name: string;
+    students_count: number;
+    marked_count: number;
+    pending_count: number;
+  }>;
+  today_schedule: Array<{
+    id: number;
+    class_id: number;
+    class_name: string | null;
+    subject: string | null;
+    room: string | null;
+    start_time: string;
+    end_time: string;
+  }>;
+  upcoming_exams: Array<{
+    id: number;
+    title: string;
+    class_id: number;
+    class_name: string | null;
+    subject: string | null;
+    exam_date: string | null;
+    start_time: string;
+  }>;
+  top_performers: DashboardStats["top_performers"];
+}
+
 export interface ActivityItem {
   type: "fee" | "student" | "attendance" | "event";
   icon: string;
@@ -1005,6 +1114,8 @@ export interface CreateStudentPayload {
   date_of_birth: string;
   gender: "male" | "female" | "other";
   class_id: number;
+  student_email?: string;
+  student_password?: string;
   blood_group?: "A+" | "A-" | "B+" | "B-" | "O+" | "O-" | "AB+" | "AB-";
   address?: string;
   session_id?: number;
@@ -1024,6 +1135,38 @@ export interface CreateStudentPayload {
   secondary_parent_name?: string;
   secondary_parent_email?: string;
   secondary_parent_phone?: string;
+}
+
+export type LessonPlanPayload = Pick<LessonPlan,
+  "class_id" | "subject_id" | "planned_date" | "title"
+> & Partial<Pick<LessonPlan, "objectives" | "materials" | "activities" | "homework" | "status">>;
+
+export type SchemeOfWorkPayload = Pick<SchemeOfWork,
+  "class_id" | "subject_id" | "term_number" | "week_number" | "topic"
+> & Partial<Pick<SchemeOfWork, "subtopic" | "objectives" | "activities" | "resources" | "assessment" | "status">>;
+
+export interface AssignmentPayload {
+  class_id?: number;
+  subject_id?: number;
+  title?: string;
+  description?: string | null;
+  instructions?: string | null;
+  due_at?: string;
+  max_score?: number;
+  submission_mode?: AssignmentSubmissionMode;
+  visible_to_parents?: boolean;
+  status?: AssignmentStatus;
+  attachment?: File;
+}
+
+export interface CreateAssignmentPayload extends AssignmentPayload {
+  class_id: number;
+  subject_id: number;
+  title: string;
+  due_at: string;
+  max_score: number;
+  submission_mode: AssignmentSubmissionMode;
+  status: AssignmentStatus;
 }
 
 export interface AdmissionNumberCheckResult {
@@ -1278,6 +1421,21 @@ http.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
+  const path = new URL(config.url ?? "", window.location.origin).pathname;
+  const sessionScopedRead = /^\/(?:classes|students|attendance|timetable|exams|grades|dashboard)(?:\/|$)/.test(path)
+    || /^\/teachers\/\d+\/timetable$/.test(path)
+    || /^\/analytics\/(?:grades|exams|attendance)(?:\/|$)/.test(path);
+  const selectedSessionId = localStorage.getItem("edunexus_academic_session_id");
+  if (
+    config.method?.toLowerCase() === "get"
+    && sessionScopedRead
+    && selectedSessionId
+    && config.params?.session_id === undefined
+  ) {
+    config.params = { ...config.params, session_id: Number(selectedSessionId) };
+  }
+
   return config;
 });
 
@@ -1356,6 +1514,9 @@ export const dashboard = {
   stats: () =>
     get<ApiResponse<DashboardStats>>("/dashboard/stats"),
 
+  teacherStats: () =>
+    get<ApiResponse<TeacherDashboardStats>>("/dashboard/stats"),
+
   activity: () =>
     get<ApiResponse<ActivityItem[]>>("/dashboard/activity"),
 
@@ -1374,10 +1535,10 @@ export const academicSessions = {
   get: (id: number) =>
     get<ApiResponse<AcademicSession>>(`/academic-sessions/${id}`),
 
-  create: (payload: { name: string; start_date: string; end_date: string; is_active?: boolean }) =>
+  create: (payload: { name: string; start_date: string; end_date: string; is_active?: boolean; is_current?: boolean }) =>
     post<ApiResponse<AcademicSession>>("/academic-sessions", payload),
 
-  update: (id: number, payload: Partial<{ name: string; start_date: string; end_date: string; is_active: boolean }>) =>
+  update: (id: number, payload: Partial<{ name: string; start_date: string; end_date: string; is_active: boolean; is_current: boolean }>) =>
     put<ApiResponse<AcademicSession>>(`/academic-sessions/${id}`, payload),
 
   delete: (id: number) =>
@@ -1671,6 +1832,99 @@ export const exams = {
 
   delete: (id: number) =>
     del<ApiResponse<null>>(`/exams/${id}`),
+};
+
+export const lessonPlans = {
+  list: (filters?: { class_id?: number; subject_id?: number; from?: string; to?: string }) =>
+    get<ApiResponse<LessonPlan[]>>("/lesson-plans", filters as Record<string, unknown>),
+
+  create: (payload: LessonPlanPayload) =>
+    post<ApiResponse<LessonPlan>>("/lesson-plans", payload),
+
+  update: (id: number, payload: Partial<LessonPlanPayload>) =>
+    put<ApiResponse<LessonPlan>>(`/lesson-plans/${id}`, payload),
+
+  delete: (id: number) =>
+    del<ApiResponse<null>>(`/lesson-plans/${id}`),
+};
+
+export const schemesOfWork = {
+  list: (filters?: { class_id?: number; subject_id?: number; term_number?: number }) =>
+    get<ApiResponse<SchemeOfWork[]>>("/schemes-of-work", filters as Record<string, unknown>),
+
+  create: (payload: SchemeOfWorkPayload) =>
+    post<ApiResponse<SchemeOfWork>>("/schemes-of-work", payload),
+
+  update: (id: number, payload: Partial<SchemeOfWorkPayload>) =>
+    put<ApiResponse<SchemeOfWork>>(`/schemes-of-work/${id}`, payload),
+
+  delete: (id: number) =>
+    del<ApiResponse<null>>(`/schemes-of-work/${id}`),
+};
+
+const assignmentFormData = <T extends object>(payload: T): FormData => {
+  const formData = new FormData();
+  for (const [key, value] of Object.entries(payload as Record<string, unknown>)) {
+    if (value !== undefined) {
+      formData.append(
+        key,
+        value === null
+          ? ""
+          : typeof value === "boolean"
+            ? value ? "1" : "0"
+          : typeof File !== "undefined" && value instanceof File
+            ? value
+            : String(value),
+      );
+    }
+  }
+  return formData;
+};
+
+export const assignments = {
+  list: (filters?: { class_id?: number; subject_id?: number; status?: AssignmentStatus }) =>
+    get<ApiResponse<Assignment[]>>("/assignments", filters as Record<string, unknown>),
+
+  get: (id: number) =>
+    get<ApiResponse<Assignment>>(`/assignments/${id}`),
+
+  create: (payload: CreateAssignmentPayload) =>
+    upload<ApiResponse<Assignment>>("/assignments", assignmentFormData(payload)),
+
+  update: (id: number, payload: AssignmentPayload) => {
+    const formData = assignmentFormData(payload);
+    formData.append("_method", "PUT");
+    return upload<ApiResponse<Assignment>>(`/assignments/${id}`, formData);
+  },
+
+  delete: (id: number) =>
+    del<ApiResponse<null>>(`/assignments/${id}`),
+
+  submit: (id: number, payload: { response_text?: string; attachment?: File }) =>
+    upload<ApiResponse<AssignmentSubmission>>(
+      `/assignments/${id}/submissions`,
+      assignmentFormData(payload),
+    ),
+
+  recordSubmission: (
+    assignmentId: number,
+    studentId: number,
+    payload: { offline_completed?: boolean; marks_obtained?: number | null; feedback?: string },
+  ) =>
+    put<ApiResponse<AssignmentSubmission>>(
+      `/assignments/${assignmentId}/submissions/${studentId}`,
+      payload,
+    ),
+
+  downloadAttachment: (id: number) =>
+    get<Blob>(`/assignments/${id}/attachment`, undefined, { responseType: "blob" }),
+
+  downloadSubmission: (assignmentId: number, studentId: number) =>
+    get<Blob>(
+      `/assignments/${assignmentId}/submissions/${studentId}/attachment`,
+      undefined,
+      { responseType: "blob" },
+    ),
 };
 
 // ============================================================
@@ -2363,6 +2617,9 @@ export const apiService = {
   attendance,
   timetable,
   exams,
+  lessonPlans,
+  schemesOfWork,
+  assignments,
   grades,
   fees,
   feeTypes,

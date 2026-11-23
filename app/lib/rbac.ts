@@ -21,7 +21,7 @@ export const ROLE_MENU_ACCESS: Record<UserRole, string[]> = {
   teacher: ["Overview", "Academic", "Communication"],
   librarian: ["Overview", "Administration", "Communication"],
   receptionist: ["Overview", "Academic", "Administration", "Communication"],
-  student: ["Overview", "Communication"],
+  student: ["Overview", "Academic", "Communication"],
   parent: ["Overview", "Parent Portal", "Communication"],
   driver: ["Overview", "Administration", "Communication"],
 };
@@ -139,6 +139,7 @@ function hasMenuItemAccess(role: UserRole, route: string): boolean {
   const routeAccess: Record<string, UserRole[]> = {
     // Overview
     "/": ["superadmin", "admin", "accountant", "teacher", "librarian", "student", "parent"],
+    "/account": ["teacher"],
     "/analytics": ["superadmin", "admin"],
 
     // Academic
@@ -149,6 +150,9 @@ function hasMenuItemAccess(role: UserRole, route: string): boolean {
     "/timetable": ["superadmin", "admin", "teacher"],
     "/attendance": ["superadmin", "admin", "teacher"],
     "/exams": ["superadmin", "admin", "teacher"],
+    "/lesson-plans": ["teacher"],
+    "/schemes-of-work": ["teacher"],
+    "/assignments": ["teacher", "student", "parent"],
 
     // Administration
     "/fees": ["superadmin", "admin"],
@@ -179,6 +183,7 @@ function hasMenuItemAccess(role: UserRole, route: string): boolean {
     "/transport/tracker": ["parent"],
 
     // System
+    "/academic-sessions": ["superadmin", "admin"],
     "/settings": ["superadmin", "admin"],
     "/parents/bulk-sms": ["superadmin", "admin"],
     "/parents/sms-logs": ["superadmin", "admin"],

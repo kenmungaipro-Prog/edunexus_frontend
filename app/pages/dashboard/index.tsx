@@ -1,14 +1,64 @@
-import { Link } from "react-router";
+import { Link, useRevalidator, useRouteError } from "react-router";
 import { apiService } from "~/lib/api";
+import type { DashboardCharts, DashboardStats, TeacherDashboardStats } from "~/lib/api";
 import type { Route } from "./+types/index";
 import { getDashboardTitle, getDashboardSubtitle, type UserRole } from "~/lib/rbac";
 import { useUser } from "~/layouts/dashboard";
+
+const emptyCharts: DashboardCharts = { enrollment: {}, fees: {}, attendance: {} };
 
 /**
  * LOADER: Aggregates data from multiple API services
  * to ensure all UI components have real database backing.
  */
 export async function clientLoader() {
+  const userResponse = await apiService.auth.me();
+  const role = userResponse.data.role;
+
+  if (role === "teacher") {
+    const response = await apiService.dashboard.teacherStats();
+    const teacherData = response.data;
+
+    return {
+      role,
+      teacherData,
+      stats: {
+        students: teacherData.stats.my_students_count,
+        teachers: 0,
+        fee_collected: 0,
+        avg_attendance: teacherData.stats.avg_attendance,
+        upcoming_events: 0,
+        pending_fees: 0,
+        low_attendance: 0,
+        classes_count: teacherData.stats.classes_count,
+        my_students_count: teacherData.stats.my_students_count,
+        total_books: 0,
+        borrowed_books: 0,
+        class_distribution: [],
+        top_performers: teacherData.top_performers,
+      } satisfies DashboardStats,
+      activity: [],
+      charts: emptyCharts,
+      topPerformers: teacherData.top_performers,
+      classDistribution: [],
+      feeDetails: { paid: 0, pending: 0, overdue: 0 },
+    };
+  }
+
+  if (!["admin", "superadmin", "accountant"].includes(role)) {
+    const response = await apiService.dashboard.stats();
+    return {
+      role,
+      teacherData: null,
+      stats: response.data,
+      activity: [],
+      charts: emptyCharts,
+      topPerformers: [],
+      classDistribution: [],
+      feeDetails: { paid: 0, pending: 0, overdue: 0 },
+    };
+  }
+
   const [stats, activity, charts, fees] = await Promise.all([
     apiService.dashboard.stats(),
     apiService.dashboard.activity(),
@@ -17,6 +67,8 @@ export async function clientLoader() {
   ]);
 
   return {
+    role,
+    teacherData: null,
     stats: stats.data,
     activity: activity.data,
     charts: charts.data,
@@ -31,7 +83,7 @@ export async function clientLoader() {
 }
 
 export default function DashboardPage({ loaderData }: Route.ComponentProps) {
-  const { stats, activity, charts, topPerformers, classDistribution, feeDetails } = loaderData;
+  const { stats, activity, charts, topPerformers, classDistribution, feeDetails, teacherData } = loaderData;
   const { user } = useUser();
   const userRole = user?.role as UserRole;
 
@@ -56,12 +108,19 @@ export default function DashboardPage({ loaderData }: Route.ComponentProps) {
         </div>
         <div className="flex items-center justify-between sm:justify-end gap-3">
           <div className="text-left sm:text-right">
-            <p className="text-[10px] sm:text-xs font-bold text-emerald-400 uppercase tracking-widest">System Status</p>
-            <p className="text-[10px] text-slate-500 italic">Last sync: {new Date().toLocaleTimeString()}</p>
+            <p className="text-[10px] sm:text-xs font-bold text-emerald-400 uppercase tracking-widest">Dashboard data</p>
+            <p className="text-[10px] text-slate-500 italic">Loaded at {new Date().toLocaleTimeString()}</p>
           </div>
           <span className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)] animate-pulse shrink-0" />
         </div>
       </div>
+
+      {userRole === "teacher" && teacherData && (
+        <TeacherHome
+          teacherData={teacherData}
+          topPerformers={topPerformers}
+        />
+      )}
 
       {/* Admin/Superadmin Dashboard - Full Stats */}
       {(userRole === "admin" || userRole === "superadmin") && (
@@ -321,73 +380,6 @@ export default function DashboardPage({ loaderData }: Route.ComponentProps) {
         </>
       )}
 
-      {/* Teacher Dashboard - Class & Student Focus */}
-      {userRole === "teacher" && (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-8">
-            <MetricCard 
-              title="My Classes" 
-              value={stats.classes_count || "—"} 
-              subText="Assigned to you"
-              icon="📚"
-            />
-            <MetricCard 
-              title="Total Students" 
-              value={stats.my_students_count || "—"} 
-              subText="All classes"
-              icon="🎓"
-            />
-            <MetricCard 
-              title="Avg Attendance" 
-              value={stats.avg_attendance == null ? "—" : `${stats.avg_attendance}%`}
-              subText="This month"
-              icon="✅"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
-            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-4 sm:p-6">
-              <h3 className="font-bold text-white text-base sm:text-lg mb-6">Top Students</h3>
-              <div className="divide-y divide-slate-800/50">
-                {topPerformers.length > 0 ? topPerformers.slice(0, 5).map((student: any, i: number) => (
-                  <div key={i} className="py-3 sm:py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3 truncate pr-2">
-                      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-blue-400 shrink-0">
-                        {i + 1}
-                      </div>
-                      <p className="text-xs sm:text-sm font-semibold text-slate-200 truncate">{student.name}</p>
-                    </div>
-                    <span className="text-xs sm:text-sm font-mono font-bold text-emerald-400 shrink-0">{student.percentage}%</span>
-                  </div>
-                )) : (
-                  <div className="py-10 text-center text-slate-500 text-sm italic">No student data available</div>
-                )}
-              </div>
-            </div>
-
-            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl flex flex-col h-[350px] sm:h-[400px]">
-              <div className="p-4 sm:p-6 border-b border-slate-800">
-                <h3 className="font-bold text-white text-base sm:text-lg">Quick Links</h3>
-              </div>
-              <div className="flex-1 p-4 sm:p-6 space-y-3 flex flex-col justify-around">
-                <Link to="/attendance" className="block px-4 py-2.5 bg-blue-500/10 text-blue-400 rounded-lg hover:bg-blue-500/20 transition text-sm">
-                  📋 Mark Attendance
-                </Link>
-                <Link to="/exams" className="block px-4 py-2.5 bg-purple-500/10 text-purple-400 rounded-lg hover:bg-purple-500/20 transition text-sm">
-                  📝 Manage Exams
-                </Link>
-                <Link to="/students" className="block px-4 py-2.5 bg-green-500/10 text-green-400 rounded-lg hover:bg-green-500/20 transition text-sm">
-                  🎓 View Students
-                </Link>
-                <Link to="/messages" className="block px-4 py-2.5 bg-amber-500/10 text-amber-400 rounded-lg hover:bg-amber-500/20 transition text-sm">
-                  💬 Messages
-                </Link>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-
       {/* Librarian Dashboard - Library Focus */}
       {userRole === "librarian" && (
         <>
@@ -419,6 +411,171 @@ export default function DashboardPage({ loaderData }: Route.ComponentProps) {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+function TeacherHome({
+  teacherData,
+  topPerformers,
+}: {
+  teacherData: TeacherDashboardStats;
+  topPerformers: DashboardStats["top_performers"];
+}) {
+  const pendingAttendance = teacherData.attendance_to_submit.reduce(
+    (total, item) => total + item.pending_count,
+    0
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <MetricCard title="My Classes" value={teacherData.stats.classes_count} subText="Assigned classes" icon="📚" />
+        <MetricCard title="My Students" value={teacherData.stats.my_students_count} subText="Active enrolments" icon="🎓" />
+        <MetricCard
+          title="Avg Attendance"
+          value={teacherData.stats.avg_attendance == null ? "—" : `${teacherData.stats.avg_attendance}%`}
+          subText="This month, assigned classes"
+          icon="✅"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <section className="rounded-2xl border border-slate-800 bg-slate-900/40 p-4 sm:p-6">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-bold text-white">Today’s classes</h2>
+              <p className="text-sm text-slate-400">{new Date().toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
+            </div>
+            <Link to="/timetable" className="text-sm font-semibold text-blue-400 hover:text-blue-300">Full timetable</Link>
+          </div>
+          {teacherData.today_schedule.length ? (
+            <ol className="space-y-3">
+              {teacherData.today_schedule.map((lesson) => (
+                <li key={lesson.id} className="flex items-center gap-4 rounded-xl border border-slate-800 bg-slate-950/50 p-3">
+                  <div className="min-w-[5.5rem] text-sm font-semibold text-blue-300">
+                    {lesson.start_time}–{lesson.end_time}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold text-slate-100">{lesson.subject || "Lesson"}</p>
+                    <p className="truncate text-xs text-slate-400">{lesson.class_name || "Class"}{lesson.room ? ` · ${lesson.room}` : ""}</p>
+                  </div>
+                  <Link to={`/classes/${lesson.class_id}`} className="shrink-0 rounded-lg bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-700">
+                    Class
+                  </Link>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="rounded-xl border border-dashed border-slate-700 p-6 text-center text-sm text-slate-400">
+              No classes are scheduled for today.
+            </p>
+          )}
+        </section>
+
+        <section className="rounded-2xl border border-slate-800 bg-slate-900/40 p-4 sm:p-6">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-bold text-white">Attendance to submit</h2>
+              <p className="text-sm text-slate-400">{pendingAttendance} student{pendingAttendance === 1 ? "" : "s"} still need a mark</p>
+            </div>
+            <Link to="/attendance" className="text-sm font-semibold text-blue-400 hover:text-blue-300">Attendance history</Link>
+          </div>
+          {teacherData.attendance_to_submit.length ? (
+            <ul className="space-y-3">
+              {teacherData.attendance_to_submit.map((item) => (
+                <li key={item.class_id} className="flex flex-col gap-3 rounded-xl border border-slate-800 bg-slate-950/50 p-3 sm:flex-row sm:items-center">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold text-slate-100">{item.class_name}</p>
+                    <p className="text-xs text-slate-400">{item.marked_count} of {item.students_count} recorded</p>
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-800">
+                      <div className="h-full rounded-full bg-emerald-500" style={{ width: `${item.students_count ? Math.min((item.marked_count / item.students_count) * 100, 100) : 0}%` }} />
+                    </div>
+                  </div>
+                  <Link
+                    to={`/attendance/mark?class_id=${item.class_id}`}
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-center text-sm font-semibold text-white hover:bg-blue-500"
+                  >
+                    {item.pending_count ? "Mark attendance" : "Review"}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="rounded-xl border border-dashed border-slate-700 p-6 text-center text-sm text-slate-400">
+              No assigned classes yet. Ask an administrator to assign your classes.
+            </p>
+          )}
+        </section>
+
+        <section className="rounded-2xl border border-slate-800 bg-slate-900/40 p-4 sm:p-6">
+          <h2 className="mb-4 text-lg font-bold text-white">Upcoming assessments</h2>
+          {teacherData.upcoming_exams.length ? (
+            <ul className="divide-y divide-slate-800">
+              {teacherData.upcoming_exams.map((exam) => (
+                <li key={exam.id} className="flex items-center gap-4 py-3">
+                  <div className="w-16 shrink-0 rounded-lg bg-slate-800 p-2 text-center">
+                    <p className="text-xs font-bold text-blue-300">
+                      {exam.exam_date ? new Date(`${exam.exam_date}T00:00:00`).toLocaleDateString(undefined, { day: "numeric", month: "short" }) : "Date"}
+                    </p>
+                    <p className="text-[10px] text-slate-400">{exam.start_time}</p>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold text-slate-100">{exam.title}</p>
+                    <p className="truncate text-xs text-slate-400">{exam.subject || "Subject"} · {exam.class_name || "Class"}</p>
+                  </div>
+                  <Link to={`/exams/${exam.id}`} className="shrink-0 text-sm font-semibold text-blue-400 hover:text-blue-300">Open</Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-slate-400">No scheduled assessments in the next two weeks.</p>
+          )}
+        </section>
+
+        <section className="rounded-2xl border border-slate-800 bg-slate-900/40 p-4 sm:p-6">
+          <h2 className="mb-4 text-lg font-bold text-white">Student highlights</h2>
+          {topPerformers.length ? (
+            <ul className="divide-y divide-slate-800">
+              {topPerformers.slice(0, 5).map((student, index) => (
+                <li key={student.id} className="flex items-center justify-between gap-3 py-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-800 text-sm font-bold text-blue-300">{index + 1}</span>
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-slate-100">{student.name}</p>
+                      <p className="truncate text-xs text-slate-400">{student.grade_name || "Assigned class"}</p>
+                    </div>
+                  </div>
+                  <span className="shrink-0 font-mono font-bold text-emerald-400">{student.percentage}%</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-slate-400">No assessment results are available for your assigned classes yet.</p>
+          )}
+        </section>
+      </div>
+    </div>
+  );
+}
+
+export function ErrorBoundary() {
+  const error = useRouteError();
+  const revalidator = useRevalidator();
+  const message = error instanceof Error ? error.message : "The dashboard could not load.";
+
+  return (
+    <div role="alert" className="mx-auto max-w-xl rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-slate-100">
+      <h1 className="text-lg font-bold">Dashboard unavailable</h1>
+      <p className="mt-2 text-sm text-slate-300">{message}</p>
+      <button
+        type="button"
+        onClick={() => revalidator.revalidate()}
+        disabled={revalidator.state === "loading"}
+        className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
+      >
+        {revalidator.state === "loading" ? "Retrying…" : "Retry"}
+      </button>
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { Link, Form, useSearchParams, useNavigation } from "react-router";
 import type { Route } from "./+types/index";
 import { api, type ValidationError, type ClassRoom as ApiClassRoom } from "~/lib/api";
 import { PrintListButton } from "~/components/PrintListButton";
+import { useUser } from "~/layouts/dashboard";
 
 interface ClassRoom extends Omit<ApiClassRoom, "class_teacher"> {
   students_count: number;
@@ -74,6 +75,10 @@ function occupancyColor(pct: number) {
 
 export default function ClassesPage({ loaderData }: Route.ComponentProps) {
   const { classes, meta } = loaderData as LoaderData;
+  const { user, selectedSessionId, currentSessionId } = useUser();
+  const canManageClasses = user?.role === "admin"
+    && currentSessionId !== null
+    && selectedSessionId === currentSessionId;
   const [searchParams, setSearchParams] = useSearchParams();
   const navigation = useNavigation();
   const isLoading  = navigation.state === "loading";
@@ -136,15 +141,17 @@ export default function ClassesPage({ loaderData }: Route.ComponentProps) {
               { label: "Capacity", value: (row) => row.capacity },
             ]}
           />
-          <Link
-            to="/classes/new"
-            className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:from-blue-500 hover:to-indigo-500 transition-all text-center shadow-lg shadow-blue-600/25 flex items-center justify-center gap-2 self-start sm:self-auto"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-            </svg>
-            Add New Class
-          </Link>
+          {canManageClasses && (
+            <Link
+              to="/classes/new"
+              className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-sm font-semibold hover:from-blue-500 hover:to-indigo-500 transition-all text-center shadow-lg shadow-blue-600/25 flex items-center justify-center gap-2 self-start sm:self-auto"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+              Add New Class
+            </Link>
+          )}
         </div>
       </div>
 
@@ -234,27 +241,36 @@ export default function ClassesPage({ loaderData }: Route.ComponentProps) {
                     <span className="w-1.5 h-1.5 rounded-full bg-slate-600" />
                     {c.room ? `Room ${c.room}` : "No room assigned"}
                   </p>
+                  {c.session?.name && (
+                    <p className="text-[11px] text-blue-300 mt-1">Session {c.session.name}</p>
+                  )}
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
-                  <Link
-                    to={`/classes/${c.id}/edit`}
-                    className="w-8 h-8 flex items-center justify-center bg-slate-800/80 border border-slate-700/60 text-slate-300 text-xs rounded-xl hover:bg-slate-700 hover:text-white transition-all shadow-sm"
-                    title="Edit class"
-                  >
-                    ✏️
-                  </Link>
-                  <Form method="post" className="inline">
-                    <input type="hidden" name="intent" value="delete" />
-                    <input type="hidden" name="id"     value={c.id}   />
-                    <button
-                      type="submit"
-                      title="Delete class"
-                      className="w-8 h-8 flex items-center justify-center bg-slate-800/80 border border-slate-700/60 text-slate-400 text-xs rounded-xl hover:bg-red-500/20 hover:border-red-500/30 hover:text-red-400 transition-all shadow-sm"
-                      onClick={e => { if (!confirm(`Delete class "${c.name}"? This action cannot be undone.`)) e.preventDefault(); }}
-                    >
-                      ✕
-                    </button>
-                  </Form>
+                  {canManageClasses && c.session?.is_current && (
+                    <>
+                      <Link
+                        to={`/classes/${c.id}/edit`}
+                        className="w-8 h-8 flex items-center justify-center bg-slate-800/80 border border-slate-700/60 text-slate-300 text-xs rounded-xl hover:bg-slate-700 hover:text-white transition-all shadow-sm"
+                        title="Edit class"
+                      >
+                        ✏️
+                      </Link>
+                      <Form method="post" className="inline">
+                        <input type="hidden" name="intent" value="delete" />
+                        <input type="hidden" name="id" value={c.id} />
+                        <button
+                          type="submit"
+                          title="Delete class"
+                          className="w-8 h-8 flex items-center justify-center bg-slate-800/80 border border-slate-700/60 text-slate-400 text-xs rounded-xl hover:bg-red-500/20 hover:border-red-500/30 hover:text-red-400 transition-all shadow-sm"
+                          onClick={event => {
+                            if (!confirm(`Delete class "${c.name}"? This action cannot be undone.`)) event.preventDefault();
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </Form>
+                    </>
+                  )}
                 </div>
               </div>
 

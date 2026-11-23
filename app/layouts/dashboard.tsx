@@ -2,7 +2,7 @@
 // app/layouts/dashboard.tsx — Final Merged Version
 // ============================================================
 import { useCallback, useEffect, useState } from "react";
-import { NavLink, Outlet, Link, redirect, useLocation, useOutletContext } from "react-router";
+import { NavLink, Outlet, Link, redirect, useLocation, useOutletContext, useRevalidator } from "react-router";
 import type { Route } from "./+types/dashboard";
 import { api } from "~/lib/api";
 import { filterNavByRole, type UserRole } from "~/lib/rbac";
@@ -11,7 +11,23 @@ export async function clientLoader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
   try {
     const response = await api.auth.me();
-    return { user: response.data };
+    const user = response.data;
+    const canViewSessions = ["admin", "superadmin", "teacher", "receptionist", "accountant"].includes(user.role);
+    const canSelectSession = user.role === "admin";
+    const sessionsResponse = canViewSessions ? await api.academicSessions.list() : null;
+    const sessions = sessionsResponse?.data ?? [];
+    const currentSessionId = sessions.find((session) => session.is_current)?.id ?? null;
+    const savedSessionId = Number(localStorage.getItem("edunexus_academic_session_id"));
+    const savedSession = sessions.find((session) => session.id === savedSessionId);
+    const selectedSessionId = canSelectSession && savedSession && !savedSession.is_current
+      ? savedSession.id
+      : currentSessionId;
+
+    if (!canSelectSession || !savedSession || savedSession.is_current) {
+      localStorage.removeItem("edunexus_academic_session_id");
+    }
+
+    return { user, sessions, currentSessionId, selectedSessionId };
   } catch (error: any) {
     // Only redirect if we aren't already going to the login page
     // and wipe the token to prevent the infinite redirect loop
@@ -30,6 +46,7 @@ const NAV: { group: string; items: NavItem[] }[] = [
     group: "Overview",
     items: [
       { to: "/",          icon: "🏠",  label: "Dashboard",    end: true },
+      { to: "/account",   icon: "⚙️",  label: "Account Settings" },
       { to: "/analytics", icon: "📊",  label: "Analytics" },
     ],
   },
@@ -44,6 +61,9 @@ const NAV: { group: string; items: NavItem[] }[] = [
       { to: "/timetable",  icon: "📅", label: "Timetable"     },
       { to: "/attendance", icon: "✅", label: "Attendance"    },
       { to: "/exams",      icon: "📝", label: "Exams & Grades"},
+      { to: "/lesson-plans", icon: "📖", label: "Lesson Plans" },
+      { to: "/schemes-of-work", icon: "🗂️", label: "Schemes of Work" },
+      { to: "/assignments", icon: "📝", label: "Assignments" },
     ],
   },
   {
@@ -81,6 +101,7 @@ const NAV: { group: string; items: NavItem[] }[] = [
   {
     group: "Parent Portal",
     items: [
+      { to: "/assignments", icon: "📝", label: "Assignments" },
       { to: "/transport/tracker", icon: "🚌", label: "My Child's Bus" },
       { to: "/portal/analytics", icon: "📊", label: "Child Analytics" },
       { to: "/portal/payments",  icon: "💳", label: "Pay Fees"        },
@@ -116,21 +137,45 @@ const NAV: { group: string; items: NavItem[] }[] = [
   {
     group: "System",
     items: [
+      { to: "/academic-sessions", icon: "📆", label: "Academic Sessions" },
       { to: "/settings", icon: "⚙️", label: "Settings" },
     ],
   },
 ];
 
 export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
-  const { user } = loaderData as { user: any };
+  const { user, sessions, currentSessionId, selectedSessionId } = loaderData as {
+    user: any;
+    sessions: Array<{ id: number; name: string; is_current: boolean }>;
+    currentSessionId: number | null;
+    selectedSessionId: number | null;
+  };
   const [collapsed, setCollapsed] = useState(false);
+  const [activeSessionId, setActiveSessionId] = useState(selectedSessionId);
   const [isMobile, setIsMobile] = useState(() => (typeof window !== "undefined" ? window.innerWidth < 768 : false));
   const [mobileExpanded, setMobileExpanded] = useState(false);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [unreadEventCount, setUnreadEventCount] = useState(0);
   const [unreadMessageCount, setUnreadMessageCount] = useState(0);
   const location = useLocation();
+  const revalidator = useRevalidator();
   const isTransportSection = location.pathname.startsWith("/transport");
+  const canSelectSession = user?.role === "admin";
+  const activeSession = sessions.find((session) => session.id === activeSessionId);
+
+  useEffect(() => {
+    setActiveSessionId(selectedSessionId);
+  }, [selectedSessionId]);
+
+  function changeSession(sessionId: number) {
+    if (sessionId === currentSessionId) {
+      localStorage.removeItem("edunexus_academic_session_id");
+    } else {
+      localStorage.setItem("edunexus_academic_session_id", String(sessionId));
+    }
+    setActiveSessionId(sessionId);
+    revalidator.revalidate();
+  }
 
   const refreshUnreadEventCount = useCallback(async () => {
     try {
@@ -468,15 +513,36 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
 
           {/* Actions */}
           <div className="ml-auto flex items-center gap-2 md:ml-0">
-            <span className="hidden sm:inline-flex" style={{ background: "linear-gradient(135deg,#10b981,#059669)", color: "#fff", fontSize: "11px", fontWeight: 600, padding: "4px 12px", borderRadius: "20px" }}>
-              2024–25
-            </span>
+            {canSelectSession ? (
+              <select
+                aria-label="Academic session"
+                value={activeSessionId ?? ""}
+                onChange={(event) => changeSession(Number(event.target.value))}
+                className="max-w-40 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-200"
+              >
+                {sessions.map((session) => (
+                  <option key={session.id} value={session.id}>
+                    {session.name}{session.is_current ? " (Current)" : ""}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              activeSession?.name && (
+                <span className="hidden sm:inline-flex" style={{ background: "linear-gradient(135deg,#10b981,#059669)", color: "#fff", fontSize: "11px", fontWeight: 600, padding: "4px 12px", borderRadius: "20px" }}>
+                  {activeSession.name}
+                </span>
+              )
+            )}
             <div style={{ width: "38px", height: "38px", background: "#1a2035", border: "1px solid #2a3350", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "16px", position: "relative" }}>
               🔔
             </div>
-            <Link to="/students/new" style={{ width: "38px", height: "38px", background: "linear-gradient(135deg,#4f8ef7,#6366f1)", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: "18px", textDecoration: "none", color: "#fff" }}>
-              ＋
-            </Link>
+            {(user?.role === "admin" || user?.role === "receptionist")
+              && currentSessionId !== null
+              && activeSessionId === currentSessionId && (
+                <Link to="/students/new" aria-label="Add student" style={{ width: "38px", height: "38px", background: "linear-gradient(135deg,#4f8ef7,#6366f1)", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: "18px", textDecoration: "none", color: "#fff" }}>
+                  ＋
+                </Link>
+              )}
           </div>
         </header>
 
@@ -512,7 +578,12 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
 
         {/* Content */}
         <main className="flex-1 overflow-y-auto bg-[#0a0e1a] px-3 py-3 sm:px-4 sm:py-4 md:px-7 md:py-6" style={{ minWidth: 0 }}>
-          <Outlet context={{ user }} />
+          {canSelectSession && activeSessionId !== currentSessionId && activeSession && (
+            <div className="mx-auto mb-4 max-w-7xl rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200" role="status">
+              Viewing {activeSession.name}. Historical academic data is read-only.
+            </div>
+          )}
+          <Outlet context={{ user, selectedSessionId: activeSessionId, currentSessionId }} />
         </main>
       </div>
     </div>
@@ -520,5 +591,9 @@ export default function DashboardLayout({ loaderData }: Route.ComponentProps) {
 }
 
 export function useUser() {
-  return useOutletContext<{ user: { id: number; name: string; email: string; role: string; school?: { name: string } } }>();
+  return useOutletContext<{
+    user: { id: number; name: string; email: string; role: string; school?: { name: string } };
+    selectedSessionId: number | null;
+    currentSessionId: number | null;
+  }>();
 }

@@ -231,6 +231,27 @@ export default function StudentEditPage({ loaderData, actionData }: Route.Compon
           </div>
         </div>
 
+        <div style={s.card} className="responsive-card">
+          <div style={s.sectionTitle}><SectionIcon emoji="🔐" /> Student Portal Account</div>
+          {student.has_portal_account ? (
+            <p style={{ margin: 0, color: "#86efac", fontSize: "13px" }}>This student already has a linked login account.</p>
+          ) : (
+            <>
+              <p style={{ margin: "-8px 0 14px", color: "#94a3b8", fontSize: "12px", lineHeight: 1.5 }}>
+                Optional: create a student login so they can view and submit assignments. Share the initial password securely.
+              </p>
+              <div style={s.grid2} className="responsive-grid-2">
+                <Field label="Student email" error={errors.student_email?.[0]}>
+                  <input name="student_email" type="email" autoComplete="off" placeholder="student@example.com" style={{ ...s.input, ...(errors.student_email ? s.inputError : {}) }} onFocus={focusStyle} onBlur={blurStyle} />
+                </Field>
+                <Field label="Initial password" error={errors.student_password?.[0]}>
+                  <input name="student_password" type="password" autoComplete="new-password" minLength={12} placeholder="At least 12 characters" style={{ ...s.input, ...(errors.student_password ? s.inputError : {}) }} onFocus={focusStyle} onBlur={blurStyle} />
+                </Field>
+              </div>
+            </>
+          )}
+        </div>
+
         {/* Actions */}
         <div style={s.actions} className="responsive-actions">
           <Link to={`/students/${student.id}`} style={s.btnCancel}>Cancel</Link>

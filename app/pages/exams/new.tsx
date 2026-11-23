@@ -7,16 +7,19 @@ import { api } from "~/lib/api";
 import { validateExam } from "~/lib/validation";
 
 export async function clientLoader() {
-  const [classesRes, subjectsRes, teachersRes] = await Promise.all([
+  const [classesRes, subjectsRes, userResponse] = await Promise.all([
     api.classes.list({ per_page: 100 }),
     api.subjects.list(),
-    api.teachers.list({ per_page: 100 }),
+    api.auth.me(),
   ]);
+  const teachersRes = userResponse.data.role === "teacher"
+    ? null
+    : await api.teachers.list({ per_page: 100 });
 
   return {
     classes: classesRes.data,
     subjects: subjectsRes.data,
-    teachers: (teachersRes as any).data?.data || [], 
+    teachers: teachersRes?.data.data ?? [],
   };
 }
 
@@ -196,10 +199,11 @@ export default function NewExamPage({ loaderData, actionData }: Route.ComponentP
             <label className="text-xs font-bold uppercase tracking-widest text-slate-400">Invigilator (Optional)</label>
             <select name="invigilator_id" defaultValue={String(values.invigilator_id ?? "")} aria-invalid={Boolean(fieldError("invigilator_id"))} className={fieldClass("invigilator_id")}>
               <option value="">None / Unassigned</option>
-              {teachers.map((t: any) => (
+              {teachers.map((t) => (
                 <option key={t.id} value={t.id}>{t.user?.name || t.employee_id}</option>
               ))}
             </select>
+            {teachers.length === 0 && <p className="text-xs text-slate-500">Staff assignment is managed by school administrators.</p>}
             {fieldError("invigilator_id") && <p className="text-red-400 text-xs mt-1">{fieldError("invigilator_id")}</p>}
           </div>
           

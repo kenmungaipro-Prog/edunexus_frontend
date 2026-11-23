@@ -19,11 +19,14 @@ import { PrintTools } from "~/components/PrintTools";
 
 export async function clientLoader({ params }: Route.LoaderArgs) {
   const id = Number(params.id);
+  const userResponse = await api.auth.me();
+  const role = userResponse.data.role;
+  const canLoadFeeHistory = role === "admin";
 
   const [studentRes, reportCardRes, feeHistoryRes, attendanceHistoryRes] = await Promise.allSettled([
     api.students.get(id),
     api.students.reportCard(id),
-    api.students.feeHistory(id),
+    canLoadFeeHistory ? api.students.feeHistory(id) : Promise.resolve(null),
     api.students.attendanceHistory(id),
   ]);
 
@@ -33,9 +36,12 @@ export async function clientLoader({ params }: Route.LoaderArgs) {
 
   return {
     student,
+    role,
     reportCard:  reportCardRes.status === "fulfilled"  ? reportCardRes.value.data  : null,
-    feeHistory:  feeHistoryRes.status === "fulfilled"  ? feeHistoryRes.value.data  : null,
-    feeHistoryError: feeHistoryRes.status === "rejected" ? "Fee history could not be loaded. Please try again." : null,
+    feeHistory:  feeHistoryRes.status === "fulfilled"  ? feeHistoryRes.value?.data ?? null : null,
+    feeHistoryError: canLoadFeeHistory && feeHistoryRes.status === "rejected"
+      ? "Fee history could not be loaded. Please try again."
+      : null,
     attendance:  attendanceHistoryRes.status === "fulfilled" ? attendanceHistoryRes.value.data : null,
   };
 }
@@ -148,8 +154,9 @@ function TH({ children }: { children: React.ReactNode }) {
 type TabId = "overview" | "grades" | "fees" | "attendance";
 
 export default function StudentShowPage({ loaderData }: Route.ComponentProps) {
-  const { student, reportCard, feeHistory, feeHistoryError, attendance } = loaderData as {
+  const { student, role, reportCard, feeHistory, feeHistoryError, attendance } = loaderData as {
     student:    Student;
+    role:       User["role"];
     reportCard: { grades: Record<string, Grade[]>; attendance_percentage: number; rank: number | null; total_students: number } | null;
     feeHistory: { fees: Fee[]; invoices: Invoice[]; payments: FinancePayment[]; total_paid: number; total_pending: number; total_overdue: number } | null;
     feeHistoryError: string | null;
@@ -162,6 +169,8 @@ export default function StudentShowPage({ loaderData }: Route.ComponentProps) {
   const [receiptDownloadError, setReceiptDownloadError] = useState("");
   const navigation = useNavigation();
   const deleting   = navigation.state === "submitting";
+  const canManageStudents = role === "admin" || role === "receptionist";
+  const canViewFees = role === "admin";
 
   const statusCfg = STATUS_CONFIG[student.status] ?? STATUS_CONFIG.active;
   const color     = avatarColor(student.full_name);
@@ -207,7 +216,7 @@ export default function StudentShowPage({ loaderData }: Route.ComponentProps) {
   const TABS: { id: TabId; label: string; count?: number }[] = [
     { id: "overview",   label: "Overview" },
     { id: "grades",     label: "Grades",     count: allGrades.length },
-    { id: "fees",       label: "Fees",       count: allFees.length },
+    ...(canViewFees ? [{ id: "fees" as const, label: "Fees", count: allFees.length }] : []),
     { id: "attendance", label: "Attendance", count: allAttendance.length },
   ];
 
@@ -261,7 +270,11 @@ export default function StudentShowPage({ loaderData }: Route.ComponentProps) {
                 color: (attendance?.percentage ?? student.attendance_percentage) >= 90 ? "#34d399" : (attendance?.percentage ?? student.attendance_percentage) >= 75 ? "#fbbf24" : "#f87171",
               },
               { label: "Exams",      value: String(allGrades.length),        color: "#4f8ef7" },
-              { label: "Fee Status", value: student.fee_status,              color: FEE_CONFIG[student.fee_status]?.color ?? "#a0aec0" },
+              ...(canViewFees ? [{
+                label: "Fee Status",
+                value: student.fee_status,
+                color: FEE_CONFIG[student.fee_status]?.color ?? "#a0aec0",
+              }] : []),
             ].map((stat) => (
               <div key={stat.label} style={{ padding: "12px 18px", background: "#0a0e1a", textAlign: "center", minWidth: "75px", flex: 1 }}>
                 <div style={{ fontSize: "17px", fontWeight: 700, color: stat.color, fontFamily: "'JetBrains Mono', monospace", textTransform: "capitalize" }}>{stat.value}</div>
@@ -271,10 +284,12 @@ export default function StudentShowPage({ loaderData }: Route.ComponentProps) {
           </div>
 
           <div style={{ display: "flex", gap: "8px", alignSelf: "center", flexWrap: "wrap" }} className="responsive-hero-actions">
-            <Link to={`/students/${student.id}/edit`} style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "8px 14px", borderRadius: "8px", background: "rgba(79,142,247,0.1)", border: "1px solid rgba(79,142,247,0.25)", color: "#4f8ef7", textDecoration: "none", fontSize: "12px", fontWeight: 700 }}>
-              ✏️ Edit
-            </Link>
-            {!deleteConfirm ? (
+            {canManageStudents && (
+              <Link to={`/students/${student.id}/edit`} style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "8px 14px", borderRadius: "8px", background: "rgba(79,142,247,0.1)", border: "1px solid rgba(79,142,247,0.25)", color: "#4f8ef7", textDecoration: "none", fontSize: "12px", fontWeight: 700 }}>
+                ✏️ Edit
+              </Link>
+            )}
+            {canManageStudents && (!deleteConfirm ? (
               <button onClick={() => setDeleteConfirm(true)} style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "8px 14px", borderRadius: "8px", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171", fontSize: "12px", fontWeight: 700, cursor: "pointer", fontFamily: "'Sora', sans-serif" }}>
                 🗑 Remove
               </button>
@@ -301,7 +316,7 @@ export default function StudentShowPage({ loaderData }: Route.ComponentProps) {
                   Cancel
                 </button>
               </div>
-            )}
+            ))}
           </div>
         </div>
       </Card>

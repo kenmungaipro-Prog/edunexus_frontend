@@ -17,6 +17,7 @@ import {
   type ValidationError,
 } from "~/lib/api";
 import { fetchAllPages, PrintListButton } from "~/components/PrintListButton";
+import { useUser } from "~/layouts/dashboard";
 
 // --- Loaders & Actions ---
 
@@ -253,6 +254,13 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
 
   const actionResult = actionData as { ok?: boolean; message?: string } | undefined;
 
+  const { user, selectedSessionId, currentSessionId } = useUser();
+  const canManageStudents = (user?.role === "admin" || user?.role === "receptionist")
+    && currentSessionId !== null
+    && selectedSessionId === currentSessionId;
+  const canViewFees = user?.role === "admin";
+  const tableColumnCount = 7 + (canManageStudents ? 2 : 0) + (canViewFees ? 1 : 0);
+
   const [searchParams, setSearchParams] = useSearchParams();
   const navigation = useNavigation();
   const submit     = useSubmit();
@@ -343,9 +351,17 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
     try {
       const res = await api.students.list({ ...filters, per_page: 10000, page: 1 });
       const rows = res.data.data;
-      const header = "Admission No,Name,Class,Gender,Status,Attendance %,Fee Status\n";
+      const header = `Admission No,Name,Class,Gender,Status,Attendance %${canViewFees ? ",Fee Status" : ""}\n`;
       const csv = header + rows.map((st: Student) =>
-        [st.admission_no, `"${st.full_name}"`, st.class_room?.name ?? "", st.gender, st.status, st.attendance_percentage, st.fee_status].join(",")
+        [
+          st.admission_no,
+          `"${st.full_name}"`,
+          st.class_room?.name ?? "",
+          st.gender,
+          st.status,
+          st.attendance_percentage,
+          ...(canViewFees ? [st.fee_status] : []),
+        ].join(",")
       ).join("\n");
       const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
       const a = document.createElement("a");
@@ -387,37 +403,43 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
               { label: "Student", value: (student) => student.full_name },
               { label: "Class", value: (student) => student.class_room?.name },
               { label: "Gender", value: (student) => student.gender },
-              { label: "Parent / Guardian", value: (student) => student.parent?.name },
-              { label: "Parent Phone", value: (student) => student.parent_phone },
+              ...(canManageStudents ? [
+                { label: "Parent / Guardian", value: (student: Student) => student.parent?.name },
+                { label: "Parent Phone", value: (student: Student) => student.parent_phone },
+              ] : []),
               { label: "Status", value: (student) => student.status },
             ]}
           />
-          <button
-            onClick={() => setShowImportModal(true)}
-            className="px-3.5 py-2 rounded-lg text-xs font-semibold bg-[#1e2640] border border-[#2a3350] text-slate-300 hover:bg-[#252f4e] transition-all"
-          >
-            📤 Import
-          </button>
+          {canManageStudents && (
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="px-3.5 py-2 rounded-lg text-xs font-semibold bg-[#1e2640] border border-[#2a3350] text-slate-300 hover:bg-[#252f4e] transition-all"
+            >
+              📤 Import
+            </button>
+          )}
           <button
             onClick={handleExportCsv}
             className="px-3.5 py-2 rounded-lg text-xs font-semibold bg-[#1e2640] border border-[#2a3350] text-slate-300 hover:bg-[#252f4e] transition-all"
           >
             📥 Export CSV
           </button>
-          <Link
-            to="/students/new"
-            className="px-3.5 py-2 rounded-lg text-xs font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm hover:opacity-95 transition-all"
-          >
-            ➕ Add Student
-          </Link>
+          {canManageStudents && (
+            <Link
+              to="/students/new"
+              className="px-3.5 py-2 rounded-lg text-xs font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm hover:opacity-95 transition-all"
+            >
+              ➕ Add Student
+            </Link>
+          )}
         </div>
       </div>
 
       {/* Quick stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className={`grid grid-cols-1 sm:grid-cols-2 ${canViewFees ? "lg:grid-cols-4" : "lg:grid-cols-3"} gap-4 mb-6`}>
         <StatCard label="Total Students" value={stats.total} color="text-blue-400" bg="bg-blue-500/10" icon="🎓" />
         <StatCard label="Active" value={stats.active} color="text-emerald-400" bg="bg-emerald-500/10" icon="✅" />
-        <StatCard label="Fee Overdue" value={stats.fee_overdue} color="text-rose-400" bg="bg-rose-500/10" icon="⚠️" />
+        {canViewFees && <StatCard label="Fee Overdue" value={stats.fee_overdue} color="text-rose-400" bg="bg-rose-500/10" icon="⚠️" />}
         <StatCard label="Low Attendance" value={stats.low_attendance} color="text-amber-400" bg="bg-amber-500/10" icon="📉" />
       </div>
 
@@ -501,7 +523,7 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
           </div>
 
           {/* Bulk Action Trigger */}
-          {someSelected && (
+          {canManageStudents && someSelected && (
             <div className="relative col-span-full sm:col-span-1">
               <button
                 onClick={() => setShowBulkMenu((v) => !v)}
@@ -564,24 +586,26 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
           <table className="w-full border-collapse text-xs text-slate-300 min-w-[850px]">
             <thead>
               <tr className="border-b border-[#1e2640] text-slate-400 uppercase text-[11px] font-semibold tracking-wider text-left">
-                <th className="p-3 w-10">
-                  <input
-                    type="checkbox"
-                    checked={allSelected}
-                    onChange={toggleAll}
-                    className="rounded accent-blue-500 cursor-pointer"
-                  />
-                </th>
+                {canManageStudents && (
+                  <th className="p-3 w-10">
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      onChange={toggleAll}
+                      className="rounded accent-blue-500 cursor-pointer"
+                    />
+                  </th>
+                )}
                 {[
                   { key: "first_name",  label: "Student"    },
                   { key: "roll_number", label: "Roll No"    },
                   { key: "class_room",  label: "Class",      sortable: false },
                   { key: "gender",      label: "Gender"     },
                   { key: "attendance",  label: "Attendance", sortable: false },
-                  { key: "fee_status",  label: "Fees",       sortable: false },
+                  ...(canViewFees ? [{ key: "fee_status", label: "Fees", sortable: false }] : []),
                   { key: "status",      label: "Status"     },
                   { key: "created_at",  label: "Joined"     },
-                  { key: "actions",     label: "",           sortable: false },
+                  ...(canManageStudents ? [{ key: "actions", label: "", sortable: false }] : []),
                 ].map((col) => (
                   <th
                     key={col.key}
@@ -603,7 +627,7 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
             <tbody className="divide-y divide-[#141929]">
               {students.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-12 text-slate-500">
+                  <td colSpan={tableColumnCount} className="text-center py-12 text-slate-500">
                     <div className="text-3xl mb-2 opacity-50">🎓</div>
                     {hasFilters ? "No students match the current filters." : "No students found. Add your first student to get started."}
                   </td>
@@ -612,7 +636,7 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
                 students.map((student) => {
                   const isChecked  = selected.has(student.id);
                   const color      = avatarColor(student.full_name);
-                  const feePill    = FEE_PILL[student.fee_status] ?? FEE_PILL.pending;
+                  const feePill    = canViewFees ? FEE_PILL[student.fee_status] ?? FEE_PILL.pending : null;
                   const statusPill = STATUS_PILL[student.status]  ?? STATUS_PILL.active;
 
                   return (
@@ -620,14 +644,16 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
                       key={student.id}
                       className={`hover:bg-white/[0.02] transition-colors ${isChecked ? "bg-blue-500/[0.04]" : ""}`}
                     >
-                      <td className="p-3">
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => toggleOne(student.id)}
-                          className="rounded accent-blue-500 cursor-pointer"
-                        />
-                      </td>
+                      {canManageStudents && (
+                        <td className="p-3">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => toggleOne(student.id)}
+                            className="rounded accent-blue-500 cursor-pointer"
+                          />
+                        </td>
+                      )}
 
                       <td className="p-3">
                         <div className="flex items-center gap-3">
@@ -671,11 +697,13 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
                         <AttendanceBadge pct={student.attendance_percentage} />
                       </td>
 
-                      <td className="p-3">
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border whitespace-nowrap ${feePill.cls}`}>
-                          {feePill.label}
-                        </span>
-                      </td>
+                      {feePill && (
+                        <td className="p-3">
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border whitespace-nowrap ${feePill.cls}`}>
+                            {feePill.label}
+                          </span>
+                        </td>
+                      )}
 
                       <td className="p-3">
                         <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold capitalize border whitespace-nowrap ${statusPill}`}>
@@ -687,7 +715,7 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
                         {new Date(student.created_at).toLocaleDateString("en-KE", { day: "2-digit", month: "short", year: "numeric" })}
                       </td>
 
-                      <td className="p-3">
+                      {canManageStudents && <td className="p-3">
                         <div className="flex items-center gap-1.5">
                           <Link
                             to={`/students/${student.id}`}
@@ -727,7 +755,7 @@ export default function StudentsPage({ loaderData, actionData }: Route.Component
                             </button>
                           </Form>
                         </div>
-                      </td>
+                      </td>}
                     </tr>
                   );
                 })

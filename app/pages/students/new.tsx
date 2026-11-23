@@ -1030,6 +1030,20 @@ export default function NewStudentPage({ loaderData, actionData }: Route.Compone
               <textarea name="address" rows={2} placeholder="Street / City / County" style={{ ...s.textarea, ...(stepErrors.address || errors.address ? s.inputError : {}) }} onFocus={focusStyle} onBlur={blurStyle} />
             </Field>
           </div>
+          <div style={{ marginTop: "20px", padding: "16px", border: "1px solid rgba(79,142,247,0.2)", borderRadius: "10px", background: "rgba(79,142,247,0.04)" }}>
+            <div style={s.sectionTitle}><SectionIcon emoji="🔐" /> Student Portal Account (Optional)</div>
+            <p style={{ margin: "-8px 0 14px", color: "#94a3b8", fontSize: "12px", lineHeight: 1.5 }}>
+              Add both fields to let the student sign in to view and submit assignments. Share the initial password securely.
+            </p>
+            <div style={s.grid2} className="responsive-grid-2">
+              <Field label="Student email" error={errors.student_email?.[0]}>
+                <input name="student_email" type="email" autoComplete="off" placeholder="student@example.com" style={{ ...s.input, ...(errors.student_email ? s.inputError : {}) }} onFocus={focusStyle} onBlur={blurStyle} />
+              </Field>
+              <Field label="Initial password" error={errors.student_password?.[0]}>
+                <input name="student_password" type="password" autoComplete="new-password" minLength={12} placeholder="At least 12 characters" style={{ ...s.input, ...(errors.student_password ? s.inputError : {}) }} onFocus={focusStyle} onBlur={blurStyle} />
+              </Field>
+            </div>
+          </div>
         </div>
 
         {/* Academic Details */}

@@ -8,18 +8,21 @@ interface EditExam extends Exam {
 
 export async function clientLoader({ params }: Route.LoaderArgs) {
   const examId = Number(params.id);
-  const [examResponse, classesResponse, subjectsResponse, teachersResponse] = await Promise.all([
+  const [examResponse, classesResponse, subjectsResponse, userResponse] = await Promise.all([
     api.exams.get(examId),
     api.classes.list({ per_page: 100 }),
     api.subjects.list(),
-    api.teachers.list({ per_page: 100 }),
+    api.auth.me(),
   ]);
+  const teachersResponse = userResponse.data.role === "teacher"
+    ? null
+    : await api.teachers.list({ per_page: 100 });
 
   return {
     exam: examResponse.data as EditExam,
     classes: classesResponse.data,
     subjects: subjectsResponse.data,
-    teachers: teachersResponse.data.data,
+    teachers: teachersResponse?.data.data ?? [],
   };
 }
 
@@ -200,10 +203,18 @@ export default function EditExamPage({ loaderData, actionData }: Route.Component
           </label>
           <label className="space-y-1.5">
             <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Invigilator</span>
-            <select name="invigilator_id" className={inputClass("invigilator_id")} defaultValue={value("invigilator_id", exam.invigilator_id)}>
-              <option value="">No invigilator assigned</option>
-              {teachers.map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.user?.name ?? `Teacher ${teacher.id}`}</option>)}
-            </select>
+            {teachers.length > 0 ? (
+              <select name="invigilator_id" className={inputClass("invigilator_id")} defaultValue={value("invigilator_id", exam.invigilator_id)}>
+                <option value="">No invigilator assigned</option>
+                {teachers.map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.user?.name ?? `Teacher ${teacher.id}`}</option>)}
+              </select>
+            ) : (
+              <>
+                <p className="text-sm text-slate-300">{exam.invigilator?.user?.name ?? "No invigilator assigned"}</p>
+                <input type="hidden" name="invigilator_id" value={exam.invigilator_id ?? ""} />
+                <p className="text-xs text-slate-500">Staff assignment is managed by school administrators.</p>
+              </>
+            )}
             {errors("invigilator_id")}
           </label>
 

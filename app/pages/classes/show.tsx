@@ -5,6 +5,7 @@ import { Link } from "react-router";
 import type { Route } from "./+types/show";
 import { api, type ClassRoom as ApiClassRoom } from "~/lib/api";
 import { PrintTools } from "~/components/PrintTools";
+import { useUser } from "~/layouts/dashboard";
 
 type ClassRoom = ApiClassRoom & {
   students_count: number;
@@ -31,6 +32,8 @@ function occupancyColor(pct: number) {
 
 export default function ClassShowPage({ loaderData }: Route.ComponentProps) {
   const { classData } = loaderData as LoaderData;
+  const { user } = useUser();
+  const canManageClasses = user?.role === "admin";
   
   const activeStudentsCount = classData.active_students_count ?? 0;
   const inactiveStudentsCount = classData.inactive_students_count ?? 0;
@@ -66,12 +69,14 @@ export default function ClassShowPage({ loaderData }: Route.ComponentProps) {
           >
             📅 Timetable
           </Link>
-          <Link
-            to={`/classes/${classData.id}/edit`}
-            className="flex-1 sm:flex-none text-center px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-xs sm:text-sm font-semibold hover:from-blue-500 hover:to-indigo-500 transition-all shadow-lg shadow-blue-600/25 flex items-center justify-center gap-2"
-          >
-            ✏️ Edit Class
-          </Link>
+          {canManageClasses && (
+            <Link
+              to={`/classes/${classData.id}/edit`}
+              className="flex-1 sm:flex-none text-center px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-xs sm:text-sm font-semibold hover:from-blue-500 hover:to-indigo-500 transition-all shadow-lg shadow-blue-600/25 flex items-center justify-center gap-2"
+            >
+              ✏️ Edit Class
+            </Link>
+          )}
         </div>
       </div>
 
@@ -230,12 +235,14 @@ export default function ClassShowPage({ loaderData }: Route.ComponentProps) {
                 <div className="text-4xl mb-3 opacity-40">🤷‍♂️</div>
                 <p className="text-sm text-slate-300 font-medium">No teacher assigned</p>
                 <p className="text-xs text-slate-500 mt-1">Assign a faculty lead to this room.</p>
-                <Link 
-                  to={`/classes/${classData.id}/edit`} 
-                  className="mt-4 inline-block text-xs font-semibold px-4 py-2 rounded-xl bg-blue-600/10 border border-blue-500/20 text-blue-400 hover:bg-blue-600/20 transition-all"
-                >
-                  Assign Teacher
-                </Link>
+                {canManageClasses && (
+                  <Link
+                    to={`/classes/${classData.id}/edit`}
+                    className="mt-4 inline-block text-xs font-semibold px-4 py-2 rounded-xl bg-blue-600/10 border border-blue-500/20 text-blue-400 hover:bg-blue-600/20 transition-all"
+                  >
+                    Assign Teacher
+                  </Link>
+                )}
               </div>
             )}
           </div>

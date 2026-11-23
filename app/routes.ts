@@ -10,6 +10,7 @@ export default [
   // ── Dashboard (authenticated) ───────────────────────────────
   layout("layouts/dashboard.tsx", [
     index("pages/dashboard/index.tsx"),
+    route("account", "pages/account/index.tsx"),
     route("analytics", "pages/analytics/index.tsx"),
 
     // ── Students ──────────────────────────────────────────────
@@ -36,6 +37,11 @@ export default [
     route("teachers/:id/edit", "pages/teachers/edit.tsx"),
     route("teachers/:id/timetable", "pages/teachers/timetable.tsx"),
 
+    // ── Teacher workflows / student and parent assignments ───
+    route("lesson-plans", "pages/lesson-plans/index.tsx"),
+    route("schemes-of-work", "pages/schemes-of-work/index.tsx"),
+    route("assignments", "pages/assignments/index.tsx"),
+
     route("portal/analytics", "pages/portal/analytics/index.tsx"),
     route("portal/payments", "pages/portal/payments/index.tsx"),
 
@@ -44,6 +50,7 @@ export default [
     route("classes/new", "pages/classes/new.tsx"),
     route("classes/:id", "pages/classes/show.tsx"),
     route("classes/:id/edit", "pages/classes/edit.tsx"),
+    route("academic-sessions", "pages/academic-sessions/index.tsx"),
 
     // ── Subjects ──────────────────────────────────────────────
     route("subjects", "pages/subjects/index.tsx"),

@@ -24,6 +24,7 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
 
   try {
     const res = await api.auth.login({ email, password });
+    localStorage.removeItem("edunexus_academic_session_id");
     localStorage.setItem("edunexus_token", res.data.token);
     return redirect("/"); // Native framework redirect
   } catch (err: unknown) {
