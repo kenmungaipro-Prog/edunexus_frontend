@@ -1,9 +1,10 @@
 // ============================================================
-// app/pages/auth/login.tsx
+// app/pages/auth/demo-login.tsx
 // ============================================================
 import { useRef } from "react";
-import { redirect, Form, useActionData, useNavigation } from "react-router";
-import type { Route } from "./+types/login";
+import { Form, Link, redirect, useActionData, useNavigation } from "react-router";
+import { useState } from "react";
+import type { Route } from "./+types/demo-login";
 import { api } from "~/lib/api";
 
 // 1. Guard against authenticated users
@@ -39,7 +40,8 @@ export default function LoginPage() {
   const navigation = useNavigation(); // Automatically tracks loading states
   const emailRef = useRef<HTMLInputElement | null>(null);
   const passwordRef = useRef<HTMLInputElement | null>(null);
-  
+  const [showPassword, setShowPassword] = useState(false);
+
   const demoUsers = [
     { label: "School Admin", email: "admin@greenwood.edu.in", password: "password" },
     { label: "Super Admin", email: "superadmin@edunexus.com", password: "password" },
@@ -71,6 +73,7 @@ export default function LoginPage() {
 
         <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5 sm:p-7 shadow-2xl">
           <h2 className="text-base sm:text-lg font-bold mb-5 sm:mb-6">Sign In</h2>
+          <p className="text-xs text-slate-400 -mt-3 mb-5">Demo accounts for exploring EduNexus.</p>
 
           {/* Displays error returned from clientAction */}
           {actionData?.error && (
@@ -89,21 +92,50 @@ export default function LoginPage() {
                 name="email"
                 defaultValue="admin@greenwood.edu.in"
                 required
+                autoComplete="username"
                 className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 sm:px-4 py-2.5 text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-blue-500 transition"
                 placeholder="admin@school.edu.in"
               />
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-400 mb-2">Password</label>
-              <input
-                ref={passwordRef}
-                type="password"
-                name="password"
-                defaultValue="password"
-                required
-                className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 sm:px-4 py-2.5 text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-blue-500 transition"
-                placeholder="••••••••"
-              />
+              <div className="relative">
+                <input
+                  ref={passwordRef}
+                  id="demo-login-password"
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  defaultValue="password"
+                  required
+                  autoComplete="current-password"
+                  className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 sm:px-4 py-2.5 pr-12 text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-blue-500 transition"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-controls="demo-login-password"
+                  aria-pressed={showPassword}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => setShowPassword((visible) => !visible)}
+                  className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500 rounded"
+                >
+                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+                    {showPassword ? (
+                      <>
+                        <path d="M3 3l18 18" />
+                        <path d="M10.6 10.6a2 2 0 002.8 2.8" />
+                        <path d="M9.9 5.2A10.8 10.8 0 0112 5c6.4 0 10 7 10 7a15.7 15.7 0 01-3.1 3.8M6.2 6.2C3.5 8 2 12 2 12s3.6 7 10 7a10.7 10.7 0 004.1-.8" />
+                      </>
+                    ) : (
+                      <>
+                        <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </>
+                    )}
+                  </svg>
+                </button>
+              </div>
             </div>
 
             <div>
@@ -137,6 +169,11 @@ export default function LoginPage() {
             <p className="text-xs text-slate-400 font-mono truncate">
               admin@greenwood.edu.in / password
             </p>
+          </div>
+          <div className="mt-4 text-center">
+            <Link to="/login" className="text-xs text-blue-300 hover:text-blue-200 underline underline-offset-2">
+              Back to regular sign in
+            </Link>
           </div>
         </div>
       </div>

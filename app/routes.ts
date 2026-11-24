@@ -4,7 +4,7 @@ export default [
   // ── Guest (unauthenticated) ─────────────────────────────────
   layout("layouts/guest.tsx", [
     route("login", "pages/auth/login.tsx"),
-    route("login2", "pages/auth/logi.tsx"),
+    route("demo-login", "pages/auth/demo-login.tsx"),
   ]),
 
   // ── Dashboard (authenticated) ───────────────────────────────
