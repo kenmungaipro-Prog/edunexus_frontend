@@ -1260,6 +1260,7 @@ export interface CreateTeacherPayload {
   join_date?: string;
   salary?: number;
   subjects?: number[];
+  classroom_ids?: number[];
   bio?: string;
   password?: string;
   status?: "active" | "inactive" | "on_leave";
@@ -1281,6 +1282,7 @@ export interface UpdateTeacherPayload {
   bio?: string;
   status?: "active" | "inactive" | "on_leave";
   subjects?: number[];
+  classroom_ids?: number[];
 }
 
 

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Form, useSubmit, useActionData, useNavigation } from "react-router";
 import type { Route as TTRoute } from "./+types/index";
-import { apiService, type TimetableSlot, type ClassRoom, type Subject, type Teacher } from "~/lib/api";
+import { apiService, type TimetableSlot, type ClassRoom, type Subject, type Teacher, type User } from "~/lib/api";
 import { PrintTools } from "~/components/PrintTools";
 import { PrintListButton } from "~/components/PrintListButton";
 
@@ -58,22 +58,50 @@ function normalizeListData<T>(response: any): T[] {
   return [];
 }
 
-export async function clientLoader() {
-  try {
-    const [classesRes, subjectsRes, teachersRes] = await Promise.all([
+type TimetableLoaderData = {
+  user: User;
+  classes: ClassRoom[];
+  subjects: Subject[];
+  teachers: Teacher[];
+  teacherTimetable: Record<string, TimetableSlot[]> | null;
+};
+
+export async function clientLoader(): Promise<TimetableLoaderData> {
+  const userResponse = await apiService.auth.me();
+  const user = userResponse.data;
+
+  if (user.role === "teacher") {
+    const [classesResponse, timetableResponse] = await Promise.all([
       apiService.classes.list({ per_page: 100 }),
-      apiService.subjects.list(),
-      apiService.teachers.list({ per_page: 100 }),
+      apiService.timetable.list(),
     ]);
+    const classes = normalizeListData<ClassRoom>(classesResponse);
+    const subjects = Array.from(
+      new Map(classes.flatMap((classRoom) => classRoom.subjects ?? []).map((subject) => [subject.id, subject])).values(),
+    );
+
     return {
-      classes: normalizeListData<ClassRoom>(classesRes),
-      subjects: normalizeListData<Subject>(subjectsRes),
-      teachers: normalizeListData<Teacher>(teachersRes),
+      user,
+      classes,
+      subjects,
+      teachers: [],
+      teacherTimetable: timetableResponse.data ?? {},
     };
-  } catch (error) {
-    console.error("Loader failed:", error);
-    return { classes: [], subjects: [], teachers: [] };
   }
+
+  const [classesResponse, subjectsResponse, teachersResponse] = await Promise.all([
+    apiService.classes.list({ per_page: 100 }),
+    apiService.subjects.list(),
+    apiService.teachers.list({ per_page: 100 }),
+  ]);
+
+  return {
+    user,
+    classes: normalizeListData<ClassRoom>(classesResponse),
+    subjects: normalizeListData<Subject>(subjectsResponse),
+    teachers: normalizeListData<Teacher>(teachersResponse),
+    teacherTimetable: null,
+  };
 }
 
 export async function clientAction({ request }: TTRoute.ClientActionArgs) {
@@ -228,6 +256,153 @@ function ClassSelectorDropdown({
 // --- Main Component ---
 
 export default function TimetablePage({ loaderData }: TTRoute.ComponentProps) {
+  if (loaderData.user.role === "teacher") {
+    return (
+      <TeacherTimetableView
+        teacherName={loaderData.user.name}
+        classes={loaderData.classes}
+        subjects={loaderData.subjects}
+        timetable={loaderData.teacherTimetable ?? {}}
+      />
+    );
+  }
+
+  return <AdminTimetablePage loaderData={loaderData} />;
+}
+
+function TeacherTimetableView({
+  teacherName,
+  classes,
+  subjects,
+  timetable,
+}: {
+  teacherName: string;
+  classes: ClassRoom[];
+  subjects: Subject[];
+  timetable: Record<string, TimetableSlot[]>;
+}) {
+  const [selectedClassId, setSelectedClassId] = useState("");
+  const [selectedSubjectId, setSelectedSubjectId] = useState("");
+  const [selectedDay, setSelectedDay] = useState("");
+
+  const rows = Object.entries(timetable)
+    .flatMap(([day, slots]) => slots.map((slot) => ({ day: Number(day), slot })))
+    .filter(({ day, slot }) =>
+      (!selectedClassId || slot.class_id === Number(selectedClassId))
+      && (!selectedSubjectId || slot.subject_id === Number(selectedSubjectId))
+      && (!selectedDay || day === Number(selectedDay))
+    )
+    .sort((left, right) =>
+      left.day - right.day || left.slot.period_number - right.slot.period_number
+    );
+
+  return (
+    <main className="mx-auto max-w-7xl space-y-6 p-4 text-slate-100 sm:p-6">
+      <header>
+        <h1 className="text-2xl font-bold">My Timetable</h1>
+        <p className="mt-1 text-sm text-slate-400">Your assigned classes and scheduled periods, {teacherName}.</p>
+      </header>
+
+      {classes.length === 0 ? (
+        <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-200">
+          You have no class assignments in the current academic session. Ask an administrator to assign your classes.
+        </p>
+      ) : (
+        <>
+          <section aria-label="Timetable filters" className="grid gap-3 rounded-xl border border-slate-800 bg-slate-900 p-4 sm:grid-cols-3">
+            <label className="space-y-1 text-xs font-medium text-slate-400">
+              Class
+              <select
+                aria-label="Filter timetable by class"
+                value={selectedClassId}
+                onChange={(event) => {
+                  setSelectedClassId(event.target.value);
+                  setSelectedSubjectId("");
+                }}
+                className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="">All assigned classes</option>
+                {classes.map((classRoom) => (
+                  <option key={classRoom.id} value={classRoom.id}>
+                    {classRoom.name}{classRoom.section ? ` (${classRoom.section})` : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="space-y-1 text-xs font-medium text-slate-400">
+              Subject
+              <select
+                aria-label="Filter timetable by subject"
+                value={selectedSubjectId}
+                onChange={(event) => setSelectedSubjectId(event.target.value)}
+                className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="">All assigned subjects</option>
+                {subjects.map((subject) => (
+                  <option key={subject.id} value={subject.id}>{subject.name}</option>
+                ))}
+              </select>
+            </label>
+
+            <label className="space-y-1 text-xs font-medium text-slate-400">
+              Day
+              <select
+                aria-label="Filter timetable by day"
+                value={selectedDay}
+                onChange={(event) => setSelectedDay(event.target.value)}
+                className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="">All days</option>
+                {DAYS.map((day) => <option key={day.id} value={day.id}>{day.label}</option>)}
+              </select>
+            </label>
+          </section>
+
+          {rows.length === 0 ? (
+            <p className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm text-slate-400">
+              No timetable periods match these filters. If your schedule is not set up yet, ask an administrator to add it.
+            </p>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900">
+              <table className="w-full min-w-[640px] divide-y divide-slate-800 text-left text-sm">
+                <thead className="bg-slate-800/60 text-xs uppercase text-slate-400">
+                  <tr>
+                    <th className="px-4 py-3">Day</th>
+                    <th className="px-4 py-3">Time</th>
+                    <th className="px-4 py-3">Class</th>
+                    <th className="px-4 py-3">Subject</th>
+                    <th className="px-4 py-3">Period</th>
+                    <th className="px-4 py-3">Room</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/80">
+                  {rows.map(({ day, slot }) => {
+                    const classRoom = classes.find((item) => item.id === slot.class_id);
+                    return (
+                      <tr key={slot.id} className="text-slate-200">
+                        <td className="px-4 py-3">{DAYS.find((item) => item.id === day)?.label ?? "—"}</td>
+                        <td className="px-4 py-3 font-mono text-xs">{formatTimeLabel(slot)}</td>
+                        <td className="px-4 py-3">
+                          {classRoom ? `${classRoom.name}${classRoom.section ? ` (${classRoom.section})` : ""}` : "—"}
+                        </td>
+                        <td className="px-4 py-3">{slot.subject?.name ?? "—"}</td>
+                        <td className="px-4 py-3">{slot.period_number}</td>
+                        <td className="px-4 py-3">{slot.room || "—"}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+    </main>
+  );
+}
+
+function AdminTimetablePage({ loaderData }: { loaderData: TimetableLoaderData }) {
   const { classes, subjects, teachers } = loaderData;
   const actionData = useActionData() as any;
   const navigation = useNavigation();

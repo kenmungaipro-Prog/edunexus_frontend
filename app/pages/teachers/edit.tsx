@@ -17,6 +17,7 @@ interface ActionErrors {
   name?:     string;
   email?:    string;
   dept?:     string;
+  classroom_ids?: string;
   general?:  string;
 }
 
@@ -101,6 +102,7 @@ export async function clientAction({ request, params }: Route.ClientActionArgs) 
       subjects:        selectedSubjects.length > 0 
         ? selectedSubjects.map(s => parseInt(s))
         : undefined,
+      classroom_ids: selectedClasses.map(Number),
       status: (String(form.get("status") || "active")) as "active" | "inactive" | "on_leave",
     });
     return redirect(`/teachers/${params.id}`);
@@ -112,6 +114,7 @@ export async function clientAction({ request, params }: Route.ClientActionArgs) 
           name: backendErrors.name?.[0],
           email: backendErrors.email?.[0],
           dept: backendErrors.department?.[0],
+          classroom_ids: backendErrors.classroom_ids?.[0],
           general: err?.response?.data?.message ?? "Please resolve the highlighted errors below."
         } as ActionErrors
       };
@@ -170,8 +173,9 @@ export default function EditTeacherPage({ loaderData }: Route.ComponentProps) {
   const initialSubjectIds = Array.isArray(teacher?.subjects) 
     ? teacher.subjects.map((s: any) => s.id) 
     : [];
-  const initialClassIds = Array.isArray(teacher?.classRooms) 
-    ? teacher.classRooms.map((c: any) => c.id) 
+  const availableClassIds = new Set(allClasses.map((classroom: ClassRoom) => classroom.id));
+  const initialClassIds = Array.isArray(teacher?.class_rooms)
+    ? teacher.class_rooms.filter((classroom: ClassRoom) => availableClassIds.has(classroom.id)).map((classroom: ClassRoom) => classroom.id)
     : [];
 
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<number[]>(initialSubjectIds);
@@ -395,6 +399,9 @@ export default function EditTeacherPage({ loaderData }: Route.ComponentProps) {
                     </label>
                   ))}
                 </div>
+              )}
+              {errors.classroom_ids && (
+                <p role="alert" className="mt-2 text-xs text-red-400">{errors.classroom_ids}</p>
               )}
             </div>
 

@@ -18,6 +18,7 @@ interface ActionErrors {
   experience_yrs?: string;
   dob?: string;
   join_date?: string;
+  classroom_ids?: string;
   general?:  string;
 }
 
@@ -75,6 +76,7 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
 
   try {
     const selectedSubjects = Array.from(form.getAll("subject_ids")) as string[];
+    const selectedClasses = Array.from(form.getAll("classroom_ids")) as string[];
 
     const genderValue = String(form.get("gender") || "");
     const gender =
@@ -108,6 +110,7 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
       subjects: selectedSubjects.length > 0
         ? selectedSubjects.map(s => parseInt(s))
         : undefined,
+      classroom_ids: selectedClasses.map(Number),
       password,
       status,
     });
@@ -131,6 +134,7 @@ export async function clientAction({ request }: Route.ClientActionArgs) {
           experience_yrs: backendErrors.experience_yrs?.[0],
           dob: backendErrors.dob?.[0],
           join_date: backendErrors.join_date?.[0],
+          classroom_ids: backendErrors.classroom_ids?.[0],
           general: apiError?.message ?? apiError?.response?.data?.message ?? "Please resolve the highlighted errors below."
         } as ActionErrors
       };
@@ -232,6 +236,8 @@ export default function NewTeacherPage() {
       setStep(0);
     } else if (errors.dept || errors.qualification || errors.experience_yrs || errors.join_date) {
       setStep(1);
+    } else if (errors.classroom_ids) {
+      setStep(2);
     } else if (errors.username || errors.password) {
       setStep(3);
     }
@@ -543,6 +549,9 @@ export default function NewTeacherPage() {
                   </label>
                 ))}
               </div>
+            )}
+            {errors.classroom_ids && (
+              <p role="alert" className="mt-2 text-xs text-red-400">{errors.classroom_ids}</p>
             )}
           </div>
 
